@@ -699,6 +699,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 ## 9. Messenger Integration Security
 
+> **Reference:** [Facebook Messenger Platform Documentation](https://developers.facebook.com/docs/messenger-platform/) · [Webhooks for Messenger](https://developers.facebook.com/docs/messenger-platform/webhooks/) · [Send API](https://developers.facebook.com/docs/messenger-platform/send-messages/) · [Messenger Profile API](https://developers.facebook.com/docs/messenger-platform/reference/messenger-profile-api/) · [Message Tags](https://developers.facebook.com/docs/messenger-platform/send-messages/tags) · [Handover Protocol](https://developers.facebook.com/docs/messenger-platform/handover-protocol/)
+
 ### 9.1 Webhook Verification
 
 **GET (subscription verification):**
@@ -738,8 +740,31 @@ function verifySignature(body: string, signature: string, secret: string): boole
 | Message content | Only appointment-related info sent via Messenger — no medical details, diagnosis, or treatment specifics |
 | Patient consent for Messenger | Patient initiates contact via Messenger — implicit consent for booking-related communication |
 | Messaging window compliance | System respects 24-hour messaging window; falls back to staff notification if window expired (FR-90/91) |
+| `messaging_type` parameter | All Send API calls include `messaging_type`: `RESPONSE` for bot replies, `UPDATE` for proactive notifications, `MESSAGE_TAG` with `HUMAN_AGENT` for staff messages outside 24h window |
+| Message tags | Staff messages outside 24h window use `HUMAN_AGENT` tag (7-day window). Bot notifications within 24h use `RESPONSE` or `UPDATE`. No promotional content sent via tags. |
+| 24-hour window handling | If Send API returns error 1545041 (messaging window closed), system creates `messenger_notification_failed` audit log entry for staff fallback |
+| Rate limiting | System respects Graph API rate limits; cron jobs batch sends with delays to avoid error 613 |
 
-### 9.3 Live Chat Security
+### 9.3 Messenger Profile Configuration
+
+| Property | Purpose | Setup Method |
+|---|---|---|
+| `get_started` button | First interaction trigger — sends `GET_STARTED` postback payload when user taps it | POST to Messenger Profile API |
+| `greeting` text | Welcome message on chat screen: "Welcome to Dental Clinic! Tap Get Started to book an appointment." | POST to Messenger Profile API |
+| `persistent_menu` | Always-visible menu: Book Appointment, Clinic Hours, Contact Us, Cancel Appointment | POST to Messenger Profile API |
+| `ice_breakers` | Suggested conversation starters for new users | POST to Messenger Profile API |
+| `whitelisted_domains` | Domain allowlist for Messenger Extensions (if web views used) | POST to Messenger Profile API |
+
+### 9.4 Handover Protocol (Staff Takeover)
+
+| Control | Implementation |
+|---|---|
+| Thread control | `pass_thread_control` API transfers conversation from bot to human agent; `take_thread_control` returns to bot |
+| Metadata | Handover includes metadata string identifying the staff member |
+| Bot pause | On `pass_thread_control`, bot stops automated replies; on `take_thread_control`, bot resumes |
+| Fallback | If handover API fails, system falls back to `messenger_conversations.status` database flag |
+
+### 9.5 Live Chat Security
 
 | Control | Implementation |
 |---|---|

@@ -1,0 +1,22 @@
+# Supabase Local Dev
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Cloudflare R2
+R2_ACCOUNT_ID=your-cloudflare-account-id
+R2_ACCESS_KEY_ID=your-r2-access-key-id
+R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+R2_BUCKET_NAME=dental-clinic
+R2_PUBLIC_URL=https://your-r2-public-url.r2.dev
+
+# Messenger (Phase 5)
+MESSENGER_APP_SECRET=your-messenger-app-secret
+MESSENGER_VERIFY_TOKEN=your-messenger-verify-token
+MESSENGER_PAGE_ACCESS_TOKEN=your-messenger-page-access-token
+MESSENGER_API_VERSION=v21.0
+META_APP_ID=your-meta-app-id
+META_PAGE_ID=your-facebook-page-id
+
+# Cron
+CRON_SECRET=your-cron-secret
