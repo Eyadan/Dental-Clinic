@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Clock, Calendar, Search } from "lucide-react";
+import { Loader2, Clock, Calendar, Search, User, Stethoscope, Layers, CheckCircle2, CalendarPlus, Check, Sparkles } from "lucide-react";
 import type { Patient } from "@/lib/types/database";
 import type { Dentist } from "@/lib/types/database";
 import type { DentalService } from "@/lib/types/database";
@@ -29,6 +29,10 @@ interface AppointmentFormProps {
   onSubmit: (formData: FormData) => Promise<{ success: boolean; error?: string; data?: { id: string; reference_no: string } }>;
 }
 
+function formatPeso(amount: number): string {
+  return `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export function AppointmentForm({ patients, dentists, services, onSubmit }: AppointmentFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -38,6 +42,7 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
   const [dentistId, setDentistId] = useState<string | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [selectedTime, setSelectedTime] = useState("09:00");
 
   const selectedPatient = useMemo(() => patients.find((p) => p.id === patientId) ?? null, [patients, patientId]);
   const selectedDentist = useMemo(() => dentists.find((d) => d.id === dentistId) ?? null, [dentists, dentistId]);
@@ -48,9 +53,15 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
       .reduce((sum, s) => sum + s.default_duration_minutes, 0);
   }, [selectedServiceIds, services]);
 
-  const handleServiceToggle = (serviceId: string, checked: boolean) => {
+  const totalPrice = useMemo(() => {
+    return services
+      .filter((s) => selectedServiceIds.includes(s.id))
+      .reduce((sum, s) => sum + s.default_price, 0);
+  }, [selectedServiceIds, services]);
+
+  const handleServiceToggle = (serviceId: string) => {
     setSelectedServiceIds((prev) =>
-      checked ? [...prev, serviceId] : prev.filter((id) => id !== serviceId),
+      prev.includes(serviceId) ? prev.filter((id) => id !== serviceId) : [...prev, serviceId],
     );
   };
 
@@ -74,6 +85,7 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
   };
 
   const handleSelectSlot = (time: string) => {
+    setSelectedTime(time);
     const timeInput = document.getElementById("scheduled_time") as HTMLInputElement | null;
     if (timeInput) timeInput.value = time;
   };
@@ -99,6 +111,7 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
     const formData = new FormData(e.currentTarget);
     formData.set("patient_id", patientId);
     formData.set("dentist_id", dentistId);
+    formData.set("scheduled_time", selectedTime);
     formData.set("total_duration", String(totalDuration));
     selectedServiceIds.forEach((id) => formData.append("service_ids", id));
 
@@ -107,7 +120,7 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
       if (!result.success) {
         setError(result.error ?? "Failed to create appointment");
       } else {
-        setSuccess(`Appointment created! Reference: ${result.data?.reference_no}`);
+        setSuccess(`Appointment created successfully! Reference: ${result.data?.reference_no}`);
         setSelectedServiceIds([]);
         setPatientId(null);
         setDentistId(null);
@@ -120,171 +133,240 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+        <Alert variant="destructive" className="rounded-2xl border-red-500/20 bg-red-500/5">
+          <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
         </Alert>
       )}
+
       {success && (
-        <Alert>
-          <AlertDescription>{success}</AlertDescription>
+        <Alert className="rounded-2xl border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+          <AlertDescription className="text-xs font-semibold flex items-center gap-1.5">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            {success}
+          </AlertDescription>
         </Alert>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Patient & Dentist</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="patient">Patient</Label>
-            <Select value={patientId ?? ""} onValueChange={handlePatientChange}>
-              <SelectTrigger id="patient">
-                <SelectValue placeholder="Select patient">
-                  {selectedPatient ? `${selectedPatient.first_name} ${selectedPatient.last_name} · ${selectedPatient.contact_no}` : undefined}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {patients.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.first_name} {p.last_name} — {p.contact_no}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <input type="hidden" name="patient_id" value={patientId ?? ""} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="dentist">Dentist</Label>
-            <Select value={dentistId ?? ""} onValueChange={handleDentistChange}>
-              <SelectTrigger id="dentist">
-                <SelectValue placeholder="Select dentist">
-                  {selectedDentist ? `${selectedDentist.full_name ?? selectedDentist.license_no}${selectedDentist.specialization ? ` · ${selectedDentist.specialization}` : ""}` : undefined}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {dentists.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.full_name ?? d.license_no}{d.specialization ? ` · ${d.specialization}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <input type="hidden" name="dentist_id" value={dentistId ?? ""} />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Date & Time</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="scheduled_date">
-              <Calendar className="mr-1 inline h-4 w-4" />
-              Date
-            </Label>
-            <Input
-              id="scheduled_date"
-              type="date"
-              name="scheduled_date"
-              min={today}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="scheduled_time">
-              <Clock className="mr-1 inline h-4 w-4" />
-              Time
-            </Label>
-            <Input
-              id="scheduled_time"
-              type="time"
-              name="scheduled_time"
-              defaultValue="09:00"
-              required
-            />
-          </div>
-          {dentistId && totalDuration > 0 && (
-            <div className="col-span-full">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleCheckSlots}
-                disabled={isLoadingSlots}
-              >
-                {isLoadingSlots ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="mr-2 h-4 w-4" />
-                )}
-                Check Available Slots
-              </Button>
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* PATIENT & DENTIST SELECTION */}
+        <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
+          <CardHeader className="border-b border-border/40 pb-3">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <User className="h-4 w-4 text-cyan-600" /> Patient & Dentist Assignment
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="patient" className="text-xs font-semibold text-muted-foreground">Select Patient *</Label>
+              <Select value={patientId ?? ""} onValueChange={handlePatientChange}>
+                <SelectTrigger id="patient" className="w-full h-10 text-xs border-border/80 rounded-xl">
+                  <SelectValue placeholder="Search or select patient...">
+                    {selectedPatient ? `${selectedPatient.first_name} ${selectedPatient.last_name} · ${selectedPatient.contact_no}` : undefined}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="w-[var(--anchor-width)] min-w-[var(--anchor-width)] rounded-xl p-1">
+                  {patients.map((p) => (
+                    <SelectItem key={p.id} value={p.id} className="text-xs font-medium">
+                      {p.first_name} {p.last_name} — {p.contact_no}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-          {slots.length > 0 && (
-            <div className="col-span-full">
-              <p className="text-sm text-muted-foreground mb-2">Available slots (click to select):</p>
-              <div className="flex flex-wrap gap-2">
-                {slots.map((slot) => (
-                  <Button
-                    key={slot.startTime}
-                    type="button"
-                    variant={slot.available ? "outline" : "ghost"}
-                    size="sm"
-                    disabled={!slot.available}
-                    onClick={() => handleSelectSlot(slot.startTime)}
-                    className={!slot.available ? "line-through opacity-50" : ""}
-                  >
-                    {slot.startTime}
-                  </Button>
-                ))}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="dentist" className="text-xs font-semibold text-muted-foreground">Select Attending Dentist *</Label>
+              <Select value={dentistId ?? ""} onValueChange={handleDentistChange}>
+                <SelectTrigger id="dentist" className="w-full h-10 text-xs border-border/80 rounded-xl">
+                  <SelectValue placeholder="Choose dentist...">
+                    {selectedDentist ? `${selectedDentist.full_name ?? selectedDentist.license_no}${selectedDentist.specialization ? ` · ${selectedDentist.specialization}` : ""}` : undefined}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="w-[var(--anchor-width)] min-w-[var(--anchor-width)] rounded-xl p-1">
+                  {dentists.map((d) => (
+                    <SelectItem key={d.id} value={d.id} className="text-xs font-medium">
+                      {d.full_name ?? d.license_no}{d.specialization ? ` · ${d.specialization}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* DATE & TIME SELECTION */}
+        <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
+          <CardHeader className="border-b border-border/40 pb-3">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-cyan-600" /> Schedule Date & Time
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="scheduled_date" className="text-xs font-semibold text-muted-foreground">Scheduled Date *</Label>
+                <Input
+                  id="scheduled_date"
+                  type="date"
+                  name="scheduled_date"
+                  min={today}
+                  defaultValue={today}
+                  required
+                  className="h-10 text-xs border-border/80 rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="scheduled_time" className="text-xs font-semibold text-muted-foreground">Scheduled Time *</Label>
+                <Input
+                  id="scheduled_time"
+                  type="time"
+                  name="scheduled_time"
+                  value={selectedTime}
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                  required
+                  className="h-10 text-xs border-border/80 rounded-xl"
+                />
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Services {totalDuration > 0 && `(${totalDuration} min total)`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {services.length === 0 ? (
-            <p className="text-muted-foreground">No active services available</p>
-          ) : (
-            services.map((service) => (
-              <div key={service.id} className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id={`service-${service.id}`}
-                    checked={selectedServiceIds.includes(service.id)}
-                    onCheckedChange={(checked: boolean) =>
-                      handleServiceToggle(service.id, checked)
-                    }
-                  />
-                  <div>
-                    <Label htmlFor={`service-${service.id}`} className="font-medium">
-                      {service.name}
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {service.description ?? "No description"} · {service.default_duration_minutes} min
-                    </p>
-                  </div>
+            {dentistId && totalDuration > 0 && (
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCheckSlots}
+                  disabled={isLoadingSlots}
+                  className="h-8 rounded-xl text-xs border-border/80 hover:bg-cyan-500/10 hover:text-cyan-600 font-semibold"
+                >
+                  {isLoadingSlots ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Search className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Check Available Time Slots ({totalDuration} min)
+                </Button>
+              </div>
+            )}
+
+            {slots.length > 0 && (
+              <div className="space-y-1.5 pt-2">
+                <Label className="text-[11px] font-bold text-muted-foreground uppercase">Available Dentist Slots</Label>
+                <div className="grid grid-cols-4 gap-1.5 max-h-32 overflow-y-auto">
+                  {slots.map((slot) => (
+                    <button
+                      key={slot.startTime}
+                      type="button"
+                      disabled={!slot.available}
+                      onClick={() => handleSelectSlot(slot.startTime)}
+                      className={`p-1.5 rounded-lg border text-center font-mono text-[11px] font-bold transition-all ${
+                        selectedTime === slot.startTime
+                          ? "bg-cyan-600 text-white border-cyan-600 shadow-xs"
+                          : slot.available
+                          ? "border-border/80 text-foreground hover:bg-muted/40"
+                          : "border-border/40 text-muted-foreground opacity-40 cursor-not-allowed"
+                      }`}
+                    >
+                      {slot.startTime}
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))
-          )}
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* DENTAL PROCEDURES SELECTION — FULLY HIGHLIGHTED CLICKABLE PILLS */}
+      <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
+        <CardHeader className="border-b border-border/40 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 space-y-0">
+          <div className="flex items-center gap-2">
+            <Layers className="h-4 w-4 text-cyan-600" />
+            <CardTitle className="text-sm font-bold">Select Dental Services & Procedures</CardTitle>
+            <Badge variant="outline" className="border-cyan-500/30 text-cyan-600 bg-cyan-500/10 text-[10px] font-bold">
+              {selectedServiceIds.length} selected
+            </Badge>
+          </div>
+
+          <div className="flex items-center gap-2.5 text-xs font-mono bg-muted/40 p-2 rounded-xl border border-border/40">
+            <span className="text-muted-foreground">Duration: <strong className="text-foreground font-bold">{totalDuration} mins</strong></span>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-muted-foreground">Est. Total: <strong className="text-cyan-600 font-bold">{formatPeso(totalPrice)}</strong></span>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-4">
+          <p className="text-xs text-muted-foreground mb-3 font-medium">Click any procedure pill below to select or deselect it:</p>
+
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {services.map((service) => {
+              const isSelected = selectedServiceIds.includes(service.id);
+              return (
+                <div
+                  key={service.id}
+                  onClick={() => handleServiceToggle(service.id)}
+                  className={`group relative flex flex-col justify-between p-4 rounded-2xl cursor-pointer transition-all duration-150 select-none ${
+                    isSelected
+                      ? "bg-gradient-to-br from-cyan-600 to-teal-600 text-white shadow-md shadow-cyan-500/25 border-2 border-cyan-500 scale-[1.01]"
+                      : "bg-card border border-border/80 hover:border-cyan-500/60 hover:bg-cyan-500/5 text-foreground"
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className={`font-bold text-sm ${isSelected ? "text-white" : "text-foreground group-hover:text-cyan-600"}`}>
+                        {service.name}
+                      </p>
+                      {isSelected ? (
+                        <Badge className="bg-white/20 hover:bg-white/20 text-white font-mono text-[10px] font-bold border border-white/30 shrink-0">
+                          <Check className="mr-1 h-3 w-3 stroke-[3]" /> SELECTED
+                        </Badge>
+                      ) : (
+                        <span className="font-mono text-xs font-bold text-cyan-600 dark:text-cyan-400 shrink-0 bg-cyan-600/10 px-2 py-0.5 rounded-lg border border-cyan-600/20">
+                          {formatPeso(service.default_price)}
+                        </span>
+                      )}
+                    </div>
+
+                    {service.description && (
+                      <p className={`text-xs line-clamp-2 leading-relaxed ${isSelected ? "text-cyan-50 opacity-90" : "text-muted-foreground"}`}>
+                        {service.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-3 flex items-center justify-between mt-1">
+                    <span className={`inline-flex items-center text-[11px] font-mono font-medium gap-1 px-2 py-0.5 rounded-lg ${
+                      isSelected ? "bg-white/15 text-white border border-white/20" : "bg-muted text-muted-foreground"
+                    }`}>
+                      <Clock className="h-3 w-3" />
+                      {service.default_duration_minutes} mins
+                    </span>
+
+                    {isSelected && (
+                      <span className="font-mono text-xs font-extrabold text-white">
+                        {formatPeso(service.default_price)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isPending}>
-          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Create Appointment
+      <div className="flex items-center justify-end gap-3 pt-2">
+        <Button
+          type="submit"
+          disabled={isPending || !patientId || !dentistId || selectedServiceIds.length === 0}
+          className="h-10 px-6 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-bold shadow-xs active:scale-[0.98] transition-transform"
+        >
+          {isPending ? (
+            <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Scheduling Appointment...</>
+          ) : (
+            <><CalendarPlus className="mr-1.5 h-4 w-4" /> Book Appointment</>
+          )}
         </Button>
       </div>
     </form>

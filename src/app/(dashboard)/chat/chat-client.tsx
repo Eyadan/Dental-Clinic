@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { ConversationList } from "./conversation-list";
 import { ChatThread } from "./chat-thread";
 import { PatientInfoPanel } from "./patient-info-panel";
@@ -38,11 +39,11 @@ export function ChatClient({ staffId }: ChatClientProps) {
       .channel("conversations-realtime")
       .on("postgres_changes",
         { event: "*", schema: "public", table: "messenger_conversations" },
-        () => loadConversations(),
+        () => loadConversations()
       )
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "messenger_messages" },
-        () => loadConversations(),
+        () => loadConversations()
       )
       .subscribe();
 
@@ -51,56 +52,72 @@ export function ChatClient({ staffId }: ChatClientProps) {
     };
   }, [loadConversations]);
 
-  const handleSelect = useCallback(async (conv: ConversationWithDetails) => {
-    setSelected(conv);
-    if (conv.unread_count > 0) {
-      await markAsReadAction(conv.id);
-      await loadConversations();
+  const handleSelect = async (conversation: ConversationWithDetails) => {
+    setSelected(conversation);
+    if (conversation.unread_count > 0) {
+      await markAsReadAction(conversation.id);
+      loadConversations();
     }
-  }, [loadConversations]);
+  };
 
-  if (isLoading) {
-    return (
-      <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
-        <div className="h-6 w-6 animate-pulse rounded-full bg-muted" />
-      </div>
-    );
-  }
+  const unreadTotal = conversations.reduce((acc, c) => acc + c.unread_count, 0);
 
   return (
-    <div className="grid h-[calc(100vh-8rem)] grid-cols-1 gap-0 lg:grid-cols-[280px_1fr_300px]">
-      <div className="border-r border-border">
-        <ConversationList
-          conversations={conversations}
-          selectedId={selected?.id ?? null}
-          onSelect={handleSelect}
-        />
+    <div className="space-y-4 h-[calc(100vh-100px)] flex flex-col">
+      {/* BRANDED HERO HEADER */}
+      <div className="flex items-center justify-between bg-card p-4 rounded-2xl border border-border/60 shadow-xs shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
+            <MessageSquare className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold tracking-tight text-foreground">Messenger Live Chat Handoff</h1>
+              {unreadTotal > 0 && (
+                <Badge className="bg-cyan-600 text-white text-[10px] rounded-full">
+                  {unreadTotal} unread
+                </Badge>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground">Real-time Facebook Messenger chatbot takeover & patient support desk</p>
+          </div>
+        </div>
       </div>
 
-      <div className="h-full overflow-hidden border-r border-border">
-        {selected ? (
-          <ChatThread conversation={selected} staffId={staffId} onConversationChange={loadConversations} />
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-            <MessageSquare className="h-12 w-12 text-muted-foreground/30" />
-            <p className="mt-4 text-sm font-medium text-muted-foreground">
-              Select a conversation to start
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground/70">
-              Choose a conversation from the list to view messages
-            </p>
-          </div>
-        )}
-      </div>
+      {/* 3-COLUMN CHAT INTERFACE */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-hidden min-h-0">
+        <div className="lg:col-span-4 h-full border border-border/60 bg-card rounded-2xl shadow-xs overflow-hidden">
+          <ConversationList
+            conversations={conversations}
+            selectedId={selected?.id ?? null}
+            onSelect={handleSelect}
+          />
+        </div>
 
-      <div className="hidden lg:block">
-        {selected ? (
-          <PatientInfoPanel conversation={selected} />
-        ) : (
-          <div className="flex h-full items-center justify-center p-6 text-center">
-            <p className="text-xs text-muted-foreground">No conversation selected</p>
-          </div>
-        )}
+        <div className="lg:col-span-5 h-full border border-border/60 bg-card rounded-2xl shadow-xs overflow-hidden flex flex-col">
+          {selected ? (
+            <ChatThread
+              conversation={selected}
+              staffId={staffId}
+            />
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-xs text-muted-foreground p-6 text-center">
+              <MessageSquare className="h-8 w-8 mb-2 text-muted-foreground/40" />
+              <p className="font-semibold">Select a conversation</p>
+              <p className="text-[11px] mt-0.5">Choose a patient from the list on the left to start live chat.</p>
+            </div>
+          )}
+        </div>
+
+        <div className="lg:col-span-3 h-full border border-border/60 bg-card rounded-2xl shadow-xs overflow-hidden">
+          {selected ? (
+            <PatientInfoPanel conversation={selected} />
+          ) : (
+            <div className="h-full flex items-center justify-center text-xs text-muted-foreground p-4 text-center">
+              Patient details preview
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

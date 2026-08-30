@@ -65,6 +65,7 @@ export class AppointmentService extends BaseService {
         scheduled_date: data.scheduled_date,
         scheduled_time: data.scheduled_time,
         total_duration: data.total_duration,
+        booking_status: data.booking_status ?? "approved",
       })
       .select()
       .single();

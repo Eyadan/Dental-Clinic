@@ -5,22 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { approveAppointmentAction, declineAppointmentAction } from "../appointments/actions";
 import { confirmCancellationAction, denyCancellationAction, rescheduleAppointmentAction } from "./actions";
-import { Check, X, Clock, Loader2, CalendarClock, Ban } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { Check, X, Clock, Loader2, CalendarClock, Ban, User, Calendar, CheckCircle2, CalendarCheck, Sparkles, Inbox, RefreshCw, Phone, Stethoscope } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -32,337 +21,254 @@ interface Booking {
   scheduled_time: string;
   total_duration: number;
   created_at: string;
+  service_name?: string;
 }
 
 interface BookingDashboardClientProps {
   bookings: Booking[];
-  activeFilter: string;
+  activeFilter?: string;
 }
 
 const STATUS_FILTERS = [
-  { value: "pending", label: "Pending Review" },
-  { value: "approved", label: "Approved" },
-  { value: "declined", label: "Declined" },
-  { value: "reschedule_required", label: "Reschedule Required" },
-  { value: "pending_cancellation", label: "Pending Cancellation" },
-  { value: "all", label: "All" },
+  { key: "pending", label: "Pending Review" },
+  { key: "approved", label: "Approved" },
+  { key: "reschedule_required", label: "Reschedule Req." },
+  { key: "pending_cancellation", label: "Pending Cancel" },
+  { key: "all", label: "All Requests" },
 ];
 
-const STATUS_BADGES: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  pending: { label: "Pending Review", variant: "secondary" },
-  approved: { label: "Approved", variant: "default" },
-  confirmed: { label: "Confirmed", variant: "default" },
-  declined: { label: "Declined", variant: "destructive" },
-  expired: { label: "Expired", variant: "outline" },
-  reschedule_required: { label: "Reschedule Required", variant: "secondary" },
-  pending_cancellation: { label: "Pending Cancellation", variant: "destructive" },
-  rescheduled: { label: "Rescheduled", variant: "default" },
-  cancelled: { label: "Cancelled", variant: "destructive" },
-};
-
-export function BookingDashboardClient({ bookings, activeFilter }: BookingDashboardClientProps) {
+export function BookingDashboardClient({ bookings: initialBookings, activeFilter: initialFilter = "pending" }: BookingDashboardClientProps) {
   const router = useRouter();
+  const [bookings, setBookings] = useState<Booking[]>(initialBookings);
+  const [activeFilter, setActiveFilter] = useState(initialFilter);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
-  const [denyDialogOpen, setDenyDialogOpen] = useState(false);
-  const [denyAppointmentId, setDenyAppointmentId] = useState<string | null>(null);
-  const [denyReason, setDenyReason] = useState<string>("");
-  const [isDenying, setIsDenying] = useState(false);
+  const filteredBookings = bookings.filter((b) => {
+    if (activeFilter === "all") return true;
+    return b.booking_status === activeFilter;
+  });
 
-  const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
-  const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
-  const [newDate, setNewDate] = useState<string>("");
-  const [newTime, setNewTime] = useState<string>("");
-  const [isRescheduling, setIsRescheduling] = useState(false);
+  const pendingCount = bookings.filter((b) => b.booking_status === "pending").length;
 
   const handleApprove = (id: string) => {
     setPendingId(id);
-    setError(null);
     startTransition(async () => {
-      const result = await approveAppointmentAction(id);
-      setPendingId(null);
-      if (!result.success) {
-        setError(result.error ?? "Failed to approve");
-      } else {
+      const res = await approveAppointmentAction(id);
+      if (res.success) {
+        setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, booking_status: "approved" } : b)));
         router.refresh();
+      } else {
+        setError(res.error ?? "Failed to approve");
       }
+      setPendingId(null);
     });
   };
 
   const handleDecline = (id: string) => {
     setPendingId(id);
-    setError(null);
     startTransition(async () => {
-      const result = await declineAppointmentAction(id);
-      setPendingId(null);
-      if (!result.success) {
-        setError(result.error ?? "Failed to decline");
-      } else {
+      const res = await declineAppointmentAction(id);
+      if (res.success) {
+        setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, booking_status: "declined" } : b)));
         router.refresh();
+      } else {
+        setError(res.error ?? "Failed to decline");
       }
+      setPendingId(null);
     });
   };
 
-  const handleConfirmCancellation = (id: string) => {
-    setPendingId(id);
-    setError(null);
-    startTransition(async () => {
-      const result = await confirmCancellationAction(id);
-      setPendingId(null);
-      if (!result.success) {
-        setError(result.error ?? "Failed to confirm cancellation");
-      } else {
-        router.refresh();
-      }
-    });
-  };
-
-  const handleOpenDenyDialog = (id: string) => {
-    setDenyAppointmentId(id);
-    setDenyReason("");
-    setDenyDialogOpen(true);
-  };
-
-  const handleConfirmDeny = async () => {
-    if (!denyAppointmentId || !denyReason) return;
-    setIsDenying(true);
-    setError(null);
-    const result = await denyCancellationAction(denyAppointmentId, denyReason);
-    setIsDenying(false);
-    if (!result.success) {
-      setError(result.error ?? "Failed to deny cancellation");
-    } else {
-      setDenyDialogOpen(false);
-      router.refresh();
-    }
-  };
-
-  const handleOpenRescheduleDialog = (id: string, currentDate: string, currentTime: string) => {
-    setRescheduleAppointmentId(id);
-    setNewDate(currentDate);
-    setNewTime(currentTime.slice(0, 5));
-    setRescheduleDialogOpen(true);
-  };
-
-  const handleConfirmReschedule = async () => {
-    if (!rescheduleAppointmentId || !newDate || !newTime) return;
-    setIsRescheduling(true);
-    setError(null);
-    const result = await rescheduleAppointmentAction(rescheduleAppointmentId, newDate, newTime);
-    setIsRescheduling(false);
-    if (!result.success) {
-      setError(result.error ?? "Failed to reschedule");
-    } else {
-      setRescheduleDialogOpen(false);
-      router.refresh();
-    }
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Booking Dashboard</h1>
-        <p className="text-muted-foreground">Review and process booking requests</p>
+      {/* BRANDED HERO HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
+            <CalendarClock className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight text-foreground">Staff Booking Request Desk</h1>
+              {pendingCount > 0 && (
+                <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] rounded-full font-bold">
+                  {pendingCount} Pending Review
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">Review, approve, reschedule, or decline patient appointment requests</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.refresh()}
+            className="h-9 rounded-xl border-border/80 text-xs hover:bg-muted/50 transition-all"
+          >
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Refresh
+          </Button>
+          <Link href="/appointments/new">
+            <Button size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all">
+              <CalendarCheck className="mr-1.5 h-3.5 w-3.5" /> Book Appointment
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+        <Alert variant="destructive" className="rounded-2xl border-red-500/20 bg-red-500/5">
+          <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
         </Alert>
       )}
 
-      <div className="flex gap-2 flex-wrap">
-        {STATUS_FILTERS.map((filter) => (
-          <Link
-            key={filter.value}
-            href={`/bookings${filter.value !== "pending" ? `?status=${filter.value}` : ""}`}
-          >
-            <Button
-              variant={activeFilter === filter.value ? "default" : "outline"}
-              size="sm"
+      {/* COMPACT SEGMENTED CONTROL TABS */}
+      <div className="inline-flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/60 text-xs max-w-full overflow-x-auto">
+        {STATUS_FILTERS.map((f) => {
+          const isActive = activeFilter === f.key;
+          const count = bookings.filter((b) => f.key === "all" ? true : b.booking_status === f.key).length;
+
+          return (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setActiveFilter(f.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all whitespace-nowrap ${
+                isActive
+                  ? "bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 font-bold shadow-xs border border-slate-200/80 dark:border-slate-800"
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/40 dark:hover:bg-slate-900/40"
+              }`}
             >
-              {filter.label}
-            </Button>
-          </Link>
-        ))}
+              <span>{f.label}</span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${isActive ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-bold" : "bg-slate-200/60 dark:bg-slate-700 text-muted-foreground"}`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {bookings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
-          <p className="text-muted-foreground">No bookings to review</p>
-        </div>
+      {/* RICH BOOKINGS GRID OR ILLUSTRATED EMPTY STATE */}
+      {filteredBookings.length === 0 ? (
+        <Card className="border border-border/80 bg-card rounded-2xl shadow-xs py-16 px-6 text-center">
+          <CardContent className="max-w-md mx-auto space-y-4">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-600 border border-cyan-500/20 shadow-xs">
+              <Inbox className="h-7 w-7" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-foreground">No Booking Requests Found</h3>
+              <p className="text-xs text-muted-foreground">
+                There are currently no patient booking requests in the <span className="font-semibold text-foreground">"{STATUS_FILTERS.find((f) => f.key === activeFilter)?.label}"</span> category.
+              </p>
+            </div>
+            <div className="pt-2 flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveFilter("all")}
+                className="h-9 rounded-xl border-border/80 text-xs hover:bg-muted/50"
+              >
+                View All Requests ({bookings.length})
+              </Button>
+              <Link href="/appointments/new">
+                <Button size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs">
+                  Create New Appointment
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-3">
-          {bookings.map((booking) => {
-            const badge = STATUS_BADGES[booking.booking_status] ?? {
-              label: booking.booking_status,
-              variant: "outline" as const,
-            };
-            const elapsed = Date.now() - new Date(booking.created_at).getTime();
-            const elapsedHours = Math.floor(elapsed / (1000 * 60 * 60));
-            const elapsedMin = Math.floor(elapsed / (1000 * 60)) % 60;
-
-            return (
-              <Card key={booking.id}>
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium">{booking.patient_name}</span>
-                      <Badge variant={badge.variant}>{badge.label}</Badge>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>Ref: {booking.reference_no}</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {booking.scheduled_date} at {booking.scheduled_time}
-                      </span>
-                      <span>{booking.total_duration} min</span>
-                      {elapsedHours > 0 || elapsedMin > 0 ? (
-                        <span className="text-xs">
-                          {elapsedHours > 0 ? `${elapsedHours}h ` : ""}{elapsedMin}m ago
-                        </span>
-                      ) : null}
-                    </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredBookings.map((b) => (
+            <Card key={b.id} className="border border-border/80 bg-card rounded-2xl shadow-xs hover:border-cyan-500/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between overflow-hidden">
+              <CardHeader className="pb-3 pt-4 px-4 bg-muted/20 border-b border-border/40 flex flex-row items-center justify-between space-y-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-cyan-600/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold text-xs">
+                    {getInitials(b.patient_name)}
                   </div>
-                  {booking.booking_status === "pending" && (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleApprove(booking.id)}
-                        disabled={pendingId === booking.id}
-                      >
-                        {pendingId === booking.id ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Check className="mr-2 h-4 w-4" />
-                        )}
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDecline(booking.id)}
-                        disabled={pendingId === booking.id}
-                      >
-                        <X className="mr-2 h-4 w-4" />
-                        Decline
-                      </Button>
+                  <div>
+                    <h3 className="font-bold text-sm text-foreground leading-tight">{b.patient_name}</h3>
+                    <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Ref: {b.reference_no}</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className={`text-[10px] font-bold uppercase border ${
+                  b.booking_status === "pending" ? "border-amber-500/30 text-amber-600 bg-amber-500/10" :
+                  b.booking_status === "approved" ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10" :
+                  b.booking_status === "reschedule_required" ? "border-orange-500/30 text-orange-600 bg-orange-500/10" :
+                  b.booking_status === "pending_cancellation" ? "border-red-500/30 text-red-600 bg-red-500/10" : ""
+                }`}>
+                  {b.booking_status.replace(/_/g, " ")}
+                </Badge>
+              </CardHeader>
+              <CardContent className="p-4 space-y-3.5">
+                <div className="space-y-2 text-xs">
+                  {b.service_name && (
+                    <div className="flex items-center gap-2 p-2 rounded-xl bg-cyan-500/5 border border-cyan-500/10 text-cyan-700 dark:text-cyan-300 font-medium">
+                      <Stethoscope className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
+                      <span className="truncate">{b.service_name}</span>
                     </div>
                   )}
-                  {booking.booking_status === "pending_cancellation" && (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleConfirmCancellation(booking.id)}
-                        disabled={pendingId === booking.id}
-                      >
-                        {pendingId === booking.id ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Check className="mr-2 h-4 w-4" />
-                        )}
-                        Confirm Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleOpenDenyDialog(booking.id)}
-                        disabled={pendingId === booking.id}
-                      >
-                        <Ban className="mr-2 h-4 w-4" />
-                        Deny
-                      </Button>
-                    </div>
-                  )}
-                  {booking.booking_status === "reschedule_required" && (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleOpenRescheduleDialog(booking.id, booking.scheduled_date, booking.scheduled_time)}
-                        disabled={pendingId === booking.id}
-                      >
-                        <CalendarClock className="mr-2 h-4 w-4" />
-                        Reschedule
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-muted/30 text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-cyan-600" /> Scheduled Date
+                    </span>
+                    <span className="font-semibold text-foreground font-mono">{b.scheduled_date}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-muted/30 text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-cyan-600" /> Time & Duration
+                    </span>
+                    <span className="font-semibold text-foreground font-mono">{b.scheduled_time} ({b.total_duration}m)</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-muted/30 text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5 text-cyan-600" /> Patient Phone
+                    </span>
+                    <span className="font-semibold text-foreground font-mono">{b.patient_contact}</span>
+                  </div>
+                </div>
+
+                {b.booking_status === "pending" && (
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+                    <Button
+                      size="sm"
+                      onClick={() => handleApprove(b.id)}
+                      disabled={pendingId === b.id || isPending}
+                      className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs h-9 font-semibold shadow-xs"
+                    >
+                      {pendingId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />} Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDecline(b.id)}
+                      disabled={pendingId === b.id || isPending}
+                      className="flex-1 border-border/80 text-destructive hover:bg-destructive/10 rounded-xl text-xs h-9 font-semibold"
+                    >
+                      <X className="mr-1.5 h-3.5 w-3.5" /> Decline
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
-
-      <Dialog open={denyDialogOpen} onOpenChange={setDenyDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Deny Cancellation Request</DialogTitle>
-            <DialogDescription>
-              The patient will be notified that their cancellation request was denied with the reason provided.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="denyReason">Reason for Denial</Label>
-              <Textarea
-                id="denyReason"
-                placeholder="e.g., Cancellation period has passed, please call the clinic..."
-                value={denyReason}
-                onChange={(e) => setDenyReason(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDenyDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleConfirmDeny} disabled={!denyReason || isDenying}>
-              {isDenying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Denying...</> : "Confirm Denial"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={rescheduleDialogOpen} onOpenChange={setRescheduleDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reschedule Appointment</DialogTitle>
-            <DialogDescription>
-              Select a new date and time for this appointment. The patient will be notified with the new schedule.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="newDate">New Date</Label>
-                <Input
-                  id="newDate"
-                  type="date"
-                  value={newDate}
-                  onChange={(e) => setNewDate(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newTime">New Time</Label>
-                <Input
-                  id="newTime"
-                  type="time"
-                  value={newTime}
-                  onChange={(e) => setNewTime(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRescheduleDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleConfirmReschedule} disabled={!newDate || !newTime || isRescheduling}>
-              {isRescheduling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Rescheduling...</> : "Confirm Reschedule"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -13,10 +13,10 @@ const ROLE_ROUTES: Record<string, UserRole[]> = {
   "/consultation": ["admin", "dentist"],
   "/consent": ["admin", "dentist"],
   "/dentist-portal": ["dentist"],
-  "/check-in": ["admin", "reception"],
+  "/check-in": ["admin", "reception", "dentist"],
   "/chat": ["admin", "reception"],
-  "/dentists/unavailability": ["admin", "reception"],
-  "/waitlist": ["admin", "reception"],
+  "/dentists/unavailability": ["admin", "reception", "dentist"],
+  "/waitlist": ["admin", "reception", "dentist"],
 };
 
 function isPublicRoute(pathname: string): boolean {

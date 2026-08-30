@@ -1,6 +1,23 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
+}
+
+export function parseAllergies(allergiesStr: string | null | undefined): string[] {
+  if (!allergiesStr) return [];
+  const trimmed = allergiesStr.trim();
+  if (!trimmed || trimmed.toLowerCase() === "none" || trimmed.toLowerCase() === "no known allergies") {
+    return [];
+  }
+  return trimmed
+    .split(/[,;\n]+/)
+    .map((s) => s.trim())
+    .filter(
+      (s) =>
+        s.length > 0 &&
+        s.toLowerCase() !== "none" &&
+        s.toLowerCase() !== "no known allergies"
+    );
 }

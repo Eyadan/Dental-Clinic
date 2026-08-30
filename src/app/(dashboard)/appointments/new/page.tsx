@@ -4,6 +4,8 @@ import { DentistService } from "@/lib/services/dentist-service";
 import { DentalServiceService } from "@/lib/services";
 import { AppointmentForm } from "@/components/appointments/appointment-form";
 import { createAppointmentAction } from "../actions";
+import { CalendarCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default async function NewAppointmentPage() {
   const supabase = await createServerSupabaseClient();
@@ -19,12 +21,24 @@ export default async function NewAppointmentPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">New Appointment</h1>
-        <p className="text-muted-foreground">
-          Create a new appointment with patient, dentist, and services
-        </p>
+      {/* BRANDED HERO HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
+            <CalendarCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight text-foreground">Book New Patient Appointment</h1>
+              <Badge variant="outline" className="border-border text-foreground font-mono text-[10px]">
+                Booking Form
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">Schedule a dental appointment, link procedures, select dentist, and pick time slots</p>
+          </div>
+        </div>
       </div>
+
       <AppointmentForm
         patients={patientsResult.data}
         dentists={dentists}

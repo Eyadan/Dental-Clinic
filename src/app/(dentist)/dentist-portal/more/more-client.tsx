@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { parseAllergies } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -173,15 +174,24 @@ export function MorePageClient({
                 )}
               </div>
 
-              {selectedPatient.patient_allergies && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-                  <div className="flex items-center gap-1 text-destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <p className="text-sm font-semibold">Allergies</p>
+              {(() => {
+                const allergyList = parseAllergies(selectedPatient.patient_allergies);
+                return allergyList.length > 0 ? (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-amber-600">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <p className="text-sm font-semibold">Known Allergies ({allergyList.length})</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      {allergyList.map((allergy, idx) => (
+                        <span key={idx} className="inline-flex items-center gap-1 rounded-md bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                          <AlertCircle className="h-3 w-3 shrink-0 text-amber-600" /> {allergy}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <p className="mt-1 text-sm">{selectedPatient.patient_allergies}</p>
-                </div>
-              )}
+                ) : null;
+              })()}
 
               {selectedPatient.patient_medical_history && (
                 <div>

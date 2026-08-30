@@ -16,6 +16,9 @@ interface BillingListItem {
 }
 
 export default async function BillingListPage() {
+  // Temporary 0.9s delay for skeleton loading state preview
+  await new Promise((resolve) => setTimeout(resolve, 900));
+
   const supabase = await createServerSupabaseClient();
 
   const { data: appointments, error } = await supabase

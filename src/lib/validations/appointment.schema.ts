@@ -8,6 +8,7 @@ export const appointmentCreateSchema = z.object({
   scheduled_time: z.string().regex(/^\d{2}:\d{2}$/, "Time must be HH:MM format"),
   total_duration: z.number().int().min(1, "Duration must be at least 1 minute"),
   service_ids: z.array(z.string().uuid()).min(1, "At least one service is required"),
+  booking_status: bookingStatusSchema.optional().default("approved"),
 });
 
 export type AppointmentCreateData = z.infer<typeof appointmentCreateSchema>;

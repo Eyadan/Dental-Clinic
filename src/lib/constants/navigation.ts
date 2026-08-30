@@ -55,7 +55,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Check-In",
     href: "/check-in",
     icon: UserCheck,
-    roles: ["admin", "reception"],
+    roles: ["admin", "reception", "dentist"],
   },
   {
     label: "Queue",
@@ -94,16 +94,16 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "reception"],
   },
   {
-    label: "Unavailability",
+    label: "Schedule & Leave",
     href: "/dentists/unavailability",
     icon: CalendarX,
-    roles: ["admin", "reception"],
+    roles: ["admin", "reception", "dentist"],
   },
   {
     label: "Waitlist",
     href: "/waitlist",
     icon: ListPlus,
-    roles: ["admin", "reception"],
+    roles: ["admin", "reception", "dentist"],
   },
   {
     label: "Settings",

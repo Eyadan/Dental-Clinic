@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { ReassignmentService } from "@/lib/services/reassignment-service";
 import { DentistService } from "@/lib/services/dentist-service";
@@ -90,10 +91,17 @@ export async function declareUnavailabilityAction(
   endDate: string,
   blockType: string,
   reason: string,
-  staffId: string,
+  staffId?: string,
 ): Promise<ServiceResult<{ affectedCount: number }>> {
   try {
     const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const effectiveStaffId = (staffId && staffId.trim() !== "") ? staffId : user?.id;
+
+    if (!effectiveStaffId) {
+      return { success: false, error: "Authenticated staff account is required" };
+    }
+
     const dentistService = new DentistService(supabase);
 
     const startDatetime = `${startDate}T00:00:00`;
@@ -113,7 +121,7 @@ export async function declareUnavailabilityAction(
       dentistId,
       startDate,
       endDate,
-      staffId,
+      effectiveStaffId,
     );
 
     if (affectedCount > 0) {
@@ -135,9 +143,17 @@ export async function reassignAppointmentAction(
   newDate: string,
   newTime: string,
   reason: string,
-  staffId: string,
+  staffId?: string,
 ): Promise<ServiceResult<void>> {
   try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const effectiveStaffId = (staffId && staffId.trim() !== "") ? staffId : user?.id;
+
+    if (!effectiveStaffId) {
+      return { success: false, error: "Authenticated staff account is required" };
+    }
+
     const service = new ReassignmentService();
     const result = await service.reassignAppointment(
       appointmentId,
@@ -145,14 +161,12 @@ export async function reassignAppointmentAction(
       newDate,
       newTime,
       reason,
-      staffId,
+      effectiveStaffId,
     );
 
     if (!result.success) {
       return { success: false, error: result.error };
     }
-
-    const supabase = await createServerSupabaseClient();
 
     const { data: appointment } = await supabase
       .from("appointments")
@@ -219,6 +233,184 @@ export async function getCurrentStaffIdAction(): Promise<ServiceResult<string>> 
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to get staff ID",
+    };
+  }
+}
+
+export async function getCurrentDentistInfoAction(): Promise<ServiceResult<{ role: string; currentDentistId?: string; currentDentistName?: string }>> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const { data: appUser } = await supabase
+      .from("users")
+      .select("role, first_name, last_name")
+      .eq("id", user.id)
+      .single();
+
+    const role = appUser?.role ?? "admin";
+    let currentDentistId: string | undefined;
+    let currentDentistName: string | undefined;
+
+    if (role === "dentist") {
+      const { data: dentist } = await supabase
+        .from("dentists")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (dentist) {
+        currentDentistId = dentist.id;
+        currentDentistName = appUser ? `${appUser.first_name} ${appUser.last_name}` : undefined;
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        role,
+        currentDentistId,
+        currentDentistName,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get dentist info",
+    };
+  }
+}
+
+export interface WeeklyScheduleDay {
+  day_of_week: number;
+  day_name: string;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
+}
+
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+export async function getWeeklyScheduleAction(dentistId: string): Promise<ServiceResult<WeeklyScheduleDay[]>> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: dbSchedules, error } = await supabase
+      .from("dentist_schedules")
+      .select("*")
+      .eq("dentist_id", dentistId)
+      .order("day_of_week");
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    const scheduleMap = new Map<number, { start_time: string; end_time: string; is_active: boolean }>();
+    if (dbSchedules) {
+      for (const item of dbSchedules) {
+        scheduleMap.set(item.day_of_week, {
+          start_time: item.start_time ? item.start_time.slice(0, 5) : "08:00",
+          end_time: item.end_time ? item.end_time.slice(0, 5) : "17:00",
+          is_active: item.is_active ?? true,
+        });
+      }
+    }
+
+    const fullSchedule: WeeklyScheduleDay[] = [];
+    for (let day = 0; day <= 6; day++) {
+      const existing = scheduleMap.get(day);
+      fullSchedule.push({
+        day_of_week: day,
+        day_name: DAY_NAMES[day],
+        start_time: existing ? existing.start_time : "08:00",
+        end_time: existing ? existing.end_time : "17:00",
+        is_active: existing ? existing.is_active : day >= 1 && day <= 5,
+      });
+    }
+
+    return { success: true, data: fullSchedule };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch weekly schedule",
+    };
+  }
+}
+
+export async function saveWeeklyScheduleAction(
+  dentistId: string,
+  days: { day_of_week: number; start_time: string; end_time: string; is_active: boolean }[]
+): Promise<ServiceResult<void>> {
+  try {
+    const supabase = await createServerSupabaseClient();
+
+    for (const day of days) {
+      const { data: existing } = await supabase
+        .from("dentist_schedules")
+        .select("id")
+        .eq("dentist_id", dentistId)
+        .eq("day_of_week", day.day_of_week)
+        .single();
+
+      if (existing) {
+        await supabase
+          .from("dentist_schedules")
+          .update({
+            start_time: `${day.start_time}:00`,
+            end_time: `${day.end_time}:00`,
+            is_active: day.is_active,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+      } else {
+        await supabase
+          .from("dentist_schedules")
+          .insert({
+            dentist_id: dentistId,
+            day_of_week: day.day_of_week,
+            start_time: `${day.start_time}:00`,
+            end_time: `${day.end_time}:00`,
+            is_active: day.is_active,
+          });
+      }
+    }
+
+    return { success: true, data: undefined };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to save weekly schedule",
+    };
+  }
+}
+
+export async function getDentistBlocksAction(dentistId: string): Promise<ServiceResult<import("@/lib/types/database").DentistBlock[]>> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const dentistService = new DentistService(supabase);
+    const blocks = await dentistService.getBlocks(dentistId);
+    return { success: true, data: blocks };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch blocks",
+    };
+  }
+}
+
+export async function deleteDentistBlockAction(blockId: string): Promise<ServiceResult<void>> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const dentistService = new DentistService(supabase);
+    await dentistService.deleteBlock(blockId);
+    return { success: true, data: undefined };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete block",
     };
   }
 }
