@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Plus, Clock, Calendar as CalendarIcon, User, Sparkles, CalendarCheck } from "lucide-react";
+import { todayLocal } from "@/lib/utils/date-utils";
 
 interface CalendarAppointment {
   id: string;
@@ -70,7 +71,7 @@ export function AppointmentCalendar({ appointments, month }: AppointmentCalendar
     return map;
   }, [appointments]);
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = todayLocal();
 
   const calendarDays = useMemo(() => {
     const days = [];

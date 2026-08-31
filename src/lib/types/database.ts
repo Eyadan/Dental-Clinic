@@ -8,6 +8,12 @@ import type {
   RecurrenceRule,
   ConversationStatus,
   MessageDirection,
+  ToothCondition,
+  ToothRestoration,
+  ToothSurgery,
+  ToothSurface,
+  ToothPresenceStatus,
+  ToothFindingCategory,
 } from "./enums";
 
 export interface User {
@@ -79,15 +85,81 @@ export interface Patient {
   id: string;
   first_name: string;
   last_name: string;
+  middle_name: string | null;
   contact_no: string;
   email: string | null;
   birth_date: string | null;
+  sex: "M" | "F" | null;
+  nickname: string | null;
+  religion: string | null;
+  nationality: string | null;
+  home_address: string | null;
+  home_no: string | null;
+  office_no: string | null;
+  fax_no: string | null;
+  occupation: string | null;
+  dental_insurance: string | null;
+  insurance_effective_date: string | null;
+  guardian_name: string | null;
+  guardian_occupation: string | null;
+  referred_by: string | null;
+  consultation_reason: string | null;
   medical_history: string | null;
   allergies: string | null;
   messenger_psid: string | null;
   is_archived: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface PatientMedicalRecord {
+  id: string;
+  patient_id: string;
+  previous_dentist: string | null;
+  last_dental_visit: string | null;
+  physician_name: string | null;
+  physician_specialty: string | null;
+  physician_office_address: string | null;
+  physician_office_no: string | null;
+  is_in_good_health: boolean | null;
+  is_under_medical_treatment: boolean | null;
+  medical_treatment_condition: string | null;
+  had_serious_illness_or_surgery: boolean | null;
+  illness_or_surgery_details: string | null;
+  was_hospitalized: boolean | null;
+  hospitalization_details: string | null;
+  taking_medication: boolean | null;
+  medication_details: string | null;
+  uses_tobacco: boolean | null;
+  uses_alcohol_or_drugs: boolean | null;
+  allergy_local_anesthetic: boolean;
+  allergy_penicillin_antibiotics: boolean;
+  allergy_sulfa_drugs: boolean;
+  allergy_aspirin: boolean;
+  allergy_latex: boolean;
+  allergy_others: string | null;
+  bleeding_time: string | null;
+  is_pregnant: boolean | null;
+  is_nursing: boolean | null;
+  taking_birth_control: boolean | null;
+  blood_type: string | null;
+  blood_pressure: string | null;
+  signed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MedicalCondition {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface PatientMedicalCondition {
+  id: string;
+  patient_id: string;
+  condition_id: string;
+  created_at: string;
 }
 
 export interface DentalService {
@@ -155,6 +227,83 @@ export interface ConsentForm {
   staff_id: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface ConsentClause {
+  id: string;
+  clause_key: string;
+  title: string;
+  body_text: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ConsentFormClause {
+  id: string;
+  consent_form_id: string;
+  clause_id: string;
+  patient_initials: string | null;
+  initialed_at: string | null;
+  created_at: string;
+}
+
+export interface DentalChart {
+  id: string;
+  patient_id: string;
+  periodontal_gingivitis: boolean;
+  periodontal_early_periodontitis: boolean;
+  periodontal_moderate_periodontitis: boolean;
+  periodontal_advanced_periodontitis: boolean;
+  occlusion_class_molar: boolean;
+  occlusion_overjet: boolean;
+  occlusion_overbite: boolean;
+  occlusion_midline_deviation: boolean;
+  occlusion_crossbite: boolean;
+  appliance_orthodontic: boolean;
+  appliance_stayplate: boolean;
+  appliance_others: string | null;
+  tmd_clenching: boolean;
+  tmd_clicking: boolean;
+  tmd_trismus: boolean;
+  tmd_muscle_spasm: boolean;
+  xray_periapical: boolean;
+  xray_periapical_tooth_no: string | null;
+  xray_panoramic: boolean;
+  xray_cephalometric: boolean;
+  xray_occlusal: boolean;
+  xray_others: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ToothPresence {
+  id: string;
+  dental_chart_id: string;
+  tooth_number: number;
+  presence: ToothPresenceStatus;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ToothFinding {
+  id: string;
+  dental_chart_id: string;
+  tooth_number: number;
+  category: ToothFindingCategory;
+  code: string;
+  notes: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  finding_surfaces?: FindingSurface[];
+}
+
+export interface FindingSurface {
+  finding_id: string;
+  surface: ToothSurface;
 }
 
 export interface TreatmentRecord {
@@ -267,12 +416,21 @@ export interface Database {
       clinic_settings: { Row: ClinicSetting; Insert: Partial<ClinicSetting>; Update: Partial<ClinicSetting> };
       clinic_holidays: { Row: ClinicHoliday; Insert: Partial<ClinicHoliday>; Update: Partial<ClinicHoliday> };
       patients: { Row: Patient; Insert: Partial<Patient>; Update: Partial<Patient> };
+      patient_medical_records: { Row: PatientMedicalRecord; Insert: Partial<PatientMedicalRecord>; Update: Partial<PatientMedicalRecord> };
+      medical_conditions: { Row: MedicalCondition; Insert: Partial<MedicalCondition>; Update: Partial<MedicalCondition> };
+      patient_medical_conditions: { Row: PatientMedicalCondition; Insert: Partial<PatientMedicalCondition>; Update: Partial<PatientMedicalCondition> };
       dental_services: { Row: DentalService; Insert: Partial<DentalService>; Update: Partial<DentalService> };
       appointments: { Row: Appointment; Insert: Partial<Appointment>; Update: Partial<Appointment> };
       appointment_services: { Row: AppointmentService; Insert: Partial<AppointmentService>; Update: Partial<AppointmentService> };
       appointment_history: { Row: AppointmentHistory; Insert: Partial<AppointmentHistory>; Update: Partial<AppointmentHistory> };
       qr_codes: { Row: QrCode; Insert: Partial<QrCode>; Update: Partial<QrCode> };
       consent_forms: { Row: ConsentForm; Insert: Partial<ConsentForm>; Update: Partial<ConsentForm> };
+      consent_clauses: { Row: ConsentClause; Insert: Partial<ConsentClause>; Update: Partial<ConsentClause> };
+      consent_form_clauses: { Row: ConsentFormClause; Insert: Partial<ConsentFormClause>; Update: Partial<ConsentFormClause> };
+      dental_charts: { Row: DentalChart; Insert: Partial<DentalChart>; Update: Partial<DentalChart> };
+      tooth_presence: { Row: ToothPresence; Insert: Partial<ToothPresence>; Update: Partial<ToothPresence> };
+      tooth_findings: { Row: ToothFinding; Insert: Partial<ToothFinding>; Update: Partial<ToothFinding> };
+      finding_surfaces: { Row: FindingSurface; Insert: Partial<FindingSurface>; Update: Partial<FindingSurface> };
       treatment_records: { Row: TreatmentRecord; Insert: Partial<TreatmentRecord>; Update: Partial<TreatmentRecord> };
       invoices: { Row: Invoice; Insert: Partial<Invoice>; Update: Partial<Invoice> };
       payments: { Row: Payment; Insert: Partial<Payment>; Update: Partial<Payment> };

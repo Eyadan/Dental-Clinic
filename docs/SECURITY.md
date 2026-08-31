@@ -367,7 +367,7 @@ CREATE POLICY "appointments_update" ON appointments
 | `appointments` | All staff; dentist sees own | Reception, admin | Reception, dentist (own), admin | **DENY** (archive instead) |
 | `appointment_services` | Via appointment RLS | Reception, admin | Reception, admin | Admin only |
 | `appointment_history` | All authenticated | Service role only (trigger) | **DENY ALL** | **DENY ALL** |
-| `qr_codes` | Staff; public validates by token | Reception, admin | Reception, admin (invalidation) | **DENY ALL** |
+| `qr_codes` | Staff; public validates by token | All staff (admin, reception, dentist) | All staff (admin, reception, dentist) (invalidation) | **DENY ALL** |
 | `consent_forms` | Dentist (own), admin | Dentist, reception | **DENY ALL** (immutable) | **DENY ALL** |
 | `treatment_records` | Dentist (own), admin | Dentist only | Dentist (own), admin | **DENY ALL** |
 | `invoices` | All authenticated | Reception, admin | Reception, admin | **DENY** (archive instead) |
@@ -377,6 +377,16 @@ CREATE POLICY "appointments_update" ON appointments
 | `messenger_conversations` | Reception, admin | Service role, reception | Reception, admin | **DENY ALL** |
 | `messenger_messages` | Reception, admin | Service role, reception | **DENY ALL** | **DENY ALL** |
 | `reassignment_logs` | All authenticated | Service role, reception, admin | **DENY ALL** | **DENY ALL** |
+| `dental_charts` | All staff | Dentist, admin | Dentist, admin | **DENY ALL** |
+| `tooth_presence` | All staff | Dentist, admin | Dentist, admin | Dentist, admin |
+| `tooth_findings` | All staff | Dentist, admin | Dentist, admin | Dentist, admin |
+| `finding_surfaces` | All staff | Dentist, admin | Dentist, admin | Dentist, admin |
+| `booking_sessions` | Service role only | Service role only | Service role only | Service role only |
+| `medical_conditions` | All authenticated | Admin only | Admin only | Admin only |
+| `patient_medical_records` | All staff | Reception, dentist, admin | Reception, dentist, admin | **DENY ALL** |
+| `patient_medical_conditions` | All staff | Reception, dentist, admin | Reception, dentist, admin | Reception, dentist, admin |
+| `consent_clauses` | All authenticated | Admin only | Admin only | Admin only |
+| `consent_form_clauses` | Via consent_forms | Via consent_forms | **DENY ALL** | **DENY ALL** |
 
 **Key RLS rules:**
 - **DELETE is denied on most tables** — records are archived (`is_archived = true`) not deleted (FR-137)
@@ -934,7 +944,7 @@ CREATE POLICY "audit_logs_insert" ON audit_logs
 | **Public** | Clinic name, services offered, contact info | No restrictions |
 | **Internal** | Staff names, roles, schedules | Authenticated staff only |
 | **Confidential** | Appointment details, billing records, Messenger conversations | RBAC + RLS enforced |
-| **Restricted (PHI)** | Patient medical history, allergies, dental chart, treatment records, consent forms | RBAC + RLS + encryption + audit logging + minimum necessary access |
+| **Restricted (PHI)** | Patient medical history, allergies, dental chart (presence, findings, surfaces), treatment records, consent forms | RBAC + RLS + encryption + audit logging + minimum necessary access |
 
 ### 12.3 Data Flows & Cross-Border Transfer
 

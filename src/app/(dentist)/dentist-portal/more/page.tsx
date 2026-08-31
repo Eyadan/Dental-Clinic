@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
+import { todayLocal } from "@/lib/utils/date-utils";
 import { MorePageClient } from "./more-client";
 
 export default async function MorePage() {
@@ -22,7 +23,7 @@ export default async function MorePage() {
     .eq("id", user.id)
     .single();
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayLocal();
 
   const { data: todayAppointments } = await supabase
     .from("appointments")

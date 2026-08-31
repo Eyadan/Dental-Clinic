@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { todayLocal } from "@/lib/utils/date-utils";
 import { CheckInClient } from "./check-in-client";
 
 interface TodayAppointment {
@@ -14,7 +15,7 @@ interface TodayAppointment {
 
 export default async function CheckInPage() {
   const supabase = await createServerSupabaseClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayLocal();
 
   const { data: appointments } = await supabase
     .from("appointments")

@@ -239,11 +239,11 @@ Dental Clinic Management System
 
 ### 6.1 Desktop Navigation (Staff Dashboard)
 
-**Pattern:** Persistent left sidebar + contextual top bar
+**Pattern:** Persistent left sidebar (collapsible) + contextual top bar
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  [Logo]  Dental Clinic Management          [User ▾]  │  ← Top bar
+│ [«] [Logo]  Dental Clinic Management     [User ▾]  │  ← Top bar
 ├──────────┬──────────────────────────────────────────┤
 │          │                                          │
 │ Overview │                                          │
@@ -256,7 +256,29 @@ Dental Clinic Management System
 │ Settings │                                          │
 │          │                                          │
 └──────────┴──────────────────────────────────────────┘
+
+Collapsed mode (w-16, icon-only):
+┌────┬────────────────────────────────────────────────┐
+│ [»]│  Dental Clinic Management           [User ▾]   │
+├────┼────────────────────────────────────────────────┤
+│ ○  │                                                │
+│ 📋 │           Main content area                    │
+│ 👤 │                                                │
+│ 📅 │                                                │
+│ ⚡ │                                                │
+│ 💰 │                                                │
+│ 💬 │                                                │
+│ ⚙  │                                                │
+│    │                                                │
+└────┴────────────────────────────────────────────────┘
 ```
+
+**Collapsible sidebar behavior:**
+- **Toggle:** Icon-only button in topbar left side (PanelLeftClose/PanelLeftOpen); desktop-only (hidden on mobile)
+- **Width transition:** 256px (expanded) → 64px (collapsed), 200ms ease-in-out
+- **Collapsed state:** Logo icon only (no text), nav items show icon-only with hover tooltips (right side, 0ms delay)
+- **Expanded state:** Logo + "Smile Dental" + role badge, nav items show icon + label
+- **User name:** Always visible in topbar dropdown (avatar + name + chevron)
 
 **Sidebar items by role:**
 
@@ -278,6 +300,7 @@ Dental Clinic Management System
 - **Hick's Law:** Max 10 items in sidebar — decision time stays low
 - **Fitts's Law:** Sidebar items are full-width, tall (48px height) — easy to hit
 - **Recognition over recall:** Icons + labels (not icon-only) — no memorization needed
+- **Collapsible:** Icon-only mode with tooltips maximizes content space when needed; toggle via bottom button
 
 ### 6.2 Mobile Navigation (Dentist Portal)
 
@@ -434,23 +457,27 @@ Dental Clinic Management System
 
 | Aspect | Detail |
 |---|---|
-| **Purpose** | Visual interactive tooth chart for documenting dental conditions |
-| **User goal** | Click a tooth to record findings, procedures, or conditions |
+| **Purpose** | Visual interactive tooth chart for documenting dental findings |
+| **User goal** | Click a tooth to record presence, multiple findings (conditions, restorations, surgeries), each with one or more surfaces |
 | **Standard** | FDI Two-Digit Notation (ISO 3950) — used by PDA and Philippine dentists |
 | **Layout** | Full-width interactive chart, dentist's view orientation (patient's right = chart left) |
 | **Chart structure** | |
 | — Upper arch | Quadrants 1 (upper right) and 2 (upper left), teeth 11–18 and 21–28 |
 | — Lower arch | Quadrants 4 (lower right) and 3 (lower left), teeth 41–48 and 31–38 |
 | — Deciduous | Quadrants 5–8 (toggle for pediatric patients) |
-| **Tooth states** | Healthy, Caries, Filled, Crown, Missing, Implant, Root Canal, Bridge, Extraction Needed |
-| **Interaction** | Click tooth → popover with state selector + notes field → save updates chart |
-| **Visual** | Each tooth is an SVG shape; color-coded by state (see Design System §10) |
+| **Data model** | Normalized: `tooth_presence` (single baseline status per tooth), `tooth_findings` (multiple independent findings per tooth), `finding_surfaces` (one or more surfaces per finding) |
+| **Presence states** | Present (✓), Missing (M), Impacted (Im), Unerupted (Un) — radio selection, mutually exclusive |
+| **Finding categories** | Conditions (Decayed, Missing due to Caries, Impacted, Supernumerary, Root Fragment, Unerupted), Restorations (Amalgam, Composite, Jacket Crown, Abutment, Attachment, Pontic, Inlay, Implant, Sealants, Removable Denture), Surgery (Extraction due to Caries, Extraction due to Other Causes) |
+| **Surfaces** | Mesial (M), Distal (D), Buccal (B), Lingual (L), Occlusal (O) — optional multi-select; if none selected, finding applies to whole tooth; surfaces persist after each add for rapid sequential findings |
+| **Interaction** | Click tooth → ToothEditor panel: ① Presence radio buttons → ② Surface multi-select (optional — click surface on tooth SVG or M/D/B/L/O buttons in editor; both are synced bidirectionally; surfaces persist after each add) → ③ Click `+` to add condition/restoration/surgery finding → ④ Existing findings list with per-finding delete + Clear All |
+| **Multi-finding** | A tooth can have multiple independent findings (e.g. Decayed + Amalgam on same surface). Each finding stores its own set of surfaces. Conditions and restorations can coexist on the same tooth and surface. |
+| **Visual** | Each tooth is an SVG with 5 tappable surface zones; surface color-coded by finding category (surgery > restoration > condition priority); multiple codes displayed joined by `/` (e.g. `D/Am`); presence shown as ring color around tooth |
 | **Loading** | Skeleton chart outline |
 | **Error** | "Failed to load dental chart" with retry |
-| **Empty** | All teeth default to "Healthy" (white/neutral) |
-| **Accessibility** | Each tooth is a button with ARIA label: "Tooth 11, upper right central incisor, healthy" |
-| **Microinteraction** | Tooth hover: scale 1.1 + tooltip with FDI number; state change: color transition 200ms |
-| **UX writing** | FDI number always displayed on tooth; state name in tooltip and popover |
+| **Empty** | All teeth default to Present with no findings (white/neutral) |
+| **Accessibility** | Each tooth is a button with ARIA label: "Tooth 11 diagram with 5 tappable surfaces"; surfaces are individually tappable regions |
+| **Microinteraction** | Tooth hover: scale 1.1 + tooltip with FDI number and finding summary; finding add: button press feedback; surface toggle: color transition 200ms |
+| **UX writing** | FDI number always displayed below tooth; finding codes (D, Am, X) shown on surfaces; legend with 4 categories (Presence, Conditions, Restorations, Surgery) |
 
 **FDI Chart Visual Layout:**
 
@@ -715,19 +742,41 @@ Dental Clinic Management System
 | `--color-purple` | #EDE9FE | #5B21B6 | #8B5CF6 | In Consultation status |
 | `--color-teal` | #CCFBF1 | #115E59 | #14B8A6 | Checkout status, consent signed |
 
-**Dental Chart Tooth States:**
+**Dental Chart Presence States (ring around tooth):**
 
-| State | Color | Hex |
-|---|---|---|
-| Healthy | White/neutral | #FFFFFF with #E5E7EB border |
-| Caries | Red fill | #FEE2E2 with #DC2626 border |
-| Filled | Blue fill | #DBEAFE with #2563EB border |
-| Crown | Gold fill | #FEF3C7 with #F59E0B border |
-| Missing | Grey (dashed outline) | #F3F4F6 with #9CA3AF dashed border |
-| Implant | Purple fill | #EDE9FE with #8B5CF6 border |
-| Root Canal | Dark blue fill | #1E3A8A |
-| Bridge | Teal fill | #CCFBF1 with #14B8A6 border |
-| Extraction Needed | Red (diagonal stripes) | #FEE2E2 with #DC2626 diagonal pattern |
+| State | Code | Color | Hex |
+|---|---|---|---|
+| Present | ✓ | Green ring | #10B981 border |
+| Missing | M | Grey dashed ring | #9CA3AF dashed border |
+| Impacted | Im | Orange ring | #F59E0B border |
+| Unerupted | Un | Blue ring | #3B82F6 border |
+
+**Dental Chart Finding Colors (surface fill):**
+
+| Category | Code | Color | Hex |
+|---|---|---|---|
+| **Conditions** | | | |
+| Decayed (Caries) | D | Red fill | #FEE2E2 with #DC2626 border |
+| Missing due to Caries | M | Red-dark fill | #FECACA with #B91C1C border |
+| Missing due to Other | MO | Grey fill | #F3F4F6 with #6B7280 border |
+| Impacted Tooth | Im | Orange fill | #FED7AA with #EA580C border |
+| Supernumerary | Sp | Purple fill | #EDE9FE with #8B5CF6 border |
+| Root Fragment | Rf | Brown fill | #FEF3C7 with #92400E border |
+| Unerupted | Un | Blue fill | #DBEAFE with #2563EB border |
+| **Restorations** | | | |
+| Amalgam Filling | Am | Silver fill | #E5E7EB with #6B7280 border |
+| Composite Filling | Co | Blue-white fill | #DBEAFE with #3B82F6 border |
+| Jacket Crown | JC | Gold fill | #FEF3C7 with #F59E0B border |
+| Abutment | Ab | Teal fill | #CCFBF1 with #14B8A6 border |
+| Attachment | Att | Teal-dark fill | #99F6E4 with #0D9488 border |
+| Pontic | P | Teal fill | #CCFBF1 with #14B8A6 border |
+| Inlay | In | Blue-dark fill | #BFDBFE with #1D4ED8 border |
+| Implant | Imp | Purple fill | #EDE9FE with #8B5CF6 border |
+| Sealants | S | Green-light fill | #D1FAE5 with #059669 border |
+| Removable Denture | Rm | Pink fill | #FCE7F3 with #DB2777 border |
+| **Surgery** | | | |
+| Extraction (Caries) | X | Red-dark fill | #FEE2E2 with #991B1B border |
+| Extraction (Other) | XO | Red-grey fill | #FECACA with #7F1D1D border |
 
 ### 10.2 Typography
 
@@ -934,7 +983,7 @@ Dental Clinic Management System
 - **Color is never the only indicator:** Status badges always include text + icon, not just color
 - **Screen reader compatibility:** All content readable via NVDA/VoiceOver; ARIA labels on icon-only buttons
 - **Motion reduction:** `@media (prefers-reduced-motion: reduce)` disables all non-essential animations
-- **Dental chart accessibility:** Each tooth is a `<button>` with descriptive ARIA label: "Tooth 11, upper right central incisor, state: healthy"
+- **Dental chart accessibility:** Each tooth is a `<button>` with ARIA label: "Tooth 11 diagram with 5 tappable surfaces"; surfaces are individually tappable regions with descriptive labels
 - **Signature pad alternative:** "Type your full name instead" option for patients who cannot sign with stylus
 
 ---
@@ -954,7 +1003,8 @@ Dental Clinic Management System
 | Modal close | Esc / overlay click / X | Scale down to 0.95 + fade out | 150ms | Dismissal |
 | Skeleton loader | Page load | Shimmer sweep left-to-right | 1.5s loop | Loading indication |
 | Dental chart tooth hover | Mouse over tooth | Scale 1.1 + tooltip with FDI number | 100ms scale, instant tooltip | Identification |
-| Dental chart state change | Select new state | Color transition on tooth | 200ms | Visual feedback |
+| Dental chart finding add | Click `+` button | Button press + surface color transition | 200ms | Visual feedback |
+| Dental chart presence change | Select presence radio | Ring color transition on tooth | 200ms | Visual feedback |
 | Signature pad draw | Stylus/touch on canvas | Real-time ink rendering | Instant | Natural signing |
 | Registration step advance | Click Next | Slide transition to next step | 250ms | Progress perception |
 | Progress bar update | Step change | Width animates to new percentage | 300ms | Goal gradient |
@@ -1075,11 +1125,12 @@ Dental Clinic Management System
 
 ### Dental Chart Implementation
 
-- **SVG-based:** Each tooth is an SVG path with unique ID; clickable button overlay for accessibility
+- **SVG-based:** Each tooth is an SVG with 5 tappable surface zones (mesial, distal, buccal, lingual, occlusal); clickable button overlay for accessibility
 - **FDI notation:** Tooth IDs use FDI two-digit system (11–48 for permanent, 51–85 for deciduous)
-- **State storage:** Tooth states stored in `treatment_records.dental_chart` as JSONB: `{"11": "caries", "16": "filled", "37": "missing"}`
+- **Data model:** Normalized 3-table model — `tooth_presence` (baseline status per tooth), `tooth_findings` (multiple independent findings per tooth), `finding_surfaces` (one or more surfaces per finding). Linked to `dental_charts` which is 1:1 with `patients`.
+- **Multi-finding:** A tooth can have multiple findings (e.g. Decayed + Amalgam on same surface). Findings are independent — conditions, restorations, and surgeries can all coexist.
 - **Tooth shapes:** Use standard dental chart SVG paths (upper/lower arch, adult/deciduous)
-- **Touch support:** Teeth are large enough for touch (min 32×32px on tablet)
+- **Touch support:** Teeth are large enough for touch (min 32×32px on tablet); surfaces are individually tappable
 
 ### Signature Pad Implementation
 

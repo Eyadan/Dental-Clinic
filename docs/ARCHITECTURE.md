@@ -188,16 +188,18 @@ app/
 ```
 components/
 ├── ui/                         # shadcn/ui primitives
-├── layout/                     # sidebar, topbar, mobile-nav
+├── layout/                     # dashboard-shell (collapsible sidebar), sidebar-nav (icon-only mode + tooltips), topbar
 ├── bookings/                   # booking-list, booking-card, booking-detail
-├── patients/                   # patient-search, patient-form, patient-record, dental-chart
+├── patients/                   # patient-search, patient-form-dialog, patient-detail, patient-form-sections
+├── dental-chart/               # dental-chart-panel, dental-chart-grid, tooth-icon, tooth-editor, dental-chart-legend, tooth-legend
 ├── queue/                      # queue-list, queue-item, call-next-button
 ├── consent/                    # consent-form, signature-pad, consent-preview
 ├── billing/                    # invoice-detail, payment-form, payment-method-selector, proof-upload
-├── chat/                       # conversation-list, chat-panel, chat-message, takeover-controls
+├── chat/                       # conversation-list, chat-thread, patient-info-panel, takeover-controls
 ├── schedule/                   # calendar-view, dentist-schedule-form, availability-picker
 ├── settings/                   # settings-tabs, clinic/dentist/appointment/messenger/payment/security-settings
-├── shared/                     # error-state, empty-state, loading-spinner, status-badge, confirm-dialog
+├── shared/                     # error-state, empty-state, skeleton-loader, archive-dialog, confirm-dialog
+├── dentist-portal/             # dentist-portal-shell, emergency-button, schedule/queue/more clients
 └── qr/                         # qr-generator, qr-registration-form
 ```
 
@@ -321,6 +323,16 @@ All tables conform to **Third Normal Form** — no transitive dependencies, no r
 | `messenger_conversations` | `id`, `patient_psid`, `status`, `taken_over_by` (FK), `taken_over_at` | 1:N → `messenger_messages` |
 | `messenger_messages` | `id`, `conversation_id` (FK), `direction`, `content`, `sent_at` | N:1 ← `messenger_conversations` |
 | `reassignment_logs` | `id`, `appointment_id` (FK), `original_dentist_id` (FK), `new_dentist_id` (FK), `original_schedule`, `new_schedule`, `reason`, `staff_id` (FK), `created_at` | N:1 ← `appointments` |
+| `dental_charts` | `id`, `patient_id` (FK UQ), `periodontal_*` (4 bools), `occlusion_*` (5 bools), `appliance_*` (3 fields), `tmd_*` (4 bools), `xray_*` (5 fields) | 1:1 ← `patients` |
+| `tooth_presence` | `id`, `chart_id` (FK), `tooth_number`, `presence` (enum: present/missing/impacted/unerupted) | N:1 ← `dental_charts` |
+| `tooth_findings` | `id`, `chart_id` (FK), `tooth_number`, `category` (enum: condition/restoration/surgery), `code` (string) | 1:N → `finding_surfaces` |
+| `finding_surfaces` | `id`, `finding_id` (FK), `surface` (enum: mesial/distal/buccal/lingual/occlusal) | N:1 ← `tooth_findings` |
+| `booking_sessions` | `id`, `patient_psid`, `session_data` (JSONB), `step`, `expires_at`, `created_at` | Standalone (Messenger booking flow) |
+| `medical_conditions` | `id`, `name` (UQ), `category`, `is_active` | M:N ↔ `patients` via `patient_medical_conditions` |
+| `patient_medical_records` | `id`, `patient_id` (FK UQ), `physician_name`, `physician_phone`, `current_medications`, `previous_surgeries`, `hospitalizations`, `family_history`, `created_at`, `updated_at` | 1:1 ← `patients` |
+| `patient_medical_conditions` | `id`, `patient_id` (FK), `condition_id` (FK) | Junction table |
+| `consent_clauses` | `id`, `code` (UQ), `title`, `body_text`, `is_active`, `display_order` | M:N ↔ `consent_forms` via `consent_form_clauses` |
+| `consent_form_clauses` | `id`, `consent_form_id` (FK), `clause_id` (FK) | Junction table |
 
 ### 5.2 Indexes
 
@@ -354,6 +366,19 @@ CREATE INDEX idx_waitlist_date_joined ON waitlist_entries (requested_date, joine
 -- Dentist schedule lookups
 CREATE INDEX idx_dentist_schedules_dentist ON dentist_schedules (dentist_id, day_of_week);
 CREATE INDEX idx_dentist_blocks_dentist ON dentist_blocks (dentist_id, start_datetime);
+
+-- Dental chart findings
+CREATE INDEX idx_dental_charts_patient ON dental_charts (patient_id);
+CREATE INDEX idx_tooth_presence_chart ON tooth_presence (chart_id, tooth_number);
+CREATE INDEX idx_tooth_findings_chart ON tooth_findings (chart_id, tooth_number);
+CREATE INDEX idx_finding_surfaces_finding ON finding_surfaces (finding_id);
+
+-- Booking sessions
+CREATE INDEX idx_booking_sessions_psid ON booking_sessions (patient_psid, expires_at);
+
+-- Medical conditions
+CREATE INDEX idx_medical_conditions_name ON medical_conditions (name);
+CREATE INDEX idx_patient_medical_conditions_patient ON patient_medical_conditions (patient_id);
 ```
 
 ### 5.3 Row-Level Security (RLS) Policies
@@ -365,9 +390,19 @@ RLS enabled on **all tables**. Key policies:
 | `users` | Own row; admins read all | Own row; admins update all |
 | `patients` | All authenticated staff (non-archived) | Reception, dentists, admins |
 | `appointments` | All staff; dentists see own | Reception, dentists (own), admins |
-| `qr_codes` | Staff; public validates by token | Reception, admins |
-| `consent_forms` | Dentists (own), admins | Dentists, reception |
-| `treatment_records` | Dentists (own), admins | Dentists, admins |
+| `qr_codes` | Staff; public validates by token | All staff (admin, reception, dentist) |
+| `consent_forms` | Dentist (own), admin | Dentist, admin |
+| `treatment_records` | Dentist (own), admin | Dentist, admin |
+| `dental_charts` | All staff | Dentist, admin |
+| `tooth_presence` | All staff | Dentist, admin |
+| `tooth_findings` | All staff | Dentist, admin |
+| `finding_surfaces` | All staff | Dentist, admin |
+| `booking_sessions` | Service role only | Service role only |
+| `medical_conditions` | All authenticated | Admin only |
+| `patient_medical_records` | All staff | Reception, dentist, admin |
+| `patient_medical_conditions` | All staff | Reception, dentist, admin |
+| `consent_clauses` | All authenticated | Admin only |
+| `consent_form_clauses` | Via consent_forms | Via consent_forms |
 | `invoices` / `payments` | All authenticated staff | Reception, admins |
 | `audit_logs` | Admins only | Service role only (no user INSERT); **UPDATE/DELETE DENIED** |
 | `clinic_settings` | All authenticated staff | Admins only |
@@ -662,7 +697,7 @@ CRON_SECRET=<random_secret>
    c. Update visit_status=Consent Signed
    d. Write audit log
 9. Dentist begins treatment → visit_status=Treatment Ongoing
-   a. Updates dental chart, clinical notes, diagnosis
+   a. Updates dental chart (presence per tooth, multi-finding per tooth/surface: conditions, restorations, surgeries), clinical notes, diagnosis
    b. Optional: pause/resume treatment (treatment.service)
 10. Dentist completes treatment → visit_status=Checkout
 11. Realtime: reception notified (FR-59)

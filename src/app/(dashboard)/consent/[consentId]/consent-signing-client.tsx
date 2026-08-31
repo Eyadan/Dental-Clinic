@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { SignaturePadHandle } from "@/components/consent/signature-pad";
@@ -16,6 +17,13 @@ const SignaturePad = dynamic(
   ) },
 );
 
+interface ConsentClauseView {
+  formClauseId: string;
+  title: string;
+  bodyText: string;
+  patientInitials: string | null;
+}
+
 interface ConsentSigningClientProps {
   consentId: string;
   treatmentInfo: string;
@@ -23,6 +31,7 @@ interface ConsentSigningClientProps {
   patientName: string;
   signedAt: string | null;
   signatureImageUrl: string | null;
+  clauses: ConsentClauseView[];
 }
 
 export function ConsentSigningClient({
@@ -32,13 +41,24 @@ export function ConsentSigningClient({
   patientName,
   signedAt,
   signatureImageUrl,
+  clauses,
 }: ConsentSigningClientProps) {
   const sigPadRef = useRef<SignaturePadHandle>(null);
   const [isSigning, setIsSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSigned, setIsSigned] = useState(!!signedAt);
+  const [initials, setInitials] = useState<Record<string, string>>(
+    Object.fromEntries(clauses.map((c) => [c.formClauseId, c.patientInitials ?? ""])),
+  );
+
+  const allInitialed = clauses.every((c) => initials[c.formClauseId]?.trim());
 
   const handleSign = async () => {
+    if (!allInitialed) {
+      setError("Please initial every clause below before signing");
+      return;
+    }
+
     if (sigPadRef.current?.isEmpty()) {
       setError("Please provide a signature");
       return;
@@ -49,7 +69,7 @@ export function ConsentSigningClient({
 
     try {
       const signatureDataUrl = sigPadRef.current?.toDataURL() ?? "";
-      const result = await signConsentAction(consentId, signatureDataUrl);
+      const result = await signConsentAction(consentId, signatureDataUrl, initials);
 
       if (result.success) {
         setIsSigned(true);
@@ -110,11 +130,32 @@ export function ConsentSigningClient({
           <CardHeader>
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <FileCheck className="h-4 w-4" />
-              Treatment Information (v{consentVersion})
+              Informed Consent Clauses (v{consentVersion})
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm whitespace-pre-wrap">{treatmentInfo}</p>
+          <CardContent className="space-y-3">
+            {treatmentInfo && <p className="text-sm whitespace-pre-wrap text-muted-foreground">{treatmentInfo}</p>}
+            {clauses.map((clause) => (
+              <div key={clause.formClauseId} className="p-3 rounded-lg border bg-muted/30 space-y-2">
+                <p className="text-sm font-bold underline">{clause.title}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{clause.bodyText}</p>
+                <div className="flex items-center justify-end gap-2">
+                  <span className="text-xs text-muted-foreground">Initial:</span>
+                  <Input
+                    value={initials[clause.formClauseId] ?? ""}
+                    onChange={(e) =>
+                      setInitials((prev) => ({ ...prev, [clause.formClauseId]: e.target.value }))
+                    }
+                    maxLength={5}
+                    className="h-8 w-16 text-center text-xs font-bold uppercase"
+                    placeholder="___"
+                  />
+                </div>
+              </div>
+            ))}
+            <p className="text-sm font-semibold text-center pt-2 border-t">
+              I understand that dentistry is not an exact science and that no dentist can properly guarantee accurate results all the time.
+            </p>
           </CardContent>
         </Card>
 
@@ -124,14 +165,14 @@ export function ConsentSigningClient({
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              I, {patientName}, confirm that I have read and understood the treatment
-              information provided above. I consent to the described dental treatment
-              and acknowledge that I have had the opportunity to ask questions.
+              I, {patientName}, confirm that I have read and understood, and initialed, each of the
+              consent clauses above. I authorize the dentist and dental auxiliaries to proceed with
+              & perform the dental restorations & treatments as explained to me.
             </p>
             <SignaturePad ref={sigPadRef} label="Patient signature" />
             <Button
               onClick={handleSign}
-              disabled={isSigning}
+              disabled={isSigning || !allInitialed}
               size="lg"
               className="w-full"
             >
@@ -142,6 +183,9 @@ export function ConsentSigningClient({
               )}
               Sign & Submit
             </Button>
+            {!allInitialed && (
+              <p className="text-xs text-center text-muted-foreground">Initial every clause above to enable signing</p>
+            )}
           </CardContent>
         </Card>
       </div>

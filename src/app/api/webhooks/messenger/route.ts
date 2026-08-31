@@ -4,7 +4,7 @@ import { processIncomingMessage } from "@/lib/services/booking-parser";
 
 const MAX_MESSAGE_LENGTH = 500;
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_MESSAGES = 5;
+const RATE_LIMIT_MAX_MESSAGES = 15;
 const PROCESSED_MID_CACHE_SIZE = 100;
 
 const rateLimitMap = new Map<string, number[]>();

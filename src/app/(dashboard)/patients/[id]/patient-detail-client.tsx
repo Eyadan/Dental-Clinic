@@ -6,24 +6,32 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PatientFormDialog } from "@/components/patients/patient-form-dialog";
+import { DentalChartPanel } from "@/components/dental-chart/dental-chart-panel";
 import { updatePatientAction } from "../actions";
 import { Pencil, Phone, Mail, Calendar, AlertTriangle, User, HeartPulse, CheckCircle2, FileText, ArrowUpRight } from "lucide-react";
-import type { Patient } from "@/lib/types/database";
+import type { Patient, PatientMedicalRecord, MedicalCondition, DentalChart, ToothPresence, ToothFinding } from "@/lib/types/database";
 
 interface PatientDetailClientProps {
   patient: Patient;
+  medicalRecord: PatientMedicalRecord | null;
+  conditions: MedicalCondition[];
+  conditionIds: string[];
+  dentalChart: DentalChart;
+  dentalChartPresence: ToothPresence[];
+  dentalChartFindings: ToothFinding[];
 }
 
-type TabId = "profile" | "medical" | "visits" | "billing";
+type TabId = "profile" | "medical" | "dental_chart" | "visits" | "billing";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "profile", label: "Demographics & Profile" },
   { id: "medical", label: "Medical History" },
+  { id: "dental_chart", label: "Dental Chart" },
   { id: "visits", label: "Visit History" },
   { id: "billing", label: "Invoices & Billing" },
 ];
 
-export function PatientDetailClient({ patient }: PatientDetailClientProps) {
+export function PatientDetailClient({ patient, medicalRecord, conditions, conditionIds, dentalChart, dentalChartPresence, dentalChartFindings }: PatientDetailClientProps) {
   const [activeTab, setActiveTab] = useState<TabId>("profile");
   const [editOpen, setEditOpen] = useState(false);
 
@@ -170,11 +178,58 @@ export function PatientDetailClient({ patient }: PatientDetailClientProps) {
       )}
 
       {activeTab === "medical" && (
-        <Card className="border border-border/80 bg-card rounded-2xl shadow-xs p-6 text-center text-xs text-muted-foreground">
-          <HeartPulse className="mx-auto h-8 w-8 text-cyan-600/40 mb-2" />
-          <p className="font-bold text-foreground">Clinical Chart & Periodontal Records</p>
-          <p className="text-muted-foreground mt-1">Consultation history, dental charts, and consent forms will appear here.</p>
-        </Card>
+        <div className="grid gap-5 md:grid-cols-2">
+          <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
+            <CardHeader className="border-b border-border/40 pb-3">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <HeartPulse className="h-4 w-4 text-cyan-600" /> Physician & Screening
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-2 text-xs">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-muted/30">
+                <span className="text-muted-foreground">Physician</span>
+                <span className="font-semibold text-foreground">{medicalRecord?.physician_name || "Not provided"}</span>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-muted/30">
+                <span className="text-muted-foreground">Blood Type / Pressure</span>
+                <span className="font-semibold text-foreground font-mono">{medicalRecord?.blood_type || "—"} / {medicalRecord?.blood_pressure || "—"}</span>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-muted/30">
+                <span className="text-muted-foreground">In Good Health</span>
+                <Badge variant="outline" className={medicalRecord?.is_in_good_health ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10" : "border-border text-muted-foreground"}>
+                  {medicalRecord?.is_in_good_health ? "Yes" : "No / Not specified"}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
+            <CardHeader className="border-b border-border/40 pb-3">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" /> Existing Conditions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 text-xs">
+              {conditionIds.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {conditions
+                    .filter((c) => conditionIds.includes(c.id))
+                    .map((c) => (
+                      <Badge key={c.id} variant="outline" className="border-amber-500/30 text-amber-700 bg-amber-500/10 text-[11px] font-semibold">
+                        {c.name}
+                      </Badge>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground italic">No known conditions checked.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === "dental_chart" && (
+        <DentalChartPanel patientId={patient.id} chart={dentalChart} presence={dentalChartPresence} findings={dentalChartFindings} />
       )}
 
       {activeTab === "visits" && (
@@ -197,6 +252,9 @@ export function PatientDetailClient({ patient }: PatientDetailClientProps) {
         open={editOpen}
         onOpenChange={setEditOpen}
         patient={patient}
+        medicalRecord={medicalRecord}
+        conditionIds={conditionIds}
+        conditions={conditions}
         onSubmit={(formData) => updatePatientAction(patient.id, formData)}
       />
     </div>

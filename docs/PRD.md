@@ -64,7 +64,7 @@ A web-based dental clinic management system that handles the full patient journe
 - Previous signed consents preserved exactly as presented (template changes don't alter past records)
 
 ### 2.9 Treatment Documentation
-- Dentist updates electronic dental chart during treatment
+- Dentist updates electronic dental chart during treatment using findings-based model: presence per tooth (present/missing/impacted/unerupted), multiple independent findings per tooth (conditions, restorations, surgeries), each finding applicable to one or more surfaces (mesial/distal/buccal/lingual/occlusal)
 - Records clinical notes, diagnosis, procedures performed, prescriptions, recommended treatment plans
 
 ### 2.10 Treatment Pause & Resume
@@ -326,7 +326,7 @@ npx supabase start       # starts local Supabase stack (Postgres, Auth, Storage,
 - **Staff Dashboard:** Overview of pending bookings, today's queue, alerts, quick actions
 - **Booking Dashboard:** List of pending/active booking requests with approve/decline actions, patient conversation history
 - **Queue View:** Real-time ordered list of waiting patients with status badges, call-next button
-- **Consultation View:** Tabbed patient record (profile, medical history, dental chart, previous visits) + treatment documentation panel
+- **Consultation View:** Tabbed patient record (profile, medical history, dental chart with findings-based model, previous visits) + treatment documentation panel
 - **Consent Screen:** Full-screen tablet view with consent text, signature pad, submit button
 - **Billing Screen:** Invoice line items, payment method selector, amount input, proof photo upload, split payment support
 - **Dentist Mobile Portal:** Simplified mobile-first interface — today's schedule, emergency declaration button, patient quick-view

@@ -35,19 +35,20 @@ import {
   getServicesAction,
 } from "./actions";
 import type { WaitlistEntryWithPatient, ReleasedSlot } from "@/lib/services/waitlist-service";
+import { todayLocal } from "@/lib/utils/date-utils";
 
 export default function WaitlistClient() {
   const [waitlist, setWaitlist] = useState<WaitlistEntryWithPatient[]>([]);
   const [releasedSlots, setReleasedSlots] = useState<ReleasedSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(todayLocal());
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const [patients, setPatients] = useState<{ id: string; name: string }[]>([]);
   const [services, setServices] = useState<{ id: string; name: string }[]>([]);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [joinPatientId, setJoinPatientId] = useState<string>("");
-  const [joinDate, setJoinDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [joinDate, setJoinDate] = useState<string>(todayLocal());
   const [isJoining, setIsJoining] = useState(false);
 
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);

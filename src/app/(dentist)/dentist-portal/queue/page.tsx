@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
+import { todayLocal } from "@/lib/utils/date-utils";
 import { DentistQueueClient } from "./queue-client";
 
 export default async function DentistQueuePage() {
@@ -16,7 +17,7 @@ export default async function DentistQueuePage() {
 
   if (!dentist) return null;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayLocal();
 
   const { data: appointments, error } = await supabase
     .from("appointments")

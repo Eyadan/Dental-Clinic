@@ -32,6 +32,24 @@ export default async function ConsentPage({
     patients: { first_name: string; last_name: string };
   }).patients;
 
+  const { data: formClauses } = await supabase
+    .from("consent_form_clauses")
+    .select("id, patient_initials, consent_clauses(title, body_text, sort_order)")
+    .eq("consent_form_id", consentId);
+
+  const clauses = ((formClauses ?? []) as unknown as Array<{
+    id: string;
+    patient_initials: string | null;
+    consent_clauses: { title: string; body_text: string; sort_order: number };
+  }>)
+    .sort((a, b) => a.consent_clauses.sort_order - b.consent_clauses.sort_order)
+    .map((fc) => ({
+      formClauseId: fc.id,
+      title: fc.consent_clauses.title,
+      bodyText: fc.consent_clauses.body_text,
+      patientInitials: fc.patient_initials,
+    }));
+
   return (
     <ConsentSigningClient
       consentId={consent.id}
@@ -40,6 +58,7 @@ export default async function ConsentPage({
       patientName={`${patient.first_name} ${patient.last_name}`}
       signedAt={consent.signed_at}
       signatureImageUrl={consent.signature_image_url}
+      clauses={clauses}
     />
   );
 }

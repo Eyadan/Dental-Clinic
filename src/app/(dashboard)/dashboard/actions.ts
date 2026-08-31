@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { todayLocal } from "@/lib/utils/date-utils";
 import type { ServiceResult } from "@/lib/services/base-service";
 
 export interface StaffNotification {
@@ -69,7 +70,7 @@ export async function getDashboardStatsAction(): Promise<ServiceResult<{
 }>> {
   try {
     const supabase = await createServerSupabaseClient();
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayLocal();
 
     const { count: pendingBookings } = await supabase
       .from("appointments")

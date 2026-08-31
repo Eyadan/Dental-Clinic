@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
+import { todayLocal } from "@/lib/utils/date-utils";
 
 export async function GET() {
   const supabase = await createServerSupabaseClient();
@@ -10,7 +11,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayLocal();
 
   const { data: appointments, error } = await supabase
     .from("appointments")

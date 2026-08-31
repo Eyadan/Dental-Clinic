@@ -1,10 +1,11 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
+import { todayLocal } from "@/lib/utils/date-utils";
 import { QueueClient } from "./queue-client";
 
 export default async function QueuePage() {
   const supabase = await createServerSupabaseClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayLocal();
 
   const { data: appointments, error } = await supabase
     .from("appointments")

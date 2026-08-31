@@ -51,8 +51,13 @@ export async function startConsultationAction(
 export async function generateConsentAction(
   appointmentId: string,
   treatmentInfo: string,
+  clauseIds: string[],
 ): Promise<ServiceResult<{ id: string }>> {
   try {
+    if (clauseIds.length === 0) {
+      return { success: false, error: "Select at least one applicable consent clause" };
+    }
+
     const supabase = await createServerSupabaseClient();
 
     const { data: existing } = await supabase
@@ -84,6 +89,14 @@ export async function generateConsentAction(
 
     if (error) {
       return { success: false, error: error.message };
+    }
+
+    const { error: clauseError } = await supabase
+      .from("consent_form_clauses")
+      .insert(clauseIds.map((clauseId) => ({ consent_form_id: data.id, clause_id: clauseId })));
+
+    if (clauseError) {
+      return { success: false, error: `Failed to attach consent clauses: ${clauseError.message}` };
     }
 
     revalidatePath(`/consultation/${appointmentId}`);

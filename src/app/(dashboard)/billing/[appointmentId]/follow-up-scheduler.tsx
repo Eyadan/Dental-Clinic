@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createFollowUpAction } from "./actions";
+import { todayLocal } from "@/lib/utils/date-utils";
 import { Loader2, CalendarPlus } from "lucide-react";
 
 interface FollowUpSchedulerProps {
@@ -84,7 +85,7 @@ export function FollowUpScheduler({ appointmentId, services }: FollowUpScheduler
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              min={new Date().toISOString().split("T")[0]}
+              min={todayLocal()}
             />
           </div>
           <div className="space-y-2">

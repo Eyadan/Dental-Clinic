@@ -19,6 +19,7 @@ export default async function PatientsPage({
     page: 1,
     pageSize: 50,
   });
+  const conditions = await service.getMedicalConditions();
 
-  return <PatientsClient initialPatients={result.data} totalCount={result.total} />;
+  return <PatientsClient initialPatients={result.data} totalCount={result.total} conditions={conditions} />;
 }

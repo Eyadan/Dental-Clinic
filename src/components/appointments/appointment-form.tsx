@@ -19,6 +19,7 @@ import type { Patient } from "@/lib/types/database";
 import type { Dentist } from "@/lib/types/database";
 import type { DentalService } from "@/lib/types/database";
 import { getAvailableSlotsAction } from "@/app/(dashboard)/appointments/actions";
+import { todayLocal } from "@/lib/utils/date-utils";
 
 type Slot = { startTime: string; endTime: string; available: boolean };
 
@@ -128,7 +129,7 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
     });
   };
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayLocal();
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

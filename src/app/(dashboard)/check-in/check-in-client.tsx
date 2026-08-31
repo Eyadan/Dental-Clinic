@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDebounce } from "@/lib/hooks/use-debounce";
+import { todayLocal } from "@/lib/utils/date-utils";
 import { checkInPatientAction } from "./actions";
 import { Search, Loader2, CheckCircle2, Clock, User, QrCode, Activity, Users, Calendar, UserCheck, RefreshCw } from "lucide-react";
 
@@ -28,54 +29,10 @@ interface CheckInClientProps {
   initialAppointments: CheckInAppointment[];
 }
 
-const TEMPORARY_MOCK_CHECKINS: CheckInAppointment[] = [
-  {
-    id: "mock-ci-1",
-    reference_no: "CI-9011",
-    booking_status: "approved",
-    visit_status: null,
-    scheduled_time: "09:00 AM",
-    total_duration: 45,
-    patient_name: "Juan Dela Cruz",
-    patient_contact: "+639171234567",
-  },
-  {
-    id: "mock-ci-2",
-    reference_no: "CI-9012",
-    booking_status: "confirmed",
-    visit_status: "checked_in",
-    scheduled_time: "10:15 AM",
-    total_duration: 30,
-    patient_name: "Maria Clara Santos",
-    patient_contact: "+639182345678",
-  },
-  {
-    id: "mock-ci-3",
-    reference_no: "CI-9013",
-    booking_status: "confirmed",
-    visit_status: "in_consultation",
-    scheduled_time: "11:30 AM",
-    total_duration: 60,
-    patient_name: "Ana Patricia Reyes",
-    patient_contact: "+639193456789",
-  },
-  {
-    id: "mock-ci-4",
-    reference_no: "CI-9014",
-    booking_status: "approved",
-    visit_status: null,
-    scheduled_time: "02:00 PM",
-    total_duration: 30,
-    patient_name: "Carlos Miguel Mendoza",
-    patient_contact: "+639204567890",
-  },
-];
-
 export function CheckInClient({ initialAppointments }: CheckInClientProps) {
   const router = useRouter();
-  const effectiveAppointments = initialAppointments.length > 0 ? initialAppointments : TEMPORARY_MOCK_CHECKINS;
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<CheckInAppointment[]>(effectiveAppointments);
+  const [results, setResults] = useState<CheckInAppointment[]>(initialAppointments);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -84,7 +41,7 @@ export function CheckInClient({ initialAppointments }: CheckInClientProps) {
 
   const handleSearch = useCallback(async (q: string) => {
     if (q.trim().length < 2) {
-      setResults(effectiveAppointments);
+      setResults(initialAppointments);
       return;
     }
 
@@ -92,7 +49,7 @@ export function CheckInClient({ initialAppointments }: CheckInClientProps) {
     setError(null);
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = todayLocal();
       const res = await fetch(
         `/api/check-in/search?q=${encodeURIComponent(q)}&date=${today}`,
       );
@@ -110,7 +67,7 @@ export function CheckInClient({ initialAppointments }: CheckInClientProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [effectiveAppointments]);
+  }, [initialAppointments]);
 
   useEffect(() => {
     handleSearch(debouncedQuery);
@@ -120,13 +77,6 @@ export function CheckInClient({ initialAppointments }: CheckInClientProps) {
     setPendingId(appointmentId);
     setError(null);
     setSuccess(null);
-
-    if (appointmentId.startsWith("mock-")) {
-      setResults((prev) => prev.map((r) => r.id === appointmentId ? { ...r, visit_status: "checked_in" } : r));
-      setSuccess(`${patientName} checked in successfully`);
-      setPendingId(null);
-      return;
-    }
 
     try {
       const result = await checkInPatientAction(appointmentId);

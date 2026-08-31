@@ -1,21 +1,21 @@
-# Dental Clinic Management System
+ï»¿# Dental Clinic Management System
 
 A full-stack dental clinic management web application built with Next.js 16, React 19, TypeScript, Supabase, and Tailwind CSS v4. Features an AI-powered Messenger chatbot for appointment booking, a comprehensive staff dashboard, and a mobile-first dentist portal.
 
 ## Features
 
-- **Patient Management** — CRUD operations, search, archive/restore, medical history, allergies
-- **Appointment System** — Calendar view, booking dashboard (approve/decline), triple status model (booking/visit/payment), conflict detection, walk-ins, reschedule/cancel flows
-- **Messenger Chatbot** — Facebook Messenger integration for automated appointment booking, rescheduling, cancellation, and reminders via natural language
-- **Live Chat Dashboard** — Staff can take over bot conversations, chat with patients in real-time, and hand back to the bot
-- **Check-In & Queue** — QR code generation, patient check-in, queue management with FIFO ordering, delay/no-show handling
-- **Consultation & Consent** — Treatment documentation with FDI dental chart, electronic consent forms with signature pad
-- **Billing & Payments** — Invoice generation, partial payment tracking, multiple payment methods (cash, GCash, Maya, card, bank transfer), follow-up scheduling
-- **Dentist Portal** — Mobile-first portal with schedule view, queue, emergency declaration, patient quick-view
-- **Waitlist Management** — Same-day dynamic availability, FIFO waitlist with patient notifications
-- **Unavailability Management** — Declare dentist unavailability, auto-mark affected appointments, reassign to alternate dentists
-- **Audit & Settings** — Full audit log viewer, system settings with 6 categories, appointment history timeline
-- **Security** — RBAC with Supabase RLS, CSP headers, webhook signature verification, rate limiting, spam prevention, Messenger 24h window compliance with Message Tags
+- **Patient Management** ï¿½ CRUD operations, search, archive/restore, medical history, allergies
+- **Appointment System** ï¿½ Calendar view, booking dashboard (approve/decline), triple status model (booking/visit/payment), conflict detection, walk-ins, reschedule/cancel flows
+- **Messenger Chatbot** ï¿½ Facebook Messenger integration for automated appointment booking, rescheduling, cancellation, and reminders via natural language
+- **Live Chat Dashboard** ï¿½ Staff can take over bot conversations, chat with patients in real-time, and hand back to the bot
+- **Check-In & Queue** ï¿½ QR code generation, patient check-in, queue management with FIFO ordering, delay/no-show handling
+- **Consultation & Consent** â€” Treatment documentation with FDI dental chart (findings-based model: presence per tooth, multiple conditions/restorations/surgeries per tooth with multi-surface selection), electronic consent forms with signature pad
+- **Billing & Payments** ï¿½ Invoice generation, partial payment tracking, multiple payment methods (cash, GCash, Maya, card, bank transfer), follow-up scheduling
+- **Dentist Portal** ï¿½ Mobile-first portal with schedule view, queue, emergency declaration, patient quick-view
+- **Waitlist Management** ï¿½ Same-day dynamic availability, FIFO waitlist with patient notifications
+- **Unavailability Management** ï¿½ Declare dentist unavailability, auto-mark affected appointments, reassign to alternate dentists
+- **Audit & Settings** ï¿½ Full audit log viewer, system settings with 6 categories, appointment history timeline
+- **Security** ï¿½ RBAC with Supabase RLS, CSP headers, webhook signature verification, rate limiting, spam prevention, Messenger 24h window compliance with Message Tags
 
 ## Tech Stack
 
@@ -134,26 +134,25 @@ npm run test:e2e:report
 ```
 src/
 +-- app/
-¦   +-- (auth)/              # Login, unauthorized pages
-¦   +-- (dashboard)/         # Staff dashboard (admin, reception)
-¦   +-- (dentist)/           # Dentist mobile portal
-¦   +-- (public)/            # Public QR registration page
-¦   +-- api/                 # API routes (webhooks, cron, upload, queue)
+ï¿½   +-- (auth)/              # Login, unauthorized pages
+ï¿½   +-- (dashboard)/         # Staff dashboard (admin, reception)
+ï¿½   +-- (dentist)/           # Dentist mobile portal
+ï¿½   +-- (public)/            # Public QR registration page
+ï¿½   +-- api/                 # API routes (webhooks, cron, upload, queue)
 +-- components/
-¦   +-- layout/              # Sidebar, topbar, dashboard shell
-¦   +-- ui/                  # shadcn/ui base components
-¦   +-- [feature]/           # Feature-specific components
+ï¿½   +-- layout/              # Sidebar, topbar, dashboard shell
+ï¿½   +-- ui/                  # shadcn/ui base components
+ï¿½   +-- [feature]/           # Feature-specific components
 +-- lib/
-¦   +-- services/            # Business logic (booking-parser, notification, messenger, etc.)
-¦   +-- supabase/            # Supabase client utilities
-¦   +-- types/               # TypeScript types & database interfaces
-¦   +-- validations/         # Zod schemas
-¦   +-- hooks/               # React hooks
-¦   +-- constants/           # Theme, navigation constants
-¦   +-- utils/               # Utility functions
+ï¿½   +-- services/            # Business logic (booking-parser, notification, messenger, etc.)
+ï¿½   +-- supabase/            # Supabase client utilities
+ï¿½   +-- types/               # TypeScript types & database interfaces
+ï¿½   +-- validations/         # Zod schemas
+ï¿½   +-- hooks/               # React hooks
+ï¿½   +-- constants/           # Theme, navigation constants
+ï¿½   +-- utils/               # Utility functions
 +-- middleware.ts            # RBAC route guards + session refresh
-supabase/
-+-- migrations/              # SQL migrations
+supabase/`n+-- migrations/              # SQL migrations
 +-- seed.sql                 # Seed data
 +-- create_auth_users.sql    # Auth user creation script
 tests/
@@ -162,14 +161,14 @@ tests/
 
 ## Documentation
 
-- [PRD](docs/PRD.md) — Product Requirements Document
-- [Architecture](docs/ARCHITECTURE.md) — System architecture & design
-- [Security](docs/SECURITY.md) — Security model & threat analysis
-- [UI/UX](docs/UI_UX.md) — UI/UX design document
-- [Dev Order](docs/dev-order.md) — Development task ordering
-- [Plan](docs/plan.md) — Implementation plan
-- [Completed Tasks](docs/plan_done.md) — Completed tasks log
-- [Bug Log](docs/donetask_bug-encountered.md) — Bug tracking
+- [PRD](docs/PRD.md) ï¿½ Product Requirements Document
+- [Architecture](docs/ARCHITECTURE.md) ï¿½ System architecture & design
+- [Security](docs/SECURITY.md) ï¿½ Security model & threat analysis
+- [UI/UX](docs/UI_UX.md) ï¿½ UI/UX design document
+- [Dev Order](docs/dev-order.md) ï¿½ Development task ordering
+- [Plan](docs/plan.md) ï¿½ Implementation plan
+- [Completed Tasks](docs/plan_done.md) ï¿½ Completed tasks log
+- [Bug Log](docs/donetask_bug-encountered.md) ï¿½ Bug tracking
 
 ## License
 

@@ -7,11 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  DentalChart,
-  type ToothData,
-  type ToothStatus,
-} from "@/components/dental-chart/dental-chart";
+import { DentalChartPanel } from "@/components/dental-chart/dental-chart-panel";
 import {
   saveTreatmentRecordAction,
   pauseTreatmentAction,
@@ -19,32 +15,24 @@ import {
   completeTreatmentAction,
   getTreatmentRecordAction,
 } from "./treatment-actions";
-import { Loader2, Save, Pause, Play, CheckCircle, Activity } from "lucide-react";
+import { Loader2, Save, Pause, Play, CheckCircle } from "lucide-react";
+import type { DentalChart, ToothPresence, ToothFinding } from "@/lib/types/database";
 
 interface TreatmentFormProps {
   appointmentId: string;
+  patientId: string;
   visitStatus: string;
+  dentalChart: DentalChart;
+  dentalChartPresence: ToothPresence[];
+  dentalChartFindings: ToothFinding[];
 }
 
-const STATUS_OPTIONS: { value: ToothStatus; label: string }[] = [
-  { value: "healthy", label: "Healthy" },
-  { value: "decayed", label: "Decayed" },
-  { value: "filled", label: "Filled" },
-  { value: "extracted", label: "Extracted" },
-  { value: "crown", label: "Crown" },
-  { value: "implant", label: "Implant" },
-  { value: "root_canal", label: "Root Canal" },
-  { value: "bridge", label: "Bridge" },
-];
-
-export function TreatmentForm({ appointmentId, visitStatus }: TreatmentFormProps) {
+export function TreatmentForm({ appointmentId, patientId, visitStatus, dentalChart, dentalChartPresence, dentalChartFindings }: TreatmentFormProps) {
   const [diagnosis, setDiagnosis] = useState("");
   const [procedures, setProcedures] = useState("");
   const [clinicalNotes, setClinicalNotes] = useState("");
   const [prescriptions, setPrescriptions] = useState("");
   const [treatmentPlan, setTreatmentPlan] = useState("");
-  const [toothChart, setToothChart] = useState<ToothData[]>([]);
-  const [selectedTooth, setSelectedTooth] = useState<ToothData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isPausing, setIsPausing] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
@@ -73,29 +61,6 @@ export function TreatmentForm({ appointmentId, visitStatus }: TreatmentFormProps
     loadTreatmentRecord();
   }, [loadTreatmentRecord]);
 
-  const handleToothClick = (tooth: ToothData) => {
-    setSelectedTooth(tooth);
-  };
-
-  const handleToothStatusChange = (status: ToothStatus) => {
-    if (!selectedTooth) return;
-
-    const existing = toothChart.find((t) => t.number === selectedTooth.number);
-    if (existing) {
-      setToothChart((prev) =>
-        prev.map((t) =>
-          t.number === selectedTooth.number
-            ? { ...t, status }
-            : t,
-        ),
-      );
-    } else {
-      setToothChart((prev) => [...prev, { number: selectedTooth.number, status }]);
-    }
-
-    setSelectedTooth((prev) => prev ? { ...prev, status } : prev);
-  };
-
   const handleSave = async () => {
     setIsSaving(true);
     setError(null);
@@ -108,7 +73,6 @@ export function TreatmentForm({ appointmentId, visitStatus }: TreatmentFormProps
         clinical_notes: clinicalNotes,
         prescriptions,
         treatment_plan: treatmentPlan,
-        tooth_chart: toothChart,
       });
 
       if (result.success) {
@@ -206,43 +170,9 @@ export function TreatmentForm({ appointmentId, visitStatus }: TreatmentFormProps
         </Alert>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Dental Chart (FDI/ISO 3950)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <DentalChart
-              teeth={toothChart}
-              onToothClick={handleToothClick}
-            />
-            {selectedTooth && (
-              <div className="rounded-lg border p-3 space-y-2">
-                <p className="text-sm font-medium">
-                  Tooth {selectedTooth.number}: {selectedTooth.status}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {STATUS_OPTIONS.map((opt) => (
-                    <Button
-                      key={opt.value}
-                      type="button"
-                      size="sm"
-                      variant={selectedTooth.status === opt.value ? "default" : "outline"}
-                      onClick={() => handleToothStatusChange(opt.value)}
-                    >
-                      {opt.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      <DentalChartPanel patientId={patientId} chart={dentalChart} presence={dentalChartPresence} findings={dentalChartFindings} readOnly />
 
-        <div className="space-y-4">
+      <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium">Clinical Documentation</CardTitle>
@@ -400,7 +330,6 @@ export function TreatmentForm({ appointmentId, visitStatus }: TreatmentFormProps
               </CardContent>
             </Card>
           )}
-        </div>
       </div>
     </div>
   );

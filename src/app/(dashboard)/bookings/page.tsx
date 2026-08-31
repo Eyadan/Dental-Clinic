@@ -13,10 +13,10 @@ export default async function BookingDashboardPage({
   const { status } = await searchParams;
   const supabase = await createServerSupabaseClient();
 
-  const validStatuses = ["pending", "approved", "declined", "expired", "reschedule_required", "pending_cancellation", "rescheduled", "cancelled", "confirmed", "no_show"];
+  const validStatuses = ["all", "pending", "approved", "declined", "expired", "reschedule_required", "pending_cancellation", "rescheduled", "cancelled", "confirmed", "no_show"];
   const filterStatus = status && validStatuses.includes(status) ? status : "pending";
 
-  let query = supabase
+  const { data: appointments, error } = await supabase
     .from("appointments")
     .select(`
       id,
@@ -32,12 +32,6 @@ export default async function BookingDashboardPage({
     `)
     .eq("is_archived", false)
     .order("created_at", { ascending: false });
-
-  if (filterStatus !== "all") {
-    query = query.eq("booking_status", filterStatus);
-  }
-
-  const { data: appointments, error } = await query;
 
   if (error) {
     throw new Error(`Failed to fetch bookings: ${error.message}`);

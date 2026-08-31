@@ -15,7 +15,8 @@ export default async function AppointmentsPage({
 
   const [year, monthNum] = targetMonth.split("-").map(Number);
   const startDate = `${year}-${String(monthNum).padStart(2, "0")}-01`;
-  const endDate = new Date(year, monthNum, 0).toISOString().split("T")[0];
+  const lastDay = new Date(year, monthNum, 0).getDate();
+  const endDate = `${year}-${String(monthNum).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
   const supabase = await createServerSupabaseClient();
 

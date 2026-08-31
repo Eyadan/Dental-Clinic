@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
+import { DentalChartService } from "@/lib/services/dental-chart-service";
 import { ConsultationClient } from "./consultation-client";
 
 export default async function ConsultationPage({
@@ -15,6 +16,7 @@ export default async function ConsultationPage({
     .from("appointments")
     .select(`
       id,
+      patient_id,
       scheduled_time,
       visit_status,
       patients(first_name, last_name, contact_no, birth_date, medical_history, allergies),
@@ -50,9 +52,21 @@ export default async function ConsultationPage({
     .limit(1)
     .maybeSingle();
 
+  const { data: consentClauses } = await supabase
+    .from("consent_clauses")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order");
+
+  const dentalChartService = new DentalChartService(supabase);
+  const { chart: dentalChart, presence: dentalChartPresence, findings: dentalChartFindings } = await dentalChartService.getFullChart(
+    appointment.patient_id,
+  );
+
   return (
     <ConsultationClient
       appointmentId={appointmentId}
+      patientId={appointment.patient_id}
       patientName={patient ? `${patient.first_name} ${patient.last_name}` : "Unknown Patient"}
       patientContact={patient?.contact_no ?? ""}
       patientBirthDate={patient?.birth_date ?? null}
@@ -63,6 +77,10 @@ export default async function ConsultationPage({
       dentistName={dentistUser ? `${dentistUser.first_name} ${dentistUser.last_name}` : "Unknown Dentist"}
       services={services}
       hasConsent={!!consent}
+      consentClauses={consentClauses ?? []}
+      dentalChart={dentalChart}
+      dentalChartPresence={dentalChartPresence}
+      dentalChartFindings={dentalChartFindings}
     />
   );
 }

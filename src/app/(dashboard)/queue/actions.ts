@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { todayLocal } from "@/lib/utils/date-utils";
 import type { ServiceResult } from "@/lib/services/base-service";
 
 export async function callNextAction(): Promise<ServiceResult<{ id: string; patientName: string }>> {
   try {
     const supabase = await createServerSupabaseClient();
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayLocal();
 
     const { data: appointments, error } = await supabase
       .from("appointments")

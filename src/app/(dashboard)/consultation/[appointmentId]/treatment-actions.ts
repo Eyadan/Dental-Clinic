@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import type { ServiceResult } from "@/lib/services/base-service";
-import type { ToothData } from "@/components/dental-chart/dental-chart";
 
 export async function saveTreatmentRecordAction(
   appointmentId: string,
@@ -13,7 +12,6 @@ export async function saveTreatmentRecordAction(
     clinical_notes: string;
     prescriptions: string;
     treatment_plan: string;
-    tooth_chart: ToothData[];
   },
 ): Promise<ServiceResult<{ id: string }>> {
   try {
@@ -25,8 +23,6 @@ export async function saveTreatmentRecordAction(
       .eq("appointment_id", appointmentId)
       .limit(1)
       .maybeSingle();
-
-    const toothChartJson = JSON.stringify(data.tooth_chart);
 
     if (existing) {
       const { error: updateError } = await supabase

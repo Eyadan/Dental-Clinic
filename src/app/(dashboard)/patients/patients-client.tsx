@@ -25,14 +25,15 @@ import { PatientSearch } from "@/components/patients/patient-search";
 import { PatientFormDialog } from "@/components/patients/patient-form-dialog";
 import { createPatientAction, updatePatientAction, archivePatientAction } from "./actions";
 import { MoreHorizontal, Pencil, Archive, UserPlus, Eye, Users, Phone, Mail, AlertTriangle, ArrowUpRight, ShieldCheck, CheckCircle2 } from "lucide-react";
-import type { Patient } from "@/lib/types/database";
+import type { Patient, MedicalCondition } from "@/lib/types/database";
 
 interface PatientsClientProps {
   initialPatients: Patient[];
   totalCount: number;
+  conditions: MedicalCondition[];
 }
 
-export function PatientsClient({ initialPatients, totalCount }: PatientsClientProps) {
+export function PatientsClient({ initialPatients, totalCount, conditions }: PatientsClientProps) {
   const router = useRouter();
   const [patients, setPatients] = useState(initialPatients);
   const [isLoading, setIsLoading] = useState(false);
@@ -287,6 +288,7 @@ export function PatientsClient({ initialPatients, totalCount }: PatientsClientPr
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         patient={editingPatient}
+        conditions={conditions}
         onSubmit={handleSubmit}
       />
     </div>

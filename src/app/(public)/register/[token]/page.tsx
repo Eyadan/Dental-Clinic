@@ -1,4 +1,4 @@
-import { validateTokenAction } from "./actions";
+import { validateTokenAction, getMedicalConditionsAction } from "./actions";
 import { RegistrationWizard } from "./registration-wizard";
 import { AlertTriangle } from "lucide-react";
 
@@ -8,7 +8,10 @@ export default async function RegisterPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const result = await validateTokenAction(token);
+  const [result, conditionsResult] = await Promise.all([
+    validateTokenAction(token),
+    getMedicalConditionsAction(),
+  ]);
 
   if (!result.success || !result.data) {
     return (
@@ -30,6 +33,7 @@ export default async function RegisterPage({
       token={token}
       appointmentId={result.data.appointmentId}
       patientName={result.data.patientName}
+      conditions={conditionsResult.success && conditionsResult.data ? conditionsResult.data : []}
     />
   );
 }

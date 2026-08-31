@@ -152,6 +152,13 @@ function parseIntent(text: string): ParsedIntent {
   return { intent: "unknown", rawText: text };
 }
 
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function parseDate(text: string): string | null {
   const lower = text.toLowerCase().trim();
 
@@ -161,10 +168,10 @@ function parseDate(text: string): string | null {
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   if (lower === "today") {
-    return today.toISOString().split("T")[0];
+    return formatLocalDate(today);
   }
   if (lower === "tomorrow" || lower === "tmrw") {
-    return tomorrow.toISOString().split("T")[0];
+    return formatLocalDate(tomorrow);
   }
 
   const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
@@ -178,7 +185,7 @@ function parseDate(text: string): string | null {
       if (date < today) {
         return null;
       }
-      return date.toISOString().split("T")[0];
+      return formatLocalDate(date);
     }
   }
 
@@ -191,7 +198,7 @@ function parseDate(text: string): string | null {
       if (daysUntil <= 0) daysUntil += 7;
       const target = new Date(today);
       target.setDate(target.getDate() + daysUntil);
-      return target.toISOString().split("T")[0];
+      return formatLocalDate(target);
     }
   }
 
@@ -199,7 +206,7 @@ function parseDate(text: string): string | null {
 }
 
 function parseTime(text: string): string | null {
-  const lower = text.trim();
+  const lower = text.trim().replace(";", ":");
 
   const timeMatch = lower.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
   if (timeMatch) {
@@ -889,6 +896,14 @@ export async function processIncomingMessage(
       return;
     }
 
+    const originalDentistStillAvailable = dentistsAvailableAtTime.find(
+      (d) => d.id === session.collectedDentistId,
+    );
+    if (!originalDentistStillAvailable) {
+      session.collectedDentistId = dentistsAvailableAtTime[0].id;
+      await saveSession(session);
+    }
+
     const supabase = getServiceClient();
     const { data: appointment } = await supabase
       .from("appointments")
@@ -955,11 +970,13 @@ export async function processIncomingMessage(
         .update({
           scheduled_date: session.collectedDate,
           scheduled_time: session.collectedTime,
+          dentist_id: session.collectedDentistId,
           booking_status: "rescheduled",
         })
         .eq("id", session.rescheduleAppointmentId);
 
       if (updateError) {
+        console.error("[Booking Parser] Reschedule update error:", updateError.message, updateError.code, updateError.details);
         await sendMessengerMessage(psid, "Sorry, something went wrong updating your appointment. Please try again or call the clinic.");
         return;
       }

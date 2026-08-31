@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { todayLocal } from "@/lib/utils/date-utils";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const query = searchParams.get("q") ?? "";
-  const date = searchParams.get("date") ?? new Date().toISOString().split("T")[0];
+  const date = searchParams.get("date") ?? todayLocal();
 
   if (query.trim().length < 2) {
     return NextResponse.json({ appointments: [] });

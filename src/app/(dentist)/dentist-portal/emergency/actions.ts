@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
-import { ReassignmentService } from "@/lib/services/reassignment-service";
+import { todayLocal, formatDateLocal } from "@/lib/utils/date-utils";
+import type { ServiceResult } from "@/lib/services/base-service";
 import { DentistService } from "@/lib/services/dentist-service";
 import { notifyAffectedPatients } from "@/lib/services/booking-parser";
-import type { ServiceResult } from "@/lib/services/base-service";
+import { ReassignmentService } from "@/lib/services/reassignment-service";
 
 export async function declareEmergencyAction(
   dentistId: string,
@@ -19,10 +20,10 @@ export async function declareEmergencyAction(
       return { success: false, error: "Not authenticated" };
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayLocal();
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 1);
-    const endDateStr = endDate.toISOString().split("T")[0];
+    const endDateStr = formatDateLocal(endDate);
 
     const dentistService = new DentistService(supabase);
     await dentistService.createBlock({

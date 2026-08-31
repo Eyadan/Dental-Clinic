@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, LogOut, ChevronDown } from "lucide-react";
+import { Menu, LogOut, ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -27,9 +27,11 @@ interface TopbarProps {
   userName: string;
   userEmail: string;
   onSignOut: () => void;
+  sidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }
 
-export function Topbar({ role, userName, userEmail, onSignOut }: TopbarProps) {
+export function Topbar({ role, userName, userEmail, onSignOut, sidebarCollapsed = false, onToggleSidebar }: TopbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const initials = userName
     .split(" ")
@@ -41,6 +43,22 @@ export function Topbar({ role, userName, userEmail, onSignOut }: TopbarProps) {
   return (
     <header className="flex h-16 items-center justify-between border-b px-4 lg:px-6">
       <div className="flex items-center gap-3">
+        {onToggleSidebar && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden lg:flex"
+            onClick={onToggleSidebar}
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? (
+              <PanelLeftOpen className="h-5 w-5" />
+            ) : (
+              <PanelLeftClose className="h-5 w-5" />
+            )}
+          </Button>
+        )}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger
             render={

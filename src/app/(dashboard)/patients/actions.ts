@@ -4,20 +4,13 @@ import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { PatientService } from "@/lib/services/patient-service";
 import { patientSchema } from "@/lib/validations/patient.schema";
+import { extractPatientFormData } from "@/lib/utils/patient-form-data";
 import type { ServiceResult } from "@/lib/services/base-service";
 
 export async function createPatientAction(
   formData: FormData,
 ): Promise<ServiceResult<{ id: string }>> {
-  const raw = {
-    first_name: formData.get("first_name") as string,
-    last_name: formData.get("last_name") as string,
-    contact_no: formData.get("contact_no") as string,
-    email: (formData.get("email") as string) || "",
-    birth_date: (formData.get("birth_date") as string) || "",
-    medical_history: (formData.get("medical_history") as string) || "",
-    allergies: (formData.get("allergies") as string) || "",
-  };
+  const raw = extractPatientFormData(formData);
 
   const parsed = patientSchema.safeParse(raw);
   if (!parsed.success) {
@@ -45,15 +38,7 @@ export async function updatePatientAction(
   id: string,
   formData: FormData,
 ): Promise<ServiceResult<void>> {
-  const raw = {
-    first_name: formData.get("first_name") as string,
-    last_name: formData.get("last_name") as string,
-    contact_no: formData.get("contact_no") as string,
-    email: (formData.get("email") as string) || "",
-    birth_date: (formData.get("birth_date") as string) || "",
-    medical_history: (formData.get("medical_history") as string) || "",
-    allergies: (formData.get("allergies") as string) || "",
-  };
+  const raw = extractPatientFormData(formData);
 
   const parsed = patientSchema.safeParse(raw);
   if (!parsed.success) {

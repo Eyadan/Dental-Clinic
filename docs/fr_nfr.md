@@ -249,7 +249,7 @@ J. Treatment Documentation
 ID
 Requirement
 FR-57
-The system shall allow the dentist to update the patient's electronic dental chart during treatment.
+The system shall allow the dentist to update the patient's electronic dental chart during treatment. The dental chart uses a findings-based model: each tooth has a presence status (present, missing, impacted, unerupted) and can have multiple independent findings (conditions, restorations, surgeries), where each finding applies to one or more tooth surfaces (mesial, distal, buccal, lingual, occlusal).
 FR-58
 The system shall allow the dentist to record clinical notes, diagnosis, procedures performed, prescriptions, and recommended treatment plans.
 

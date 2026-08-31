@@ -22,7 +22,7 @@ BEGIN
       (OLD.booking_status = 'approved' AND NEW.booking_status IN ('confirmed', 'reschedule_required', 'pending_cancellation', 'cancelled', 'no_show', 'completed')) OR
       (OLD.booking_status = 'confirmed' AND NEW.booking_status IN ('reschedule_required', 'pending_cancellation', 'cancelled', 'no_show', 'completed')) OR
       (OLD.booking_status = 'reschedule_required' AND NEW.booking_status IN ('rescheduled')) OR
-      (OLD.booking_status = 'rescheduled' AND NEW.booking_status IN ('confirmed', 'pending_cancellation', 'cancelled', 'no_show', 'completed')) OR
+      (OLD.booking_status = 'rescheduled' AND NEW.booking_status IN ('approved', 'confirmed', 'pending_cancellation', 'cancelled', 'no_show', 'completed')) OR
       (OLD.booking_status = 'pending_cancellation' AND NEW.booking_status IN ('cancelled'))
     ) THEN
       RAISE EXCEPTION 'Invalid booking_status transition: % -> %', OLD.booking_status, NEW.booking_status

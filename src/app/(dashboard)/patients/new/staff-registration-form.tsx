@@ -5,29 +5,36 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { patientSchema, type PatientFormData } from "@/lib/validations/patient.schema";
+import { buildPatientFormDefaults, appendPatientFormData } from "@/lib/utils/patient-form-defaults";
 import { createPatientAction, checkDuplicatePatientAction } from "../actions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PatientFormPersonalSection } from "@/components/patients/patient-form-personal-section";
+import { PatientFormDentalHistorySection } from "@/components/patients/patient-form-dental-history-section";
+import { PatientFormMedicalQuestionsSection } from "@/components/patients/patient-form-medical-questions-section";
+import { PatientFormAllergyConditionsSection } from "@/components/patients/patient-form-allergy-conditions-section";
 import { Loader2, UserPlus, AlertTriangle } from "lucide-react";
+import type { MedicalCondition } from "@/lib/types/database";
 
-export function StaffRegistrationForm() {
+interface StaffRegistrationFormProps {
+  conditions: MedicalCondition[];
+}
+
+const TABS = ["Personal Info", "Dental History", "Medical History"] as const;
+type Tab = (typeof TABS)[number];
+
+export function StaffRegistrationForm({ conditions }: StaffRegistrationFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("Personal Info");
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [overrideDuplicate, setOverrideDuplicate] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<PatientFormData>({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
+    defaultValues: buildPatientFormDefaults(),
   });
 
   const firstName = watch("first_name");
@@ -58,17 +65,8 @@ export function StaffRegistrationForm() {
 
     setIsSubmitting(true);
 
-    const fd = new FormData();
-    fd.append("first_name", data.first_name);
-    fd.append("last_name", data.last_name);
-    fd.append("contact_no", data.contact_no);
-    fd.append("email", data.email ?? "");
-    fd.append("birth_date", data.birth_date ?? "");
-    fd.append("medical_history", data.medical_history ?? "");
-    fd.append("allergies", data.allergies ?? "");
-
     try {
-      const result = await createPatientAction(fd);
+      const result = await createPatientAction(appendPatientFormData(data));
       if (result.success && result.data) {
         router.push(`/patients/${result.data.id}`);
       } else {
@@ -82,10 +80,10 @@ export function StaffRegistrationForm() {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">New Patient Registration</h1>
-        <p className="text-muted-foreground">Register a patient on their behalf</p>
+        <p className="text-muted-foreground">Register a patient using the PDA Dental Chart information</p>
       </div>
 
       {error && (
@@ -111,83 +109,37 @@ export function StaffRegistrationForm() {
         </Alert>
       )}
 
+      <div className="inline-flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/60 text-xs">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
+              activeTab === tab
+                ? "bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Personal Information</CardTitle>
+            <CardTitle className="text-sm font-medium">{activeTab}</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="first_name">First Name *</Label>
-              <Input id="first_name" {...register("first_name")} />
-              {errors.first_name && (
-                <p className="text-sm text-destructive">{errors.first_name.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="last_name">Last Name *</Label>
-              <Input id="last_name" {...register("last_name")} />
-              {errors.last_name && (
-                <p className="text-sm text-destructive">{errors.last_name.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="birth_date">Date of Birth</Label>
-              <Input id="birth_date" type="date" {...register("birth_date")} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Contact Information</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="contact_no">Contact Number *</Label>
-              <Input
-                id="contact_no"
-                placeholder="09171234567"
-                {...register("contact_no")}
-                onBlur={handleDuplicateCheck}
-              />
-              {errors.contact_no && (
-                <p className="text-sm text-destructive">{errors.contact_no.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register("email")} />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Medical Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="medical_history">Medical History</Label>
-              <Textarea
-                id="medical_history"
-                rows={3}
-                placeholder="Diabetes, hypertension, etc."
-                {...register("medical_history")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="allergies">Allergies</Label>
-              <Textarea
-                id="allergies"
-                rows={2}
-                placeholder="Penicillin, latex, etc."
-                {...register("allergies")}
-              />
-            </div>
+          <CardContent onBlurCapture={handleDuplicateCheck}>
+            {activeTab === "Personal Info" && <PatientFormPersonalSection register={register} errors={errors} />}
+            {activeTab === "Dental History" && <PatientFormDentalHistorySection register={register} />}
+            {activeTab === "Medical History" && (
+              <div className="space-y-4">
+                <PatientFormMedicalQuestionsSection register={register} />
+                <PatientFormAllergyConditionsSection register={register} watch={watch} setValue={setValue} conditions={conditions} />
+              </div>
+            )}
           </CardContent>
         </Card>
 

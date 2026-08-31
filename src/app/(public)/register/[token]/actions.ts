@@ -5,6 +5,7 @@ import { QrCodeService } from "@/lib/services/qr-code-service";
 import { PatientService } from "@/lib/services/patient-service";
 import { patientSchema } from "@/lib/validations/patient.schema";
 import type { ServiceResult } from "@/lib/services/base-service";
+import type { MedicalCondition } from "@/lib/types/database";
 
 function getPublicServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321";
@@ -59,15 +60,21 @@ export async function submitRegistrationAction(
       return { success: false, error: "Invalid or expired QR code" };
     }
 
-    const raw = {
-      first_name: formData.get("first_name") as string,
-      last_name: formData.get("last_name") as string,
-      contact_no: formData.get("contact_no") as string,
-      email: (formData.get("email") as string) ?? "",
-      birth_date: (formData.get("birth_date") as string) ?? "",
-      medical_history: (formData.get("medical_history") as string) ?? "",
-      allergies: (formData.get("allergies") as string) ?? "",
-    };
+    const conditionIds = formData.getAll("condition_ids").filter((v) => v !== "") as string[];
+
+    const raw: Record<string, unknown> = {};
+    for (const [key, value] of formData.entries()) {
+      if (key === "condition_ids") continue;
+      const strValue = value as string;
+      if (strValue === "true") {
+        raw[key] = true;
+      } else if (strValue === "false") {
+        raw[key] = false;
+      } else {
+        raw[key] = strValue;
+      }
+    }
+    raw.condition_ids = conditionIds;
 
     const parsed = patientSchema.safeParse(raw);
     if (!parsed.success) {
@@ -91,9 +98,25 @@ export async function submitRegistrationAction(
         .update({
           first_name: parsed.data.first_name,
           last_name: parsed.data.last_name,
+          middle_name: parsed.data.middle_name || null,
           contact_no: parsed.data.contact_no,
           email: parsed.data.email || null,
           birth_date: parsed.data.birth_date || null,
+          sex: parsed.data.sex || null,
+          nickname: parsed.data.nickname || null,
+          religion: parsed.data.religion || null,
+          nationality: parsed.data.nationality || null,
+          home_address: parsed.data.home_address || null,
+          home_no: parsed.data.home_no || null,
+          office_no: parsed.data.office_no || null,
+          fax_no: parsed.data.fax_no || null,
+          occupation: parsed.data.occupation || null,
+          dental_insurance: parsed.data.dental_insurance || null,
+          insurance_effective_date: parsed.data.insurance_effective_date || null,
+          guardian_name: parsed.data.guardian_name || null,
+          guardian_occupation: parsed.data.guardian_occupation || null,
+          referred_by: parsed.data.referred_by || null,
+          consultation_reason: parsed.data.consultation_reason || null,
           medical_history: parsed.data.medical_history || null,
           allergies: parsed.data.allergies || null,
         })
@@ -101,6 +124,61 @@ export async function submitRegistrationAction(
 
       if (updateError) {
         return { success: false, error: updateError.message };
+      }
+
+      const { data: existingRecord } = await supabase
+        .from("patient_medical_records")
+        .select("id")
+        .eq("patient_id", existingPatientId)
+        .maybeSingle();
+
+      const recordData = {
+        patient_id: existingPatientId,
+        previous_dentist: parsed.data.previous_dentist || null,
+        last_dental_visit: parsed.data.last_dental_visit || null,
+        physician_name: parsed.data.physician_name || null,
+        physician_specialty: parsed.data.physician_specialty || null,
+        physician_office_address: parsed.data.physician_office_address || null,
+        physician_office_no: parsed.data.physician_office_no || null,
+        is_in_good_health: parsed.data.is_in_good_health ?? false,
+        is_under_medical_treatment: parsed.data.is_under_medical_treatment ?? false,
+        medical_treatment_condition: parsed.data.medical_treatment_condition || null,
+        had_serious_illness_or_surgery: parsed.data.had_serious_illness_or_surgery ?? false,
+        illness_or_surgery_details: parsed.data.illness_or_surgery_details || null,
+        was_hospitalized: parsed.data.was_hospitalized ?? false,
+        hospitalization_details: parsed.data.hospitalization_details || null,
+        taking_medication: parsed.data.taking_medication ?? false,
+        medication_details: parsed.data.medication_details || null,
+        uses_tobacco: parsed.data.uses_tobacco ?? false,
+        uses_alcohol_or_drugs: parsed.data.uses_alcohol_or_drugs ?? false,
+        allergy_local_anesthetic: parsed.data.allergy_local_anesthetic ?? false,
+        allergy_penicillin_antibiotics: parsed.data.allergy_penicillin_antibiotics ?? false,
+        allergy_sulfa_drugs: parsed.data.allergy_sulfa_drugs ?? false,
+        allergy_aspirin: parsed.data.allergy_aspirin ?? false,
+        allergy_latex: parsed.data.allergy_latex ?? false,
+        allergy_others: parsed.data.allergy_others || null,
+        bleeding_time: parsed.data.bleeding_time || null,
+        is_pregnant: parsed.data.is_pregnant ?? false,
+        is_nursing: parsed.data.is_nursing ?? false,
+        taking_birth_control: parsed.data.taking_birth_control ?? false,
+        blood_type: parsed.data.blood_type || null,
+        blood_pressure: parsed.data.blood_pressure || null,
+      };
+
+      if (existingRecord) {
+        await supabase.from("patient_medical_records").update(recordData).eq("id", existingRecord.id);
+      } else {
+        await supabase.from("patient_medical_records").insert(recordData);
+      }
+
+      if (conditionIds.length > 0) {
+        await supabase
+          .from("patient_medical_conditions")
+          .delete()
+          .eq("patient_id", existingPatientId);
+        await supabase
+          .from("patient_medical_conditions")
+          .insert(conditionIds.map((id) => ({ patient_id: existingPatientId, condition_id: id })));
       }
 
       await qrService.invalidateToken(token);
@@ -111,11 +189,57 @@ export async function submitRegistrationAction(
     const patient = await patientService.createPatient({
       first_name: parsed.data.first_name,
       last_name: parsed.data.last_name,
+      middle_name: parsed.data.middle_name || undefined,
       contact_no: parsed.data.contact_no,
       email: parsed.data.email || undefined,
       birth_date: parsed.data.birth_date || undefined,
+      sex: parsed.data.sex || undefined,
+      nickname: parsed.data.nickname || undefined,
+      religion: parsed.data.religion || undefined,
+      nationality: parsed.data.nationality || undefined,
+      home_address: parsed.data.home_address || undefined,
+      home_no: parsed.data.home_no || undefined,
+      office_no: parsed.data.office_no || undefined,
+      fax_no: parsed.data.fax_no || undefined,
+      occupation: parsed.data.occupation || undefined,
+      dental_insurance: parsed.data.dental_insurance || undefined,
+      insurance_effective_date: parsed.data.insurance_effective_date || undefined,
+      guardian_name: parsed.data.guardian_name || undefined,
+      guardian_occupation: parsed.data.guardian_occupation || undefined,
+      referred_by: parsed.data.referred_by || undefined,
+      consultation_reason: parsed.data.consultation_reason || undefined,
       medical_history: parsed.data.medical_history || undefined,
       allergies: parsed.data.allergies || undefined,
+      previous_dentist: parsed.data.previous_dentist || undefined,
+      last_dental_visit: parsed.data.last_dental_visit || undefined,
+      physician_name: parsed.data.physician_name || undefined,
+      physician_specialty: parsed.data.physician_specialty || undefined,
+      physician_office_address: parsed.data.physician_office_address || undefined,
+      physician_office_no: parsed.data.physician_office_no || undefined,
+      is_in_good_health: parsed.data.is_in_good_health ?? undefined,
+      is_under_medical_treatment: parsed.data.is_under_medical_treatment ?? undefined,
+      medical_treatment_condition: parsed.data.medical_treatment_condition || undefined,
+      had_serious_illness_or_surgery: parsed.data.had_serious_illness_or_surgery ?? undefined,
+      illness_or_surgery_details: parsed.data.illness_or_surgery_details || undefined,
+      was_hospitalized: parsed.data.was_hospitalized ?? undefined,
+      hospitalization_details: parsed.data.hospitalization_details || undefined,
+      taking_medication: parsed.data.taking_medication ?? undefined,
+      medication_details: parsed.data.medication_details || undefined,
+      uses_tobacco: parsed.data.uses_tobacco ?? undefined,
+      uses_alcohol_or_drugs: parsed.data.uses_alcohol_or_drugs ?? undefined,
+      allergy_local_anesthetic: parsed.data.allergy_local_anesthetic ?? undefined,
+      allergy_penicillin_antibiotics: parsed.data.allergy_penicillin_antibiotics ?? undefined,
+      allergy_sulfa_drugs: parsed.data.allergy_sulfa_drugs ?? undefined,
+      allergy_aspirin: parsed.data.allergy_aspirin ?? undefined,
+      allergy_latex: parsed.data.allergy_latex ?? undefined,
+      allergy_others: parsed.data.allergy_others || undefined,
+      bleeding_time: parsed.data.bleeding_time || undefined,
+      is_pregnant: parsed.data.is_pregnant ?? undefined,
+      is_nursing: parsed.data.is_nursing ?? undefined,
+      taking_birth_control: parsed.data.taking_birth_control ?? undefined,
+      blood_type: parsed.data.blood_type || undefined,
+      blood_pressure: parsed.data.blood_pressure || undefined,
+      condition_ids: conditionIds,
     });
 
     await supabase
@@ -130,6 +254,20 @@ export async function submitRegistrationAction(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Registration failed",
+    };
+  }
+}
+
+export async function getMedicalConditionsAction(): Promise<ServiceResult<MedicalCondition[]>> {
+  try {
+    const supabase = getPublicServiceClient();
+    const patientService = new PatientService(supabase);
+    const conditions = await patientService.getMedicalConditions();
+    return { success: true, data: conditions };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to load medical conditions",
     };
   }
 }

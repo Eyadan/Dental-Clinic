@@ -33,6 +33,7 @@ const STATUS_FILTERS = [
   { key: "pending", label: "Pending Review" },
   { key: "approved", label: "Approved" },
   { key: "reschedule_required", label: "Reschedule Req." },
+  { key: "rescheduled", label: "Rescheduled" },
   { key: "pending_cancellation", label: "Pending Cancel" },
   { key: "all", label: "All Requests" },
 ];
@@ -143,7 +144,10 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
             <button
               key={f.key}
               type="button"
-              onClick={() => setActiveFilter(f.key)}
+              onClick={() => {
+                setActiveFilter(f.key);
+                router.push(`/bookings?status=${f.key}`, { scroll: false });
+              }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all whitespace-nowrap ${
                 isActive
                   ? "bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 font-bold shadow-xs border border-slate-200/80 dark:border-slate-800"
@@ -176,7 +180,10 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setActiveFilter("all")}
+                onClick={() => {
+                  setActiveFilter("all");
+                  router.push("/bookings?status=all", { scroll: false });
+                }}
                 className="h-9 rounded-xl border-border/80 text-xs hover:bg-muted/50"
               >
                 View All Requests ({bookings.length})
@@ -206,6 +213,7 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
                 <Badge variant="outline" className={`text-[10px] font-bold uppercase border ${
                   b.booking_status === "pending" ? "border-amber-500/30 text-amber-600 bg-amber-500/10" :
                   b.booking_status === "approved" ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10" :
+                  b.booking_status === "rescheduled" ? "border-blue-500/30 text-blue-600 bg-blue-500/10" :
                   b.booking_status === "reschedule_required" ? "border-orange-500/30 text-orange-600 bg-orange-500/10" :
                   b.booking_status === "pending_cancellation" ? "border-red-500/30 text-red-600 bg-red-500/10" : ""
                 }`}>
@@ -243,7 +251,7 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
                   </div>
                 </div>
 
-                {b.booking_status === "pending" && (
+                {(b.booking_status === "pending" || b.booking_status === "rescheduled") && (
                   <div className="flex items-center gap-2 pt-2 border-t border-border/40">
                     <Button
                       size="sm"

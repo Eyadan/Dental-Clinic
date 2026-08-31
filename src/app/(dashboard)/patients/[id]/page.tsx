@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { PatientService } from "@/lib/services/patient-service";
+import { DentalChartService } from "@/lib/services/dental-chart-service";
 import { PatientDetailClient } from "./patient-detail-client";
 
 export default async function PatientDetailPage({
@@ -17,5 +18,24 @@ export default async function PatientDetailPage({
     notFound();
   }
 
-  return <PatientDetailClient patient={patient} />;
+  const [medicalRecord, conditions, conditionIds] = await Promise.all([
+    service.getMedicalRecord(id),
+    service.getMedicalConditions(),
+    service.getPatientConditionIds(id),
+  ]);
+
+  const dentalChartService = new DentalChartService(supabase);
+  const { chart: dentalChart, presence: dentalChartPresence, findings: dentalChartFindings } = await dentalChartService.getFullChart(id);
+
+  return (
+    <PatientDetailClient
+      patient={patient}
+      medicalRecord={medicalRecord}
+      conditions={conditions}
+      conditionIds={conditionIds}
+      dentalChart={dentalChart}
+      dentalChartPresence={dentalChartPresence}
+      dentalChartFindings={dentalChartFindings}
+    />
+  );
 }
