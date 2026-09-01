@@ -44,6 +44,7 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
   const [slots, setSlots] = useState<Slot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [selectedTime, setSelectedTime] = useState("09:00");
+  const [isVerballyApproved, setIsVerballyApproved] = useState(false);
 
   const selectedPatient = useMemo(() => patients.find((p) => p.id === patientId) ?? null, [patients, patientId]);
   const selectedDentist = useMemo(() => dentists.find((d) => d.id === dentistId) ?? null, [dentists, dentistId]);
@@ -114,6 +115,7 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
     formData.set("dentist_id", dentistId);
     formData.set("scheduled_time", selectedTime);
     formData.set("total_duration", String(totalDuration));
+    formData.set("isVerballyApproved", isVerballyApproved ? "true" : "false");
     selectedServiceIds.forEach((id) => formData.append("service_ids", id));
 
     startTransition(async () => {
@@ -191,6 +193,30 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* VERBAL PRE-APPROVAL TOGGLE */}
+            <div className="pt-2 border-t border-border/40">
+              <label htmlFor="verbally_approved_checkbox" className="flex items-start gap-2.5 p-3 rounded-xl border border-border/60 bg-muted/20 hover:bg-muted/30 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  id="verbally_approved_checkbox"
+                  checked={isVerballyApproved}
+                  onChange={(e) => setIsVerballyApproved(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded text-cyan-600 focus:ring-cyan-500 border-border cursor-pointer"
+                />
+                <div className="space-y-0.5">
+                  <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    Pre-Approved by Attending Dentist
+                    <Badge variant="outline" className={`text-[10px] ${isVerballyApproved ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" : "bg-amber-500/10 text-amber-700 border-amber-500/30"}`}>
+                      {isVerballyApproved ? "APPROVED IMMEDIATELY" : "REQUIRES DENTIST APPROVAL"}
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-snug">
+                    Check this if the attending dentist has verbally confirmed schedule availability for this patient.
+                  </p>
+                </div>
+              </label>
             </div>
           </CardContent>
         </Card>

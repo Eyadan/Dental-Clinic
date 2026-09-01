@@ -11,6 +11,7 @@ import type { ServiceResult } from "@/lib/services/base-service";
 export async function createAppointmentAction(
   formData: FormData,
 ): Promise<ServiceResult<{ id: string; reference_no: string }>> {
+  const isVerballyApproved = formData.get("isVerballyApproved") === "true";
   const raw = {
     patient_id: formData.get("patient_id") as string,
     dentist_id: formData.get("dentist_id") as string,
@@ -18,6 +19,8 @@ export async function createAppointmentAction(
     scheduled_time: formData.get("scheduled_time") as string,
     total_duration: Number(formData.get("total_duration")),
     service_ids: (formData.getAll("service_ids") as string[]).filter(Boolean),
+    isVerballyApproved,
+    booking_status: isVerballyApproved ? ("approved" as const) : ("pending" as const),
   };
 
   const parsed = appointmentCreateSchema.safeParse(raw);
@@ -81,6 +84,14 @@ export async function approveAppointmentAction(
 ): Promise<ServiceResult<void>> {
   try {
     const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Not authenticated" };
+
+    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
+    if (profile?.role === "reception") {
+      return { success: false, error: "Reception staff cannot approve appointments. Only attending dentists or admins have approval authority." };
+    }
+
     const service = new AppointmentService(supabase);
 
     const { data: appointment } = await supabase
@@ -91,7 +102,6 @@ export async function approveAppointmentAction(
 
     await service.updateAppointment(appointmentId, { booking_status: "approved" });
 
-    const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await supabase.from("appointment_history").insert({
         appointment_id: appointmentId,
@@ -172,6 +182,14 @@ export async function declineAppointmentAction(
 ): Promise<ServiceResult<void>> {
   try {
     const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Not authenticated" };
+
+    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
+    if (profile?.role === "reception") {
+      return { success: false, error: "Reception staff cannot decline appointments. Only attending dentists or admins have authority." };
+    }
+
     const service = new AppointmentService(supabase);
 
     const { data: appointment } = await supabase
@@ -182,7 +200,6 @@ export async function declineAppointmentAction(
 
     await service.updateAppointment(appointmentId, { booking_status: "declined" });
 
-    const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await supabase.from("appointment_history").insert({
         appointment_id: appointmentId,

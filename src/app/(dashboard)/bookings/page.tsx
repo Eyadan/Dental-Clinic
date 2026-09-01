@@ -56,5 +56,12 @@ export default async function BookingDashboardPage({
     };
   });
 
-  return <BookingDashboardClient bookings={bookings} activeFilter={filterStatus} />;
+  const { data: { user } } = await supabase.auth.getUser();
+  let userRole = "reception";
+  if (user) {
+    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
+    if (profile) userRole = profile.role;
+  }
+
+  return <BookingDashboardClient bookings={bookings} activeFilter={filterStatus} userRole={userRole} />;
 }

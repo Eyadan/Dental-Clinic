@@ -33,7 +33,8 @@ export default async function BillingListPage() {
       is_archived,
       patients(first_name, last_name),
       dentists(users(first_name, last_name)),
-      invoices(id, total_amount, payment_status)
+      invoices(id, total_amount, payment_status),
+      appointment_services(price, dental_services(default_price))
     `)
     .eq("is_archived", false)
     .in("booking_status", ["approved", "confirmed", "completed"])
@@ -48,11 +49,26 @@ export default async function BillingListPage() {
     );
   }
 
-  const items: BillingListItem[] = (appointments ?? []).map((appt: Record<string, unknown>) => {
+  const items: BillingListItem[] = (appointments ?? [])
+    .filter((appt: Record<string, unknown>) => {
+      const invoice = getSingleJoined<{ payment_status: string }>(appt.invoices);
+      const isCompleted = appt.visit_status === "completed" || appt.booking_status === "completed";
+      const isPaid = invoice?.payment_status === "paid";
+      return !(isCompleted && isPaid);
+    })
+    .map((appt: Record<string, unknown>) => {
     const patient = getSingleJoined<{ first_name: string; last_name: string }>(appt.patients);
     const dentist = getSingleJoined<{ users: unknown }>(appt.dentists);
     const dentistUser = dentist ? getSingleJoined<{ first_name: string; last_name: string }>(dentist.users) : null;
     const invoice = getSingleJoined<{ id: string; total_amount: number; payment_status: string }>(appt.invoices);
+
+    const services = (appt.appointment_services as unknown as Array<{ price: number; dental_services: { default_price: number } | null }>) ?? [];
+    const svcSum = services.reduce((sum, item) => {
+      const price = item.price != null && Number(item.price) > 0 ? Number(item.price) : Number(item.dental_services?.default_price ?? 0);
+      return sum + price;
+    }, 0);
+
+    const effectiveTotal = invoice && Number(invoice.total_amount) > 0 ? Number(invoice.total_amount) : (svcSum > 0 ? svcSum : (invoice ? Number(invoice.total_amount) : null));
 
     return {
       appointmentId: appt.id as string,
@@ -62,8 +78,8 @@ export default async function BillingListPage() {
       scheduledDate: appt.scheduled_date as string,
       scheduledTime: (appt.scheduled_time as string)?.slice(0, 5) ?? "",
       invoiceId: invoice?.id ?? null,
-      totalAmount: invoice ? Number(invoice.total_amount) : null,
-      paymentStatus: invoice?.payment_status ?? null,
+      totalAmount: effectiveTotal,
+      paymentStatus: (invoice && Number(invoice.total_amount) === 0 && svcSum > 0) ? "pending_payment" : (invoice?.payment_status ?? null),
       visitStatus: appt.visit_status as string | null,
     };
   });

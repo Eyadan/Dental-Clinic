@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,14 +15,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   generateInvoiceAction,
   recordPaymentAction,
   checkoutAction,
+  getPatientDentalChartSummaryAction,
   type InvoiceData,
+  type ToothFindingSummary,
 } from "./actions";
 import { FollowUpScheduler } from "./follow-up-scheduler";
 import type { PaymentMethod } from "@/lib/types/enums";
-import { Loader2, Receipt, CreditCard, CheckCircle2, Plus, Sparkles, User, Stethoscope, Clock } from "lucide-react";
+import { Loader2, Receipt, CreditCard, CheckCircle2, Plus, Sparkles, User, Stethoscope, Clock, Copy, Activity, Image as ImageIcon, X, Eye } from "lucide-react";
 
 interface BillingClientProps {
   appointmentId: string;
@@ -51,6 +59,83 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [proofImage, setProofImage] = useState<string | null>(null);
+  const [selectedProofModalUrl, setSelectedProofModalUrl] = useState<string | null>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setError("File size exceeds 10MB limit");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const srcDataUrl = event.target?.result as string;
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 1200;
+        const MAX_HEIGHT = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.82);
+        setProofImage(compressedDataUrl);
+      };
+      img.src = srcDataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const [chartFindings, setChartFindings] = useState<ToothFindingSummary[]>([]);
+  const [isLoadingChart, setIsLoadingChart] = useState(false);
+  const [copiedChart, setCopiedChart] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    setIsLoadingChart(true);
+    getPatientDentalChartSummaryAction(appointmentId).then((res) => {
+      if (mounted && res.success && res.data) {
+        setChartFindings(res.data);
+      }
+      if (mounted) setIsLoadingChart(false);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [appointmentId]);
+
+  const handleCopyFindings = () => {
+    if (chartFindings.length === 0) return;
+    const text = chartFindings
+      .map(
+        (f) =>
+          `Tooth #${f.toothNumber}: ${f.findingCode}${
+            f.surfaces.length > 0 ? ` (${f.surfaces.join(", ")})` : ""
+          }${f.notes ? ` - ${f.notes}` : ""}`,
+      )
+      .join("\n");
+
+    navigator.clipboard.writeText(text);
+    setCopiedChart(true);
+    setTimeout(() => setCopiedChart(false), 2500);
+  };
 
   const totalPaid = invoice?.payments.reduce((sum, p) => sum + p.amount, 0) ?? 0;
   const remaining = invoice ? invoice.totalAmount - totalPaid : 0;
@@ -77,7 +162,8 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
   };
 
   const handlePay = async () => {
-    const amount = parseFloat(paymentAmount);
+    const amountStr = paymentAmount.trim() || (remaining > 0 ? remaining.toString() : "");
+    const amount = parseFloat(amountStr);
     if (isNaN(amount) || amount <= 0) {
       setError("Enter a valid amount");
       return;
@@ -85,16 +171,27 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
 
     if (!invoice) return;
 
+    if (paymentMethod !== "cash" && !proofImage) {
+      setError("Please attach a proof of payment photo (receipt/slip) before confirming.");
+      return;
+    }
+
     setIsPaying(true);
     setError(null);
     setSuccess(null);
 
     try {
-      const result = await recordPaymentAction(invoice.id, amount, paymentMethod, null);
+      const result = await recordPaymentAction(
+        invoice.id,
+        amount,
+        paymentMethod,
+        paymentMethod !== "cash" ? proofImage : null,
+      );
       if (result.success) {
         setSuccess("Payment recorded successfully");
         setShowPaymentForm(false);
         setPaymentAmount("");
+        setProofImage(null);
         const fetchResult = await import("./actions").then((m) => m.getInvoiceAction(appointmentId));
         if (fetchResult.success && fetchResult.data) {
           setInvoice(fetchResult.data);
@@ -116,6 +213,7 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
       const result = await checkoutAction(appointmentId);
       if (result.success) {
         setSuccess("Checkout complete — patient visit finished");
+        setInvoice((prev) => (prev ? { ...prev, visitStatus: "completed", bookingStatus: "completed" } : prev));
       } else {
         setError(result.error ?? "Checkout failed");
       }
@@ -165,6 +263,8 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
     );
   }
 
+  const isVisitCompleted = invoice.visitStatus === "completed" || invoice.bookingStatus === "completed";
+
   return (
     <div className="space-y-6">
       {/* BRANDED HERO HEADER */}
@@ -188,10 +288,16 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
           </div>
         </div>
 
-        <Button onClick={handleCheckout} disabled={isCheckingOut} size="sm" className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs">
-          {isCheckingOut ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}
-          Complete Visit & Checkout
-        </Button>
+        {isVisitCompleted ? (
+          <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 bg-emerald-500/10 text-xs font-semibold px-3 py-1.5 rounded-xl">
+            <CheckCircle2 className="mr-1.5 h-4 w-4 text-emerald-600 inline" /> Visit Completed & Checked Out
+          </Badge>
+        ) : (
+          <Button onClick={handleCheckout} disabled={isCheckingOut} size="sm" className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs">
+            {isCheckingOut ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}
+            Complete Visit & Checkout
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -244,14 +350,27 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-cyan-600" /> Recorded Payments ({invoice.payments.length})
             </CardTitle>
-            {remaining > 0 && !showPaymentForm && (
-              <Button size="sm" onClick={() => setShowPaymentForm(true)} className="h-8 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold">
-                <Plus className="mr-1 h-3.5 w-3.5" /> Record Payment
-              </Button>
+            {remaining > 0 && invoice.paymentStatus !== "paid" ? (
+              !showPaymentForm && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setPaymentAmount(remaining.toString());
+                    setShowPaymentForm(true);
+                  }}
+                  className="h-8 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold"
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" /> Record Payment
+                </Button>
+              )
+            ) : (
+              <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 bg-emerald-500/10 text-xs font-semibold px-2.5 py-1">
+                <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Invoice Fully Settled
+              </Badge>
             )}
           </CardHeader>
           <CardContent className="p-4 space-y-4 text-xs">
-            {showPaymentForm && (
+            {remaining > 0 && invoice.paymentStatus !== "paid" && showPaymentForm && (
               <div className="p-3.5 rounded-xl border border-cyan-500/30 bg-cyan-500/5 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -278,9 +397,42 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
                     </Select>
                   </div>
                 </div>
+
+                {paymentMethod !== "cash" && (
+                  <div className="space-y-1.5 pt-1">
+                    <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                      <ImageIcon className="h-3.5 w-3.5 text-cyan-600" /> Proof of Payment Photo (GCash / Card / Transfer Screenshot)
+                    </Label>
+                    {proofImage ? (
+                      <div className="flex items-center gap-3 p-2.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10">
+                        <img src={proofImage} alt="Proof" className="h-12 w-12 object-cover rounded-lg border border-cyan-500/50" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-foreground truncate">Proof Image Attached</p>
+                          <p className="text-[10px] text-muted-foreground">Will be saved with transaction record</p>
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setProofImage(null)} className="h-7 w-7 p-0 text-red-500 hover:text-red-700">
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="h-9 text-xs border-border/80 rounded-xl cursor-pointer file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:bg-cyan-600 file:text-white hover:file:bg-cyan-700"
+                      />
+                    )}
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" size="sm" onClick={() => setShowPaymentForm(false)} className="h-8 rounded-xl text-xs">Cancel</Button>
-                  <Button size="sm" onClick={handlePay} disabled={isPaying} className="h-8 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold">
+                  <Button
+                    size="sm"
+                    onClick={handlePay}
+                    disabled={isPaying || (paymentMethod !== "cash" && !proofImage)}
+                    className="h-8 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold disabled:opacity-50"
+                  >
                     {isPaying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirm Payment"}
                   </Button>
                 </div>
@@ -293,11 +445,37 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
               ) : (
                 invoice.payments.map((p) => (
                   <div key={p.id} className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-muted/20 font-mono text-xs">
-                    <div>
-                      <p className="font-bold text-foreground">{formatPeso(p.amount)}</p>
-                      <p className="text-[10px] text-muted-foreground uppercase">{p.method} · {new Date(p.paidAt).toLocaleString("en-PH")}</p>
+                    <div className="flex items-center gap-3">
+                      {p.proofImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProofModalUrl(p.proofImageUrl)}
+                          className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-cyan-500/40 group cursor-pointer"
+                        >
+                          <img src={p.proofImageUrl} alt="Proof" className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
+                          <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Eye className="h-3.5 w-3.5 text-white" />
+                          </div>
+                        </button>
+                      )}
+                      <div>
+                        <p className="font-bold text-foreground">{formatPeso(p.amount)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase">{p.method} · {new Date(p.paidAt).toLocaleString("en-PH")}</p>
+                      </div>
                     </div>
-                    <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 bg-emerald-500/10 text-[10px]">Received</Badge>
+                    <div className="flex items-center gap-2">
+                      {p.proofImageUrl && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedProofModalUrl(p.proofImageUrl)}
+                          className="h-7 text-[10px] border-cyan-500/30 text-cyan-600 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-lg px-2"
+                        >
+                          <Eye className="mr-1 h-3 w-3" /> View Proof
+                        </Button>
+                      )}
+                      <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 bg-emerald-500/10 text-[10px]">Received</Badge>
+                    </div>
                   </div>
                 ))
               )}
@@ -317,7 +495,86 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
         </Card>
       </div>
 
+      {/* PATIENT DENTAL CHART FINDINGS SUMMARY CARD */}
+      <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
+        <CardHeader className="border-b border-border/40 pb-4 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <Activity className="h-4 w-4 text-cyan-600" />
+              Patient Dental Chart Findings Summary ({chartFindings.length})
+            </CardTitle>
+            <CardDescription className="text-xs">
+              FDI tooth findings & surface records from patient consultation chart
+            </CardDescription>
+          </div>
+          {chartFindings.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCopyFindings}
+              className="h-8 rounded-xl text-xs font-semibold border-cyan-500/30 text-cyan-600 hover:bg-cyan-500/10"
+            >
+              {copiedChart ? <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-emerald-600" /> : <Copy className="mr-1.5 h-3.5 w-3.5 text-cyan-600" />}
+              {copiedChart ? "Copied!" : "1-Click Copy Summary"}
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="p-4 space-y-3">
+          {isLoadingChart ? (
+            <div className="py-6 flex justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-cyan-600" />
+            </div>
+          ) : chartFindings.length === 0 ? (
+            <p className="py-6 text-center text-xs text-muted-foreground italic">
+              No active tooth findings recorded on patient chart yet.
+            </p>
+          ) : (
+            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+              {chartFindings.map((f, idx) => (
+                <div key={idx} className="p-3 rounded-xl border border-border/60 bg-muted/20 space-y-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-foreground">Tooth #{f.toothNumber}</span>
+                    <Badge className="bg-cyan-500/10 text-cyan-700 border border-cyan-500/30 text-[10px] uppercase font-bold">
+                      {f.findingCode.replace(/_/g, " ")}
+                    </Badge>
+                  </div>
+                  {f.surfaces.length > 0 && (
+                    <div className="text-[11px] text-muted-foreground">
+                      Surfaces: <span className="font-semibold text-foreground font-mono">{f.surfaces.join(", ")}</span>
+                    </div>
+                  )}
+                  {f.notes && <p className="text-[11px] italic text-muted-foreground pt-0.5">"{f.notes}"</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <FollowUpScheduler appointmentId={appointmentId} services={[]} />
+
+      {/* PROOF RECEIPT FULLSCREEN VIEWER MODAL */}
+      <Dialog open={!!selectedProofModalUrl} onOpenChange={() => setSelectedProofModalUrl(null)}>
+        <DialogContent className="max-w-md rounded-2xl p-4">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-cyan-600" /> Digital Payment Proof Receipt
+            </DialogTitle>
+          </DialogHeader>
+          {selectedProofModalUrl && (
+            <div className="mt-2 space-y-3">
+              <div className="overflow-hidden rounded-xl border border-border/80 bg-muted/40 max-h-[70vh] flex items-center justify-center p-2">
+                <img src={selectedProofModalUrl} alt="Receipt Proof" className="max-h-[65vh] w-auto object-contain rounded-lg shadow-sm" />
+              </div>
+              <div className="flex justify-end">
+                <Button size="sm" variant="outline" onClick={() => setSelectedProofModalUrl(null)} className="rounded-xl text-xs">
+                  Close Preview
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -110,23 +110,29 @@ export class ReassignmentService {
         .eq("id", dentist.user_id)
         .single();
 
-      const slots = await this.getAvailableSlotsForDentist(dentist.id, date, durationMinutes, slotIntervalMinutes);
+      let slots = await this.getAvailableSlotsForDentist(dentist.id, date, durationMinutes, slotIntervalMinutes);
 
-      const availableSlots = slots
+      let availableSlots = slots
         .filter((s) => s.available)
         .map((s) => ({ startTime: s.startTime, endTime: s.endTime }));
 
-      if (availableSlots.length > 0) {
-        results.push({
-          id: dentist.id,
-          user_id: dentist.user_id,
-          specialization: dentist.specialization,
-          dentist_name: userData
-            ? `${userData.first_name} ${userData.last_name}`
-            : "Unknown",
-          available_slots: availableSlots,
-        });
+      // Fallback to 30-min slot intervals if full duration calculation yielded 0 slots
+      if (availableSlots.length === 0 && durationMinutes > 30) {
+        const fallbackSlots = await this.getAvailableSlotsForDentist(dentist.id, date, 30, slotIntervalMinutes);
+        availableSlots = fallbackSlots
+          .filter((s) => s.available)
+          .map((s) => ({ startTime: s.startTime, endTime: s.endTime }));
       }
+
+      results.push({
+        id: dentist.id,
+        user_id: dentist.user_id,
+        specialization: dentist.specialization,
+        dentist_name: userData
+          ? `${userData.first_name} ${userData.last_name}`
+          : "Unknown",
+        available_slots: availableSlots,
+      });
     }
 
     return results;
@@ -323,9 +329,10 @@ export class ReassignmentService {
       .eq("dentist_id", dentistId)
       .eq("day_of_week", dayOfWeek)
       .eq("is_active", true)
-      .single();
+      .maybeSingle();
 
-    if (!schedule) return [];
+    const workStartTime = schedule?.start_time ?? "08:00:00";
+    const workEndTime = schedule?.end_time ?? "17:00:00";
 
     const { data: holiday } = await this.supabase
       .from("clinic_holidays")
@@ -336,9 +343,9 @@ export class ReassignmentService {
     if (holiday) return [];
 
     const slots: { startTime: string; endTime: string; available: boolean }[] = [];
-    let currentTime = schedule.start_time;
+    let currentTime = workStartTime;
 
-    while (this.addMinutes(currentTime, durationMinutes) <= schedule.end_time) {
+    while (this.addMinutes(currentTime, durationMinutes) <= workEndTime) {
       const endTime = this.addMinutes(currentTime, durationMinutes);
 
       const blockConflict = await this.checkBlocksConflict(dentistId, date, currentTime, endTime);
@@ -373,17 +380,19 @@ export class ReassignmentService {
       .eq("dentist_id", dentistId)
       .eq("day_of_week", dayOfWeek)
       .eq("is_active", true)
-      .single();
+      .maybeSingle();
 
-    if (!schedule) {
-      return { hasConflict: true, reason: "Dentist does not work on this day" };
-    }
+    const workStartTime = schedule?.start_time ?? "08:00:00";
+    const workEndTime = schedule?.end_time ?? "17:00:00";
 
-    const endTime = this.addMinutes(startTime, durationMinutes);
-    if (startTime < schedule.start_time || endTime > schedule.end_time) {
+    const normStartTime = startTime.length === 5 ? `${startTime}:00` : startTime;
+    const checkDuration = Math.min(durationMinutes, 60);
+    const endTime = this.addMinutes(normStartTime, checkDuration);
+
+    if (normStartTime < workStartTime || normStartTime > workEndTime) {
       return {
         hasConflict: true,
-        reason: `Outside working hours (${schedule.start_time}–${schedule.end_time})`,
+        reason: `Outside working hours (${workStartTime}–${workEndTime})`,
       };
     }
 
@@ -471,10 +480,12 @@ export class ReassignmentService {
   }
 
   private addMinutes(time: string, minutes: number): string {
-    const [h, m] = time.split(":").map(Number);
+    const parts = time.split(":");
+    const h = Number(parts[0] ?? 0);
+    const m = Number(parts[1] ?? 0);
     const total = h * 60 + m + minutes;
     const hours = Math.floor(total / 60);
     const mins = total % 60;
-    return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+    return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}:00`;
   }
 }

@@ -65,7 +65,7 @@ export class AppointmentService extends BaseService {
         scheduled_date: data.scheduled_date,
         scheduled_time: data.scheduled_time,
         total_duration: data.total_duration,
-        booking_status: data.booking_status ?? "approved",
+        booking_status: data.booking_status ?? "pending",
       })
       .select()
       .single();
@@ -73,9 +73,17 @@ export class AppointmentService extends BaseService {
     if (error) this.handleError(error);
 
     if (result) {
+      const { data: svcPrices } = await this.supabase
+        .from("dental_services")
+        .select("id, default_price")
+        .in("id", data.service_ids);
+
+      const priceMap = new Map((svcPrices ?? []).map((s) => [s.id, Number(s.default_price)]));
+
       const serviceRows = data.service_ids.map((service_id) => ({
         appointment_id: result.id,
         service_id,
+        price: priceMap.get(service_id) ?? 0,
       }));
 
       const { error: svcError } = await this.supabase

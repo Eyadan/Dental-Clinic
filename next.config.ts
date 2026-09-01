@@ -44,6 +44,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   allowedDevOrigins: ["192.168.100.199"],
   async headers() {
     return [

@@ -224,11 +224,22 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply font-sans;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv11", "tnum";
+    overflow-x: hidden;
   }
-  html {
-    @apply font-sans;
+
+  /* Smooth GPU-Accelerated hardware layer helper */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 }

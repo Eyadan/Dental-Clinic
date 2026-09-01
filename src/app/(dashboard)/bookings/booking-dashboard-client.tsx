@@ -27,6 +27,7 @@ interface Booking {
 interface BookingDashboardClientProps {
   bookings: Booking[];
   activeFilter?: string;
+  userRole?: string;
 }
 
 const STATUS_FILTERS = [
@@ -38,7 +39,7 @@ const STATUS_FILTERS = [
   { key: "all", label: "All Requests" },
 ];
 
-export function BookingDashboardClient({ bookings: initialBookings, activeFilter: initialFilter = "pending" }: BookingDashboardClientProps) {
+export function BookingDashboardClient({ bookings: initialBookings, activeFilter: initialFilter = "pending", userRole = "reception" }: BookingDashboardClientProps) {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [activeFilter, setActiveFilter] = useState(initialFilter);
@@ -252,24 +253,32 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
                 </div>
 
                 {(b.booking_status === "pending" || b.booking_status === "rescheduled") && (
-                  <div className="flex items-center gap-2 pt-2 border-t border-border/40">
-                    <Button
-                      size="sm"
-                      onClick={() => handleApprove(b.id)}
-                      disabled={pendingId === b.id || isPending}
-                      className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs h-9 font-semibold shadow-xs"
-                    >
-                      {pendingId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />} Approve
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDecline(b.id)}
-                      disabled={pendingId === b.id || isPending}
-                      className="flex-1 border-border/80 text-destructive hover:bg-destructive/10 rounded-xl text-xs h-9 font-semibold"
-                    >
-                      <X className="mr-1.5 h-3.5 w-3.5" /> Decline
-                    </Button>
+                  <div className="pt-2 border-t border-border/40">
+                    {userRole === "reception" ? (
+                      <div className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 text-xs font-semibold">
+                        <Clock className="h-3.5 w-3.5" /> Awaiting Dentist Approval
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleApprove(b.id)}
+                          disabled={pendingId === b.id || isPending}
+                          className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs h-9 font-semibold shadow-xs"
+                        >
+                          {pendingId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />} Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDecline(b.id)}
+                          disabled={pendingId === b.id || isPending}
+                          className="flex-1 border-border/80 text-destructive hover:bg-destructive/10 rounded-xl text-xs h-9 font-semibold"
+                        >
+                          <X className="mr-1.5 h-3.5 w-3.5" /> Decline
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>

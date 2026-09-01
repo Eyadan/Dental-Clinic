@@ -84,6 +84,7 @@ export default function UnavailabilityClient() {
   const [availableSlots, setAvailableSlots] = useState<{ startTime: string; endTime: string }[]>([]);
   const [isLoadingAlternates, setIsLoadingAlternates] = useState(false);
   const [isReassigning, setIsReassigning] = useState(false);
+  const [dialogError, setDialogError] = useState<string | null>(null);
 
   const loadWeeklySchedule = useCallback(async (dentistId: string) => {
     if (!dentistId) return;
@@ -275,15 +276,19 @@ export default function UnavailabilityClient() {
   };
 
   const handleConfirmReassign = async () => {
-    if (!reassigningAppointment || !selectedAlternateDentistId || !selectedNewDate || !selectedNewTime || !staffId) return;
+    if (!reassigningAppointment || !selectedAlternateDentistId || !selectedNewDate || !selectedNewTime) return;
     setIsReassigning(true);
+    setNotification(null);
+    setDialogError(null);
+    const resolvedStaffId = staffId || (await getCurrentStaffIdAction()).data || "";
+
     const result = await reassignAppointmentAction(
       reassigningAppointment.id,
       selectedAlternateDentistId,
       selectedNewDate,
       selectedNewTime,
       `Dentist unavailability: ${reason || "N/A"}`,
-      staffId,
+      resolvedStaffId,
     );
     if (result.success) {
       setNotification({
@@ -294,7 +299,8 @@ export default function UnavailabilityClient() {
       setReassigningAppointment(null);
       await handleCheckAffected();
     } else {
-      setNotification({ type: "error", message: result.error ?? "Failed to reassign" });
+      setDialogError(result.error ?? "Failed to reassign appointment");
+      setNotification({ type: "error", message: result.error ?? "Failed to reassign appointment" });
     }
     setIsReassigning(false);
   };
@@ -333,7 +339,12 @@ export default function UnavailabilityClient() {
             <Label className="text-[11px] font-bold text-muted-foreground uppercase mb-1 block">Selected Doctor</Label>
             <Select value={selectedDentistId} onValueChange={(v) => handleDentistChange(v ?? "")}>
               <SelectTrigger className="h-10 text-xs border-border/80 rounded-xl bg-background">
-                <SelectValue placeholder="Select doctor..." />
+                <SelectValue placeholder="Select doctor...">
+                  {(() => {
+                    const d = dentists.find((item) => item.id === selectedDentistId);
+                    return d ? `${d.name}${d.specialization ? ` — ${d.specialization}` : ""}` : undefined;
+                  })()}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 {dentists.map((d) => (
@@ -674,6 +685,12 @@ export default function UnavailabilityClient() {
             </DialogDescription>
           </DialogHeader>
 
+          {dialogError && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-xs font-semibold">
+              ⚠️ {dialogError}
+            </div>
+          )}
+
           {isLoadingAlternates ? (
             <div className="flex py-8 justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-cyan-600" />
@@ -684,7 +701,12 @@ export default function UnavailabilityClient() {
                 <Label className="text-xs font-semibold text-muted-foreground">Select Alternate Dentist</Label>
                 <Select value={selectedAlternateDentistId} onValueChange={(v) => handleSelectAlternateDentist(v ?? "")}>
                   <SelectTrigger className="h-10 text-xs border-border/80 rounded-xl">
-                    <SelectValue placeholder="Choose dentist..." />
+                    <SelectValue placeholder="Choose dentist...">
+                      {(() => {
+                        const d = alternateDentists.find((item) => item.id === selectedAlternateDentistId);
+                        return d ? `${d.dentist_name} (${d.specialization})` : undefined;
+                      })()}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
                     {alternateDentists.map((d) => (

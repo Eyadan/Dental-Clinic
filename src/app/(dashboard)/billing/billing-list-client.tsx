@@ -25,57 +25,6 @@ interface BillingListClientProps {
   items: BillingListItem[];
 }
 
-const TEMPORARY_MOCK_BILLING: BillingListItem[] = [
-  {
-    appointmentId: "mock-bill-1",
-    referenceNo: "INV-7011",
-    patientName: "Juan Dela Cruz",
-    dentistName: "Dr. John Doe (General Dentistry)",
-    scheduledDate: "2026-08-30",
-    scheduledTime: "09:30 AM",
-    invoiceId: "inv-101",
-    totalAmount: 2500.00,
-    paymentStatus: "paid",
-    visitStatus: "completed",
-  },
-  {
-    appointmentId: "mock-bill-2",
-    referenceNo: "INV-7012",
-    patientName: "Maria Clara Santos",
-    dentistName: "Dr. Jane Smith (Orthodontics)",
-    scheduledDate: "2026-08-30",
-    scheduledTime: "11:00 AM",
-    invoiceId: "inv-102",
-    totalAmount: 15000.00,
-    paymentStatus: "partially_paid",
-    visitStatus: "in_consultation",
-  },
-  {
-    appointmentId: "mock-bill-3",
-    referenceNo: "INV-7013",
-    patientName: "Ana Patricia Reyes",
-    dentistName: "Dr. John Doe (General Dentistry)",
-    scheduledDate: "2026-08-31",
-    scheduledTime: "02:00 PM",
-    invoiceId: null,
-    totalAmount: 3800.00,
-    paymentStatus: "pending_payment",
-    visitStatus: null,
-  },
-  {
-    appointmentId: "mock-bill-4",
-    referenceNo: "INV-7014",
-    patientName: "Carlos Miguel Mendoza",
-    dentistName: "Dr. Jane Smith (Orthodontics)",
-    scheduledDate: "2026-08-31",
-    scheduledTime: "03:30 PM",
-    invoiceId: "inv-104",
-    totalAmount: 4500.00,
-    paymentStatus: "paid",
-    visitStatus: "completed",
-  },
-];
-
 const PAYMENT_STATUS_STYLES: Record<string, string> = {
   pending_payment: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
   partially_paid: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30",
@@ -90,20 +39,34 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   payment_failed: "Payment Failed",
 };
 
-export function BillingListClient({ items: initialItems }: BillingListClientProps) {
-  const effectiveItems = initialItems.length > 0 ? initialItems : TEMPORARY_MOCK_BILLING;
+export function BillingListClient({ items }: BillingListClientProps) {
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"pending" | "paid" | "all">("pending");
+
+  const pendingCount = useMemo(
+    () => items.filter((i) => (i.paymentStatus ?? "pending_payment") !== "paid").length,
+    [items],
+  );
+  const paidCount = useMemo(
+    () => items.filter((i) => (i.paymentStatus ?? "pending_payment") === "paid").length,
+    [items],
+  );
 
   const filteredItems = useMemo(() => {
-    if (!search.trim()) return effectiveItems;
-    const query = search.toLowerCase().trim();
-    return effectiveItems.filter(
-      (item) =>
+    return items.filter((item) => {
+      const status = item.paymentStatus ?? "pending_payment";
+      if (statusFilter === "pending" && status === "paid") return false;
+      if (statusFilter === "paid" && status !== "paid") return false;
+
+      if (!search.trim()) return true;
+      const query = search.toLowerCase().trim();
+      return (
         item.patientName.toLowerCase().includes(query) ||
         item.referenceNo.toLowerCase().includes(query) ||
-        item.dentistName.toLowerCase().includes(query),
-    );
-  }, [effectiveItems, search]);
+        item.dentistName.toLowerCase().includes(query)
+      );
+    });
+  }, [items, search, statusFilter]);
 
   const getInitials = (name: string) => {
     return name
@@ -126,7 +89,7 @@ export function BillingListClient({ items: initialItems }: BillingListClientProp
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold tracking-tight text-foreground">Billing & Patient Invoices</h1>
               <Badge variant="outline" className="border-border text-foreground font-mono text-[10px]">
-                {effectiveItems.length} records
+                {items.length} records
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">Manage patient billing records, payment receipts, and invoices</p>
@@ -134,14 +97,59 @@ export function BillingListClient({ items: initialItems }: BillingListClientProp
         </div>
       </div>
 
-      {/* Search Input */}
-      <div className="space-y-1.5">
-        <div className="relative">
+      {/* FILTER TABS & SEARCH */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 p-1 bg-muted/40 rounded-xl border border-border/60 text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => setStatusFilter("pending")}
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              statusFilter === "pending"
+                ? "bg-card text-cyan-600 shadow-xs border border-border/80 font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Unpaid & Pending
+            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusFilter === "pending" ? "bg-amber-500/10 text-amber-700 border-amber-500/30" : ""}`}>
+              {pendingCount}
+            </Badge>
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("paid")}
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              statusFilter === "paid"
+                ? "bg-card text-cyan-600 shadow-xs border border-border/80 font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Paid & Settled
+            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusFilter === "paid" ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" : ""}`}>
+              {paidCount}
+            </Badge>
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("all")}
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              statusFilter === "all"
+                ? "bg-card text-cyan-600 shadow-xs border border-border/80 font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            All Records
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {items.length}
+            </Badge>
+          </button>
+        </div>
+
+        <div className="relative min-w-[260px]">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by patient name, reference number, or dentist..."
+            placeholder="Search invoice or patient..."
             className="pl-10 h-10 border-border/80 focus-visible:ring-cyan-500 rounded-xl text-xs"
           />
         </div>

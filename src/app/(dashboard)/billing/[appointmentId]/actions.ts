@@ -18,6 +18,8 @@ export interface InvoiceData {
   appointmentId: string;
   totalAmount: number;
   paymentStatus: PaymentStatus;
+  visitStatus: string | null;
+  bookingStatus: string | null;
   lineItems: InvoiceLineItem[];
   payments: {
     id: string;
@@ -66,16 +68,18 @@ export async function generateInvoiceAction(
       const dentalService = (item as unknown as {
         dental_services: { name: string; default_price: number } | null;
       }).dental_services;
-      const price = item.price ?? dentalService?.default_price ?? 0;
-      return sum + Number(price);
+      const price = item.price != null && Number(item.price) > 0 ? Number(item.price) : Number(dentalService?.default_price ?? 0);
+      return sum + price;
     }, 0);
+
+    const paymentStatus: PaymentStatus = totalAmount === 0 ? "paid" : "pending_payment";
 
     const { data: invoice, error } = await supabase
       .from("invoices")
       .insert({
         appointment_id: appointmentId,
         total_amount: totalAmount,
-        payment_status: "pending_payment",
+        payment_status: paymentStatus,
       })
       .select("id")
       .single();
@@ -127,10 +131,11 @@ export async function getInvoiceAction(
       const dentalService = (item as unknown as {
         dental_services: { name: string; default_price: number } | null;
       }).dental_services;
+      const priceVal = item.price != null && Number(item.price) > 0 ? Number(item.price) : Number(dentalService?.default_price ?? 0);
       return {
         serviceId: item.service_id,
         serviceName: dentalService?.name ?? "Unknown Service",
-        price: Number(item.price ?? dentalService?.default_price ?? 0),
+        price: priceVal,
       };
     });
 
@@ -144,6 +149,8 @@ export async function getInvoiceAction(
       .from("appointments")
       .select(`
         scheduled_time,
+        visit_status,
+        booking_status,
         patients(first_name, last_name, contact_no),
         dentists(users(first_name, last_name))
       `)
@@ -162,13 +169,22 @@ export async function getInvoiceAction(
       ? getSingleJoined<{ first_name: string; last_name: string }>(dentist.users)
       : null;
 
+    const calculatedTotal = lineItems.reduce((sum, item) => sum + item.price, 0);
+    const effectiveTotal = Number(invoice.total_amount) > 0 ? Number(invoice.total_amount) : calculatedTotal;
+
+    if (Number(invoice.total_amount) === 0 && calculatedTotal > 0) {
+      await supabase.from("invoices").update({ total_amount: calculatedTotal, payment_status: "pending_payment" }).eq("id", invoice.id);
+    }
+
     return {
       success: true,
       data: {
         id: invoice.id,
         appointmentId: invoice.appointment_id,
-        totalAmount: Number(invoice.total_amount),
-        paymentStatus: invoice.payment_status,
+        totalAmount: effectiveTotal,
+        paymentStatus: Number(invoice.total_amount) === 0 && calculatedTotal > 0 ? "pending_payment" : invoice.payment_status,
+        visitStatus: appointment?.visit_status ?? null,
+        bookingStatus: appointment?.booking_status ?? null,
         lineItems,
         payments: (payments ?? []).map((p) => ({
           id: p.id,
@@ -224,6 +240,14 @@ export async function recordPaymentAction(
     const totalPaid = (existingPayments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
     const remaining = Number(invoice.total_amount) - totalPaid;
 
+    if (invoice.payment_status === "paid" || remaining <= 0.001) {
+      return { success: false, error: "Cannot record payment — invoice is already fully paid." };
+    }
+
+    if (method !== "cash" && (!proofImageUrl || proofImageUrl.trim() === "")) {
+      return { success: false, error: "Proof of payment photo is required for digital payment methods (GCash, Maya, Card, Bank Transfer)." };
+    }
+
     if (amount > remaining + 0.01) {
       return { success: false, error: `Amount exceeds remaining balance of ₱${remaining.toFixed(2)}` };
     }
@@ -273,7 +297,7 @@ export async function checkoutAction(
 
     const { data: invoice } = await supabase
       .from("invoices")
-      .select("payment_status")
+      .select("payment_status, total_amount")
       .eq("appointment_id", appointmentId)
       .maybeSingle();
 
@@ -281,7 +305,7 @@ export async function checkoutAction(
       return { success: false, error: "Invoice not found — generate invoice first" };
     }
 
-    if (invoice.payment_status === "pending_payment") {
+    if (invoice.payment_status === "pending_payment" && Number(invoice.total_amount) > 0) {
       return { success: false, error: "Cannot checkout — payment pending" };
     }
 
@@ -385,6 +409,51 @@ export async function createFollowUpAction(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to schedule follow-up",
+    };
+  }
+}
+
+export interface ToothFindingSummary {
+  toothNumber: number;
+  findingCode: string;
+  surfaces: string[];
+  notes: string | null;
+}
+
+export async function getPatientDentalChartSummaryAction(
+  appointmentId: string,
+): Promise<ServiceResult<ToothFindingSummary[]>> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: appt } = await supabase
+      .from("appointments")
+      .select("patient_id")
+      .eq("id", appointmentId)
+      .single();
+
+    if (!appt?.patient_id) {
+      return { success: false, error: "Appointment or patient not found" };
+    }
+
+    const { DentalChartService } = await import("@/lib/services/dental-chart-service");
+    const chartService = new DentalChartService(supabase);
+    const fullChart = await chartService.getFullChart(appt.patient_id);
+
+    const summaries: ToothFindingSummary[] = (fullChart.findings ?? []).map((f) => {
+      const surfaces = (f.finding_surfaces ?? []).map((s) => s.surface);
+      return {
+        toothNumber: f.tooth_number,
+        findingCode: f.code,
+        surfaces,
+        notes: f.notes ?? null,
+      };
+    });
+
+    return { success: true, data: summaries };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to load dental chart findings",
     };
   }
 }
