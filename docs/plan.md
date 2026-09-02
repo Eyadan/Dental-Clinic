@@ -151,6 +151,40 @@
 
 ---
 
+## Implementation Phase 8 — Dental Chart History & Snapshots
+
+> **Principles:** SOLID (SRP per trigger/function), DRY (shared audit pattern from `appointment_history`), KISS (JSONB snapshot — no over-normalized point-in-time copies), ACID (triggers fire within the same transaction as the DML), 3NF (audit table has no transitive dependencies; snapshot JSONB is intentionally denormalized as a frozen copy).
+
+| # | Task | Status | Dependencies | Notes |
+|---|------|--------|--------------|-------|
+| P8-01 | Create migration: `dental_chart_history` + `dental_chart_snapshots` tables, triggers, RLS | ✅ Done | P1-04, P1-06 | `supabase/migrations/20260902170000_add_dental_chart_history_snapshots.sql` |
+| P8-02 | Add TypeScript types for `DentalChartHistory` + `DentalChartSnapshot` | ✅ Done | P8-01 | `src/lib/types/database.ts` — interfaces + Database type map |
+| P8-03 | Add service methods: `createSnapshot`, `getSnapshots`, `getSnapshotById`, `getChartHistory` | ✅ Done | P8-02 | `src/lib/services/dental-chart-service.ts` — extends `DentalChartService` |
+| P8-04 | Add server actions: `createSnapshotAction`, `getSnapshotsAction`, `getChartHistoryAction` | ✅ Done | P8-03 | `src/app/(dashboard)/patients/[id]/dental-chart-actions.ts` |
+| P8-05 | Auto-snapshot on `startConsultationAction` | ✅ Done | P8-04 | Capture chart state at consultation start for visit-to-visit comparison |
+| P8-06 | UI: Snapshot comparison view in consultation | ✅ Done | P8-05 | `DentalChartSnapshotViewer` — list of past snapshots with click-to-view chart state |
+| P8-07 | UI: Audit history timeline for dental chart | ✅ Done | P8-04 | `DentalChartHistoryTimeline` — field-level audit log with action icons, tooth numbers, old→new values |
+| P8-08 | Update PRD, ARCHITECTURE, SECURITY docs | ✅ Done | P8-01 | Add new tables to schema, RLS, immutable tables list |
+
+### Design Decisions
+
+**Part 1 — Audit Log (`dental_chart_history`):**
+- Field-level change tracking on `dental_charts`, `tooth_presence`, `tooth_findings`
+- Triggers: `AFTER INSERT/UPDATE/DELETE` on each table, `SECURITY DEFINER` (same pattern as `log_appointment_history`)
+- Columns: `dental_chart_id`, `changed_by`, `action` (insert/update/delete), `entity_type` (chart_meta/tooth_presence/tooth_finding), `entity_id`, `tooth_number`, `field`, `old_value`, `new_value`, `changed_at`
+- **3NF:** No transitive dependencies — every column depends only on the primary key
+- **Immutable:** INSERT-only via RLS (no UPDATE/DELETE)
+- **ACID:** Triggers fire within the same transaction as the DML operation
+
+**Part 2 — Visit Snapshots (`dental_chart_snapshots`):**
+- Full chart state as JSONB: `{ chart: {...}, presence: [...], findings: [{ ..., surfaces: [...] }] }`
+- Linked to `dental_chart_id` + `appointment_id` (unique constraint — one snapshot per visit)
+- Created explicitly by server action when consultation starts
+- **3NF exception:** JSONB is intentionally denormalized — it's a frozen point-in-time copy, not live relational data. The live data remains in 3NF tables. This follows the KISS principle (no complex snapshot detail tables).
+- **ACID:** Snapshot creation is atomic within the server action transaction
+
+---
+
 ## Legend
 
 | Symbol | Meaning |

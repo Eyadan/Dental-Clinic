@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { DentalChartService } from "@/lib/services/dental-chart-service";
 import type { ServiceResult } from "@/lib/services/base-service";
 
 export async function startConsultationAction(
@@ -12,7 +13,7 @@ export async function startConsultationAction(
 
     const { data: appointment, error: fetchError } = await supabase
       .from("appointments")
-      .select("visit_status")
+      .select("visit_status, patient_id")
       .eq("id", appointmentId)
       .single();
 
@@ -28,13 +29,20 @@ export async function startConsultationAction(
       };
     }
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Not authenticated" };
+
+    const dentalChartService = new DentalChartService(supabase);
+    const chart = await dentalChartService.ensureChart(appointment.patient_id);
+    await dentalChartService.createSnapshot(chart.id, appointmentId, user.id);
+
     const { error: updateError } = await supabase
       .from("appointments")
       .update({ visit_status: "in_consultation" })
       .eq("id", appointmentId);
 
     if (updateError) {
-      return { success: false, error: "Failed to start consultation" };
+      return { success: false, error: `Failed to update visit status: ${updateError.message}` };
     }
 
     revalidatePath("/queue");

@@ -333,6 +333,8 @@ All tables conform to **Third Normal Form** — no transitive dependencies, no r
 | `patient_medical_conditions` | `id`, `patient_id` (FK), `condition_id` (FK) | Junction table |
 | `consent_clauses` | `id`, `code` (UQ), `title`, `body_text`, `is_active`, `display_order` | M:N ↔ `consent_forms` via `consent_form_clauses` |
 | `consent_form_clauses` | `id`, `consent_form_id` (FK), `clause_id` (FK) | Junction table |
+| `dental_chart_history` | `id`, `dental_chart_id` (FK), `changed_by` (FK), `action`, `entity_type`, `entity_id`, `tooth_number`, `field`, `old_value`, `new_value`, `changed_at` | **IMMUTABLE** (INSERT only) — audit trail for dental chart changes |
+| `dental_chart_snapshots` | `id`, `dental_chart_id` (FK), `appointment_id` (FK), `snapshot_data` (JSONB), `created_by` (FK), `created_at` | N:1 ← `dental_charts`, N:1 ← `appointments` — point-in-time chart copy per visit |
 
 ### 5.2 Indexes
 
@@ -373,6 +375,14 @@ CREATE INDEX idx_tooth_presence_chart ON tooth_presence (chart_id, tooth_number)
 CREATE INDEX idx_tooth_findings_chart ON tooth_findings (chart_id, tooth_number);
 CREATE INDEX idx_finding_surfaces_finding ON finding_surfaces (finding_id);
 
+-- Dental chart history (audit trail)
+CREATE INDEX idx_dental_chart_history_chart ON dental_chart_history (dental_chart_id);
+CREATE INDEX idx_dental_chart_history_changed_at ON dental_chart_history (changed_at DESC);
+
+-- Dental chart snapshots (per visit)
+CREATE INDEX idx_dental_chart_snapshots_chart ON dental_chart_snapshots (dental_chart_id);
+CREATE INDEX idx_dental_chart_snapshots_appointment ON dental_chart_snapshots (appointment_id);
+
 -- Booking sessions
 CREATE INDEX idx_booking_sessions_psid ON booking_sessions (patient_psid, expires_at);
 
@@ -397,6 +407,8 @@ RLS enabled on **all tables**. Key policies:
 | `tooth_presence` | All staff | Dentist, admin |
 | `tooth_findings` | All staff | Dentist, admin |
 | `finding_surfaces` | All staff | Dentist, admin |
+| `dental_chart_history` | All staff | **INSERT only** (immutable — no UPDATE/DELETE) |
+| `dental_chart_snapshots` | All staff | Dentist, admin |
 | `booking_sessions` | Service role only | Service role only |
 | `medical_conditions` | All authenticated | Admin only |
 | `patient_medical_records` | All staff | Reception, dentist, admin |

@@ -125,12 +125,14 @@ export async function signConsentAction(
     }
 
     for (const clauseId of clauseIds) {
-      const { error: initialError } = await supabase
+      const { data: updatedClause, error: initialError } = await supabase
         .from("consent_form_clauses")
         .update({ patient_initials: clauseInitials[clauseId].trim(), initialed_at: new Date().toISOString() })
-        .eq("id", clauseId);
+        .eq("id", clauseId)
+        .select("id")
+        .single();
 
-      if (initialError) {
+      if (initialError || !updatedClause) {
         return { success: false, error: "Failed to save clause initials" };
       }
     }
@@ -162,16 +164,22 @@ export async function signConsentAction(
       signatureUrl = urlData.publicUrl;
     }
 
-    const { error: updateError } = await supabase
+    const { data: updatedRow, error: updateError } = await supabase
       .from("consent_forms")
       .update({
         signature_image_url: signatureUrl,
         signed_at: new Date().toISOString(),
       })
-      .eq("id", consentId);
+      .eq("id", consentId)
+      .select("id")
+      .single();
 
     if (updateError) {
       return { success: false, error: "Failed to save signature" };
+    }
+
+    if (!updatedRow) {
+      return { success: false, error: "Failed to save signature — database policy blocked the update. Please contact an administrator." };
     }
 
     revalidatePath("/queue");

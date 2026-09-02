@@ -306,6 +306,35 @@ export interface FindingSurface {
   surface: ToothSurface;
 }
 
+export interface DentalChartHistory {
+  id: string;
+  dental_chart_id: string;
+  changed_by: string | null;
+  action: 'insert' | 'update' | 'delete';
+  entity_type: 'chart_meta' | 'tooth_presence' | 'tooth_finding';
+  entity_id: string | null;
+  tooth_number: number | null;
+  field: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  changed_at: string;
+}
+
+export interface DentalChartSnapshot {
+  id: string;
+  dental_chart_id: string;
+  appointment_id: string;
+  snapshot_data: SnapshotData;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface SnapshotData {
+  chart: DentalChart;
+  presence: ToothPresence[];
+  findings: (ToothFinding & { finding_surfaces?: FindingSurface[] })[];
+}
+
 export interface TreatmentRecord {
   id: string;
   appointment_id: string;
@@ -431,6 +460,8 @@ export interface Database {
       tooth_presence: { Row: ToothPresence; Insert: Partial<ToothPresence>; Update: Partial<ToothPresence> };
       tooth_findings: { Row: ToothFinding; Insert: Partial<ToothFinding>; Update: Partial<ToothFinding> };
       finding_surfaces: { Row: FindingSurface; Insert: Partial<FindingSurface>; Update: Partial<FindingSurface> };
+      dental_chart_history: { Row: DentalChartHistory; Insert: Partial<DentalChartHistory>; Update: Partial<DentalChartHistory> };
+      dental_chart_snapshots: { Row: DentalChartSnapshot; Insert: Partial<DentalChartSnapshot>; Update: Partial<DentalChartSnapshot> };
       treatment_records: { Row: TreatmentRecord; Insert: Partial<TreatmentRecord>; Update: Partial<TreatmentRecord> };
       invoices: { Row: Invoice; Insert: Partial<Invoice>; Update: Partial<Invoice> };
       payments: { Row: Payment; Insert: Partial<Payment>; Update: Partial<Payment> };

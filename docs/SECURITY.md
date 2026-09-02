@@ -654,7 +654,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 | Status transition validation | `appointment_status_validate` trigger — database-level enforcement |
 | Foreign key constraints | All relationships enforced with `ON DELETE RESTRICT` (prevent orphaned records) |
 | Check constraints | Enum-like constraints on status columns |
-| Immutable tables | `audit_logs`, `appointment_history`, `consent_forms`, `messenger_messages`, `reassignment_logs` — INSERT-only via RLS |
+| Immutable tables | `audit_logs`, `appointment_history`, `consent_forms`, `messenger_messages`, `reassignment_logs`, `dental_chart_history` — INSERT-only via RLS |
 
 ### 7.4 Backup & Recovery
 

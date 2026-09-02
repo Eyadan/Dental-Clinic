@@ -66,6 +66,8 @@ A web-based dental clinic management system that handles the full patient journe
 ### 2.9 Treatment Documentation
 - Dentist updates electronic dental chart during treatment using findings-based model: presence per tooth (present/missing/impacted/unerupted), multiple independent findings per tooth (conditions, restorations, surgeries), each finding applicable to one or more surfaces (mesial/distal/buccal/lingual/occlusal)
 - Records clinical notes, diagnosis, procedures performed, prescriptions, recommended treatment plans
+- **Dental Chart Change History (Audit Log):** All modifications to the dental chart (chart meta, tooth presence, tooth findings) are automatically logged with field-level detail (old value → new value, changed by, timestamp) via database triggers — following the same immutable audit pattern as appointment history
+- **Dental Chart Visit Snapshots:** A full point-in-time copy of the patient's dental chart (meta + presence + findings + surfaces) is captured as a JSONB snapshot when a consultation begins, linked to the appointment. This allows dentists to compare the chart state across visits and see what changed between appointments
 
 ### 2.10 Treatment Pause & Resume
 - Dentist can pause ongoing treatment with reason (awaiting x-ray, lab result, specialist clearance, patient availability)
@@ -125,6 +127,8 @@ A web-based dental clinic management system that handles the full patient journe
 - Archive (not delete) patient records, appointments, invoices, consent forms
 - Archived records excluded from active views but retrievable by authorized staff
 - Complete appointment/treatment/visit history per patient without overwriting prior data
+- **Dental chart audit trail:** Every change to dental chart data (meta fields, tooth presence, tooth findings) is recorded in an immutable `dental_chart_history` table with field-level granularity, ensuring full traceability for clinical compliance
+- **Dental chart visit snapshots:** Each consultation captures a frozen snapshot of the full dental chart state, enabling visit-to-visit comparison and historical clinical reference without affecting the live chart
 
 ### 2.20 System Settings Module
 - Centralized admin configuration in categories: Clinic, Dentist, Appointment, Messenger, Payment, Security
@@ -214,6 +218,8 @@ npx supabase start       # starts local Supabase stack (Postgres, Auth, Storage,
 | `messenger_conversations` | Messenger chat sessions | `id`, `patient_psid`, `status`, `taken_over_by` (FK), `taken_over_at` |
 | `messenger_messages` | Individual messages | `id`, `conversation_id` (FK), `direction`, `content`, `sent_at` |
 | `reassignment_logs` | Dentist reassignment records | `id`, `appointment_id` (FK), `original_dentist_id` (FK), `new_dentist_id` (FK), `original_schedule`, `new_schedule`, `reason`, `staff_id` (FK), `created_at` |
+| `dental_chart_history` | Immutable dental chart audit trail | `id`, `dental_chart_id` (FK), `changed_by` (FK), `action` (insert/update/delete), `entity_type` (chart_meta/tooth_presence/tooth_finding), `entity_id`, `tooth_number`, `field`, `old_value`, `new_value`, `changed_at` |
+| `dental_chart_snapshots` | Point-in-time full chart state per visit | `id`, `dental_chart_id` (FK), `appointment_id` (FK), `snapshot_data` (JSONB), `created_by` (FK), `created_at` |
 
 ### 4.3 Status Models
 

@@ -8,11 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DentalChartPanel } from "@/components/dental-chart/dental-chart-panel";
+import { DentalChartSnapshotViewer } from "@/components/dental-chart/dental-chart-snapshot-viewer";
 import {
   saveTreatmentRecordAction,
   pauseTreatmentAction,
   resumeTreatmentAction,
   completeTreatmentAction,
+  startTreatmentAction,
   getTreatmentRecordAction,
 } from "./treatment-actions";
 import { Loader2, Save, Pause, Play, CheckCircle } from "lucide-react";
@@ -37,6 +39,7 @@ export function TreatmentForm({ appointmentId, patientId, visitStatus, dentalCha
   const [isPausing, setIsPausing] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [pauseReason, setPauseReason] = useState("");
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +63,23 @@ export function TreatmentForm({ appointmentId, patientId, visitStatus, dentalCha
   useEffect(() => {
     loadTreatmentRecord();
   }, [loadTreatmentRecord]);
+
+  const handleStartTreatment = async () => {
+    setIsStarting(true);
+    setError(null);
+
+    try {
+      const result = await startTreatmentAction(appointmentId);
+      if (result.success) {
+        setCurrentVisitStatus("treatment_ongoing");
+        setSuccess("Treatment started");
+      } else {
+        setError(result.error ?? "Failed to start treatment");
+      }
+    } finally {
+      setIsStarting(false);
+    }
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -170,7 +190,9 @@ export function TreatmentForm({ appointmentId, patientId, visitStatus, dentalCha
         </Alert>
       )}
 
-      <DentalChartPanel patientId={patientId} chart={dentalChart} presence={dentalChartPresence} findings={dentalChartFindings} readOnly />
+      <DentalChartPanel patientId={patientId} chart={dentalChart} presence={dentalChartPresence} findings={dentalChartFindings} />
+
+      <DentalChartSnapshotViewer patientId={patientId} />
 
       <div className="space-y-4">
           <Card>
@@ -243,10 +265,14 @@ export function TreatmentForm({ appointmentId, patientId, visitStatus, dentalCha
 
             {canStartTreatment && (
               <Button
-                onClick={() => setCurrentVisitStatus("treatment_ongoing")}
-                disabled={isCompleting}
+                onClick={handleStartTreatment}
+                disabled={isStarting}
               >
-                <Play className="mr-2 h-4 w-4" />
+                {isStarting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
                 Start Treatment
               </Button>
             )}

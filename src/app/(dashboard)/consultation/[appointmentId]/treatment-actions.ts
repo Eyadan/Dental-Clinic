@@ -209,7 +209,7 @@ export async function completeTreatmentAction(
       .eq("id", appointmentId);
 
     if (apptError) {
-      return { success: false, error: "Failed to complete treatment" };
+      return { success: false, error: `Failed to complete treatment: ${apptError.message}` };
     }
 
     revalidatePath(`/consultation/${appointmentId}`);
@@ -219,6 +219,32 @@ export async function completeTreatmentAction(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to complete treatment",
+    };
+  }
+}
+
+export async function startTreatmentAction(
+  appointmentId: string,
+): Promise<ServiceResult<void>> {
+  try {
+    const supabase = await createServerSupabaseClient();
+
+    const { error: apptError } = await supabase
+      .from("appointments")
+      .update({ visit_status: "treatment_ongoing" })
+      .eq("id", appointmentId);
+
+    if (apptError) {
+      return { success: false, error: `Failed to start treatment: ${apptError.message}` };
+    }
+
+    revalidatePath(`/consultation/${appointmentId}`);
+    revalidatePath("/queue");
+    return { success: true, data: undefined };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to start treatment",
     };
   }
 }

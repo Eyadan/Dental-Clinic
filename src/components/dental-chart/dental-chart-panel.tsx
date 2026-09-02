@@ -166,12 +166,10 @@ export function DentalChartPanel({ patientId, chart, presence, findings, readOnl
           <CardTitle className="text-sm font-bold flex items-center gap-2">
             <Stethoscope className="h-4 w-4 text-cyan-600" /> Dental Record Chart (FDI Notation)
           </CardTitle>
-          {!readOnly && (
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-semibold text-muted-foreground">Show Temporary Teeth</span>
-              <Switch checked={showTemporary} onCheckedChange={setShowTemporary} />
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-muted-foreground">Show Temporary Teeth</span>
+            <Switch checked={showTemporary} onCheckedChange={setShowTemporary} />
+          </div>
         </CardHeader>
         <CardContent className="p-4 space-y-4">
           <DentalChartGrid

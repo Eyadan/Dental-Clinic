@@ -9,7 +9,7 @@ import {
   toothPresenceInputSchema,
 } from "@/lib/validations/dental-chart.schema";
 import type { ServiceResult } from "@/lib/services/base-service";
-import type { DentalChart, ToothPresence, ToothFinding } from "@/lib/types/database";
+import type { DentalChart, ToothPresence, ToothFinding, DentalChartHistory, DentalChartSnapshot } from "@/lib/types/database";
 import type { ToothFindingInput } from "@/lib/validations/dental-chart.schema";
 
 export async function getDentalChartAction(
@@ -184,6 +184,66 @@ export async function clearToothAction(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to clear tooth",
+    };
+  }
+}
+
+// ── Snapshot & History Actions ──
+
+export async function createSnapshotAction(
+  patientId: string,
+  appointmentId: string,
+): Promise<ServiceResult<DentalChartSnapshot>> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Not authenticated" };
+
+    const service = new DentalChartService(supabase);
+    const chart = await service.ensureChart(patientId);
+    const snapshot = await service.createSnapshot(chart.id, appointmentId, user.id);
+
+    return { success: true, data: snapshot };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create snapshot",
+    };
+  }
+}
+
+export async function getSnapshotsAction(
+  patientId: string,
+): Promise<ServiceResult<DentalChartSnapshot[]>> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const service = new DentalChartService(supabase);
+    const chart = await service.ensureChart(patientId);
+    const snapshots = await service.getSnapshots(chart.id);
+
+    return { success: true, data: snapshots };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to load snapshots",
+    };
+  }
+}
+
+export async function getChartHistoryAction(
+  patientId: string,
+): Promise<ServiceResult<DentalChartHistory[]>> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const service = new DentalChartService(supabase);
+    const chart = await service.ensureChart(patientId);
+    const history = await service.getChartHistory(chart.id);
+
+    return { success: true, data: history };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to load chart history",
     };
   }
 }

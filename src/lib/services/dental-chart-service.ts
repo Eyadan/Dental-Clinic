@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DentalChart, ToothPresence, ToothFinding } from "@/lib/types/database";
+import type { DentalChart, ToothPresence, ToothFinding, DentalChartHistory, DentalChartSnapshot, SnapshotData } from "@/lib/types/database";
 import type { DentalChartMetaInput, ToothFindingInput, ToothPresenceInput } from "@/lib/validations/dental-chart.schema";
 import { BaseService } from "./base-service";
 
@@ -206,5 +206,89 @@ export class DentalChartService extends BaseService {
       .eq("tooth_number", toothNumber);
 
     if (error) this.handleError(error);
+  }
+
+  // ── Snapshot Methods ──
+
+  async createSnapshot(
+    dentalChartId: string,
+    appointmentId: string,
+    createdBy: string,
+  ): Promise<DentalChartSnapshot> {
+    const { chart, presence, findings } = await this.getFullChartById(dentalChartId);
+
+    const snapshotData: SnapshotData = { chart, presence, findings };
+
+    const { data, error } = await this.supabase
+      .from("dental_chart_snapshots")
+      .insert({
+        dental_chart_id: dentalChartId,
+        appointment_id: appointmentId,
+        snapshot_data: snapshotData as unknown as Record<string, unknown>,
+        created_by: createdBy,
+      })
+      .select("*")
+      .single();
+
+    if (error) this.handleError(error);
+
+    return data;
+  }
+
+  async getSnapshots(dentalChartId: string): Promise<DentalChartSnapshot[]> {
+    const { data, error } = await this.supabase
+      .from("dental_chart_snapshots")
+      .select("*")
+      .eq("dental_chart_id", dentalChartId)
+      .order("created_at", { ascending: false });
+
+    if (error) this.handleError(error);
+
+    return data ?? [];
+  }
+
+  async getSnapshotById(snapshotId: string): Promise<DentalChartSnapshot | null> {
+    const { data, error } = await this.supabase
+      .from("dental_chart_snapshots")
+      .select("*")
+      .eq("id", snapshotId)
+      .maybeSingle();
+
+    if (error) this.handleError(error);
+
+    return data;
+  }
+
+  // ── History Methods ──
+
+  async getChartHistory(dentalChartId: string): Promise<DentalChartHistory[]> {
+    const { data, error } = await this.supabase
+      .from("dental_chart_history")
+      .select("*")
+      .eq("dental_chart_id", dentalChartId)
+      .order("changed_at", { ascending: false });
+
+    if (error) this.handleError(error);
+
+    return data ?? [];
+  }
+
+  // ── Private Helpers ──
+
+  private async getFullChartById(dentalChartId: string): Promise<FullDentalChart> {
+    const { data: chart, error: chartError } = await this.supabase
+      .from("dental_charts")
+      .select("*")
+      .eq("id", dentalChartId)
+      .single();
+
+    if (chartError) this.handleError(chartError);
+
+    const [presence, findings] = await Promise.all([
+      this.getPresence(dentalChartId),
+      this.getFindings(dentalChartId),
+    ]);
+
+    return { chart, presence, findings };
   }
 }

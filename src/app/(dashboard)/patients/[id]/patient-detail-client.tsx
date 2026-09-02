@@ -7,6 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PatientFormDialog } from "@/components/patients/patient-form-dialog";
 import { DentalChartPanel } from "@/components/dental-chart/dental-chart-panel";
+import { DentalChartHistoryTimeline } from "@/components/dental-chart/dental-chart-history-timeline";
+import { DentalChartSnapshotViewer } from "@/components/dental-chart/dental-chart-snapshot-viewer";
+import { PatientBillingHistory } from "@/components/patients/patient-billing-history";
+import { PatientVisitHistory } from "@/components/patients/patient-visit-history";
 import { updatePatientAction } from "../actions";
 import { Pencil, Phone, Mail, Calendar, AlertTriangle, User, HeartPulse, CheckCircle2, FileText, ArrowUpRight } from "lucide-react";
 import type { Patient, PatientMedicalRecord, MedicalCondition, DentalChart, ToothPresence, ToothFinding } from "@/lib/types/database";
@@ -229,23 +233,19 @@ export function PatientDetailClient({ patient, medicalRecord, conditions, condit
       )}
 
       {activeTab === "dental_chart" && (
-        <DentalChartPanel patientId={patient.id} chart={dentalChart} presence={dentalChartPresence} findings={dentalChartFindings} />
+        <div className="space-y-4">
+          <DentalChartPanel patientId={patient.id} chart={dentalChart} presence={dentalChartPresence} findings={dentalChartFindings} />
+          <DentalChartSnapshotViewer patientId={patient.id} />
+          <DentalChartHistoryTimeline patientId={patient.id} />
+        </div>
       )}
 
       {activeTab === "visits" && (
-        <Card className="border border-border/80 bg-card rounded-2xl shadow-xs p-6 text-center text-xs text-muted-foreground">
-          <Calendar className="mx-auto h-8 w-8 text-cyan-600/40 mb-2" />
-          <p className="font-bold text-foreground">Appointment Visit History</p>
-          <p className="text-muted-foreground mt-1">Past and upcoming appointment records for this patient.</p>
-        </Card>
+        <PatientVisitHistory patientId={patient.id} />
       )}
 
       {activeTab === "billing" && (
-        <Card className="border border-border/80 bg-card rounded-2xl shadow-xs p-6 text-center text-xs text-muted-foreground">
-          <FileText className="mx-auto h-8 w-8 text-cyan-600/40 mb-2" />
-          <p className="font-bold text-foreground">Patient Invoices & Receipts</p>
-          <p className="text-muted-foreground mt-1">Billing history, treatment estimates, and payment receipts.</p>
-        </Card>
+        <PatientBillingHistory patientId={patient.id} />
       )}
 
       <PatientFormDialog
