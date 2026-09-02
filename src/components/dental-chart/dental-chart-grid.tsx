@@ -60,7 +60,7 @@ function ToothCell({
       aria-label={`Tooth ${number}${tooltipParts.length ? " — " + tooltipParts.join("; ") : ""}`}
       className={cn(
         "relative flex items-center justify-center rounded-full transition-all hover:scale-110 hover:z-10 focus-visible:outline-none shrink-0",
-        small ? "h-6 w-6" : "h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 lg:h-10 lg:w-10",
+        small ? "h-6 w-6" : "h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 lg:h-11 lg:w-11",
         isSelected && "ring-2 ring-cyan-500 ring-offset-1 z-10 rounded-full",
       )}
     >
