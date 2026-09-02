@@ -59,8 +59,8 @@ function ToothCell({
       title={`Tooth ${number}${tooltipParts.length ? " — " + tooltipParts.join("; ") : ""}`}
       aria-label={`Tooth ${number}${tooltipParts.length ? " — " + tooltipParts.join("; ") : ""}`}
       className={cn(
-        "relative flex items-center justify-center rounded-full transition-all hover:scale-110 hover:z-10 focus-visible:outline-none",
-        small ? "h-[30px] w-[30px]" : "h-11 w-11",
+        "relative flex items-center justify-center rounded-full transition-all hover:scale-110 hover:z-10 focus-visible:outline-none shrink-0",
+        small ? "h-6 w-6" : "h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 lg:h-10 lg:w-10",
         isSelected && "ring-2 ring-cyan-500 ring-offset-1 z-10 rounded-full",
       )}
     >
@@ -149,13 +149,13 @@ export function DentalChartGrid({ presence, findings, selectedTooth, selectedSur
           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Left</span>
         </div>
         {showTemporary && (
-          <div className="flex justify-center gap-1 pb-1 border-b border-dashed border-border/60">
+          <div className="flex justify-center gap-1 pb-1 border-b border-dashed border-border/60 overflow-x-auto max-w-full">
             <ArchRow numbers={TEMPORARY_UPPER_RIGHT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} small numberPosition="above" />
             <div className="w-px self-stretch bg-border mx-1" />
             <ArchRow numbers={TEMPORARY_UPPER_LEFT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} small numberPosition="above" />
           </div>
         )}
-        <div className="flex justify-center gap-1">
+        <div className="flex justify-center gap-1 overflow-x-auto max-w-full pb-1">
           <ArchRow numbers={PERMANENT_UPPER_RIGHT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} numberPosition="above" />
           <div className="w-px self-stretch bg-border mx-1" />
           <ArchRow numbers={PERMANENT_UPPER_LEFT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} numberPosition="above" />
@@ -163,13 +163,13 @@ export function DentalChartGrid({ presence, findings, selectedTooth, selectedSur
       </div>
 
       <div className="rounded-xl border bg-card p-4 space-y-2.5">
-        <div className="flex justify-center gap-1">
+        <div className="flex justify-center gap-1 overflow-x-auto max-w-full pb-1">
           <ArchRow numbers={PERMANENT_LOWER_RIGHT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} numberPosition="below" />
           <div className="w-px self-stretch bg-border mx-1" />
           <ArchRow numbers={PERMANENT_LOWER_LEFT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} numberPosition="below" />
         </div>
         {showTemporary && (
-          <div className="flex justify-center gap-1 pt-1 border-t border-dashed border-border/60">
+          <div className="flex justify-center gap-1 pt-1 border-t border-dashed border-border/60 overflow-x-auto max-w-full">
             <ArchRow numbers={TEMPORARY_LOWER_RIGHT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} small numberPosition="below" />
             <div className="w-px self-stretch bg-border mx-1" />
             <ArchRow numbers={TEMPORARY_LOWER_LEFT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} small numberPosition="below" />
