@@ -1,16 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
 import { todayLocal } from "@/lib/utils/date-utils";
-import { ConsultationListClient } from "./consultation-list-client";
-
-interface ConsultationListItem {
-  appointmentId: string;
-  referenceNo: string;
-  patientName: string;
-  scheduledTime: string;
-  visitStatus: string | null;
-  hasConsent: boolean;
-}
+import { ConsultationListClient, type ConsultationListItem } from "./consultation-list-client";
 
 export default async function ConsultationListPage() {
   const supabase = await createServerSupabaseClient();
@@ -23,8 +14,10 @@ export default async function ConsultationListPage() {
       reference_no,
       scheduled_time,
       visit_status,
-      patients(first_name, last_name),
-      consent_forms(id)
+      patients(first_name, last_name, contact_no, allergies),
+      dentists(users(first_name, last_name)),
+      appointment_services(dental_services(name)),
+      consent_forms(id, signed_at)
     `)
     .eq("scheduled_date", today)
     .eq("is_archived", false)
@@ -35,21 +28,37 @@ export default async function ConsultationListPage() {
   if (error) {
     return (
       <div className="p-8 text-center">
-        <p className="text-muted-foreground">Failed to load consultation queue.</p>
+        <p className="text-muted-foreground text-xs font-medium">Failed to load clinical consultation queue.</p>
       </div>
     );
   }
 
   const items: ConsultationListItem[] = (appointments ?? []).map((appt: Record<string, unknown>) => {
-    const patient = getSingleJoined<{ first_name: string; last_name: string }>(appt.patients);
-    const consentForms = appt.consent_forms as unknown as Array<{ id: string }> | null;
+    const patient = getSingleJoined<{ first_name: string; last_name: string; contact_no: string | null; allergies: string | null }>(appt.patients);
+    
+    const dentistObj = getSingleJoined<{ users: unknown }>(appt.dentists);
+    const dentistUser = dentistObj ? getSingleJoined<{ first_name: string; last_name: string }>(dentistObj.users) : null;
+
+    const rawServices = appt.appointment_services as unknown as Array<{ dental_services: { name: string } | null }> | null;
+    const servicesList: string[] = (rawServices ?? [])
+      .map((s) => s.dental_services?.name)
+      .filter((name): name is string => Boolean(name));
+
+    const consentForms = appt.consent_forms as unknown as Array<{ id: string; signed_at: string | null }> | null;
+    const activeConsent = consentForms && consentForms.length > 0 ? consentForms[0] : null;
+
     return {
       appointmentId: appt.id as string,
       referenceNo: appt.reference_no as string,
-      patientName: patient ? `${patient.first_name} ${patient.last_name}` : "Unknown",
+      patientName: patient ? `${patient.first_name} ${patient.last_name}` : "Unknown Patient",
+      patientPhone: patient?.contact_no ?? null,
+      patientAllergies: patient?.allergies ?? null,
+      dentistName: dentistUser ? `Dr. ${dentistUser.first_name} ${dentistUser.last_name}` : "Attending Dentist",
       scheduledTime: (appt.scheduled_time as string)?.slice(0, 5) ?? "",
       visitStatus: appt.visit_status as string | null,
-      hasConsent: (consentForms?.length ?? 0) > 0,
+      services: servicesList,
+      hasConsent: Boolean(activeConsent),
+      isConsentSigned: Boolean(activeConsent?.signed_at),
     };
   });
 

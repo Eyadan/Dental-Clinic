@@ -18,7 +18,7 @@ interface ChatThreadProps {
 
 function formatTimestamp(dateString: string): string {
   const date = new Date(dateString);
-  return date.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
 export function ChatThread({ conversation, staffId, onConversationChange }: ChatThreadProps) {

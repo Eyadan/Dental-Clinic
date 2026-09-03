@@ -47,7 +47,7 @@ export default async function ConsultationPage({
 
   const { data: consent } = await supabase
     .from("consent_forms")
-    .select("id")
+    .select("id, signed_at")
     .eq("appointment_id", appointmentId)
     .limit(1)
     .maybeSingle();
@@ -63,6 +63,8 @@ export default async function ConsultationPage({
     appointment.patient_id,
   );
 
+  const isConsentSigned = !!consent?.signed_at || appointment.visit_status === "consent_signed";
+
   return (
     <ConsultationClient
       appointmentId={appointmentId}
@@ -73,10 +75,11 @@ export default async function ConsultationPage({
       patientMedicalHistory={patient?.medical_history ?? null}
       patientAllergies={patient?.allergies ?? null}
       visitStatus={appointment.visit_status ?? ""}
-      scheduledTime={appointment.scheduled_time}
-      dentistName={dentistUser ? `${dentistUser.first_name} ${dentistUser.last_name}` : "Unknown Dentist"}
+      scheduledTime={appointment.scheduled_time ?? ""}
+      dentistName={dentistUser ? `Dr. ${dentistUser.first_name} ${dentistUser.last_name}` : "Assigned Dentist"}
       services={services}
       hasConsent={!!consent}
+      isConsentSigned={isConsentSigned}
       consentClauses={consentClauses ?? []}
       dentalChart={dentalChart}
       dentalChartPresence={dentalChartPresence}

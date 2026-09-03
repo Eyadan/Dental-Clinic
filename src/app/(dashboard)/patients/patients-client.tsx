@@ -23,9 +23,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PatientSearch } from "@/components/patients/patient-search";
 import { PatientFormDialog } from "@/components/patients/patient-form-dialog";
-import { createPatientAction, updatePatientAction, archivePatientAction } from "./actions";
+import { createPatientAction, updatePatientAction, archivePatientAction, getPatientMedicalDetailsAction } from "./actions";
 import { MoreHorizontal, Pencil, Archive, UserPlus, Eye, Users, Phone, Mail, AlertTriangle, ArrowUpRight, ShieldCheck, CheckCircle2 } from "lucide-react";
-import type { Patient, MedicalCondition } from "@/lib/types/database";
+import type { Patient, MedicalCondition, PatientMedicalRecord } from "@/lib/types/database";
 
 interface PatientsClientProps {
   initialPatients: Patient[];
@@ -39,6 +39,8 @@ export function PatientsClient({ initialPatients, totalCount, conditions }: Pati
   const [isLoading, setIsLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [editingMedicalRecord, setEditingMedicalRecord] = useState<PatientMedicalRecord | null>(null);
+  const [editingConditionIds, setEditingConditionIds] = useState<string[]>([]);
   const [, startTransition] = useTransition();
 
   const handleSearch = useCallback(async (query: string) => {
@@ -63,11 +65,22 @@ export function PatientsClient({ initialPatients, totalCount, conditions }: Pati
 
   const handleCreate = () => {
     setEditingPatient(null);
+    setEditingMedicalRecord(null);
+    setEditingConditionIds([]);
     setDialogOpen(true);
   };
 
-  const handleEdit = (patient: Patient) => {
+  const handleEdit = async (patient: Patient) => {
     setEditingPatient(patient);
+    setEditingMedicalRecord(null);
+    setEditingConditionIds([]);
+
+    const res = await getPatientMedicalDetailsAction(patient.id);
+    if (res.success && res.data) {
+      setEditingMedicalRecord(res.data.medicalRecord);
+      setEditingConditionIds(res.data.conditionIds);
+    }
+
     setDialogOpen(true);
   };
 
@@ -288,6 +301,8 @@ export function PatientsClient({ initialPatients, totalCount, conditions }: Pati
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         patient={editingPatient}
+        medicalRecord={editingMedicalRecord}
+        conditionIds={editingConditionIds}
         conditions={conditions}
         onSubmit={handleSubmit}
       />

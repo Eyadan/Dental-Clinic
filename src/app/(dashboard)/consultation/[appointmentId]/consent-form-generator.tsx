@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateConsentAction } from "./actions";
-import { Loader2, FileCheck } from "lucide-react";
+import { Loader2, FileCheck, AlertCircle, Lock } from "lucide-react";
 import type { ConsentClause } from "@/lib/types/database";
 
 interface ConsentFormGeneratorProps {
   appointmentId: string;
+  visitStatus?: string;
   consentClauses: ConsentClause[];
   hasConsent: boolean;
   onGenerated: () => void;
@@ -20,23 +22,32 @@ interface ConsentFormGeneratorProps {
 
 export function ConsentFormGenerator({
   appointmentId,
+  visitStatus = "waiting",
   consentClauses,
   hasConsent,
   onGenerated,
   onError,
 }: ConsentFormGeneratorProps) {
+  const router = useRouter();
   const [selectedClauseIds, setSelectedClauseIds] = useState<string[]>([]);
   const [treatmentInfo, setTreatmentInfo] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [consentCreated, setConsentCreated] = useState(hasConsent);
 
+  const isConsultationStarted = !["waiting", "checked_in"].includes(visitStatus);
+
   const toggleClause = (id: string) => {
+    if (!isConsultationStarted) return;
     setSelectedClauseIds((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
     );
   };
 
   const handleGenerate = async () => {
+    if (!isConsultationStarted) {
+      onError('Please click "Start Clinical Consultation" at the top before generating consent');
+      return;
+    }
     if (selectedClauseIds.length === 0) {
       onError("Select at least one applicable consent clause");
       return;
@@ -49,6 +60,7 @@ export function ConsentFormGenerator({
       if (result.success) {
         setConsentCreated(true);
         onGenerated();
+        router.refresh();
       } else {
         onError(result.error ?? "Failed to generate consent");
       }
@@ -59,8 +71,8 @@ export function ConsentFormGenerator({
 
   return (
     <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
-      <CardHeader className="border-b border-border/40 pb-3 flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-sm font-bold flex items-center gap-2">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border/40 pb-3">
+        <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
           <FileCheck className="h-4 w-4 text-cyan-600" /> Informed Consent Form (PDA Dental Chart)
         </CardTitle>
         {consentCreated && (
@@ -70,8 +82,17 @@ export function ConsentFormGenerator({
         )}
       </CardHeader>
       <CardContent className="p-4 space-y-3 text-xs">
+        {!isConsultationStarted && !consentCreated && (
+          <div className="flex items-center gap-2.5 p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 mb-2">
+            <Lock className="h-4 w-4 text-amber-600 shrink-0" />
+            <div className="text-xs font-semibold">
+              Clinical Consultation has not started yet. Please click <span className="font-bold text-cyan-700 dark:text-cyan-400">"Start Clinical Consultation"</span> at the top before selecting consent clauses and generating waiver forms.
+            </div>
+          </div>
+        )}
+
         {!consentCreated ? (
-          <div className="space-y-3">
+          <div className={`space-y-3 ${!isConsultationStarted ? "opacity-60 pointer-events-none" : ""}`}>
             <div>
               <p className="text-[11px] font-bold text-muted-foreground uppercase mb-2">
                 Select applicable consent clauses for this treatment *
@@ -80,11 +101,14 @@ export function ConsentFormGenerator({
                 {consentClauses.map((clause) => (
                   <label
                     key={clause.id}
-                    className="flex items-start gap-2 p-2.5 rounded-xl bg-muted/30 cursor-pointer hover:bg-cyan-500/10"
+                    className={`flex items-start gap-2 p-2.5 rounded-xl bg-muted/30 ${
+                      isConsultationStarted ? "cursor-pointer hover:bg-cyan-500/10" : "cursor-not-allowed"
+                    }`}
                   >
                     <input
                       type="checkbox"
-                      className="h-4 w-4 mt-0.5 accent-cyan-600 shrink-0"
+                      disabled={!isConsultationStarted}
+                      className="h-4 w-4 mt-0.5 accent-cyan-600 shrink-0 disabled:cursor-not-allowed"
                       checked={selectedClauseIds.includes(clause.id)}
                       onChange={() => toggleClause(clause.id)}
                     />
@@ -103,6 +127,7 @@ export function ConsentFormGenerator({
               </Label>
               <Textarea
                 id="treatmentInfo"
+                disabled={!isConsultationStarted}
                 placeholder="Specific procedure details, risks, or post-op care instructions..."
                 value={treatmentInfo}
                 onChange={(e) => setTreatmentInfo(e.target.value)}
@@ -114,8 +139,8 @@ export function ConsentFormGenerator({
             <Button
               size="sm"
               onClick={handleGenerate}
-              disabled={isGenerating || selectedClauseIds.length === 0}
-              className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs"
+              disabled={!isConsultationStarted || isGenerating || selectedClauseIds.length === 0}
+              className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGenerating ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <FileCheck className="mr-1.5 h-3.5 w-3.5" />}
               Generate Patient Consent Form ({selectedClauseIds.length} clause{selectedClauseIds.length === 1 ? "" : "s"})

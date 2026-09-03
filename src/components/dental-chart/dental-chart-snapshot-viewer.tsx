@@ -65,8 +65,9 @@ export const DentalChartSnapshotViewer = memo(function DentalChartSnapshotViewer
               month: "short",
               day: "numeric",
               year: "numeric",
-              hour: "2-digit",
+              hour: "numeric",
               minute: "2-digit",
+              hour12: true,
             })}
           </CardTitle>
           <Button size="sm" variant="ghost" onClick={() => setSelectedSnapshot(null)}>

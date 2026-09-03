@@ -77,72 +77,120 @@ export function PatientFormDialog({
     });
   });
 
+  const handleNextTab = () => {
+    if (activeTab === "Personal Info") setActiveTab("Dental History");
+    else if (activeTab === "Dental History") setActiveTab("Medical History");
+  };
+
+  const handlePrevTab = () => {
+    if (activeTab === "Medical History") setActiveTab("Dental History");
+    else if (activeTab === "Dental History") setActiveTab("Personal Info");
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl rounded-2xl border-border/80 p-6 max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="pb-3 border-b border-border/40">
+      <DialogContent className="w-[92vw] sm:max-w-3xl lg:max-w-4xl max-h-[88vh] rounded-3xl border-border/80 p-6 sm:p-7 flex flex-col overflow-hidden shadow-2xl">
+        <DialogHeader className="pb-3 border-b border-border/40 shrink-0 flex flex-row items-center justify-between space-y-0">
           <DialogTitle className="text-base font-bold flex items-center gap-2">
-            <User className="h-4 w-4 text-cyan-600" />
-            {isEdit ? `Edit Patient — ${patient?.first_name} ${patient?.last_name}` : "Register New Patient"}
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-600/10 text-cyan-600">
+              <User className="h-4 w-4" />
+            </div>
+            {isEdit ? `Edit Patient — ${patient?.first_name} ${patient?.last_name}` : "Register New Patient Record"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="inline-flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/60 text-xs">
-          {TABS.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
-                activeTab === tab
-                  ? "bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+        <div className="shrink-0 py-3 flex items-center justify-between gap-3 border-b border-border/40 bg-muted/20 -mx-6 px-6">
+          <div className="inline-flex items-center gap-1.5 p-1 bg-card rounded-xl border border-border/80 text-xs font-semibold shadow-2xs">
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                  activeTab === tab
+                    ? "bg-cyan-600 text-white shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          <span className="text-[11px] font-mono text-muted-foreground hidden sm:inline">
+            Section: <strong className="text-foreground">{activeTab}</strong>
+          </span>
         </div>
 
-        <form onSubmit={handleFormSubmit} className="space-y-4 pt-2">
+        <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 overflow-hidden pt-3">
           {error && (
-            <Alert variant="destructive" className="rounded-xl">
+            <Alert variant="destructive" className="rounded-xl mb-3 shrink-0">
               <AlertDescription className="text-xs">{error}</AlertDescription>
             </Alert>
           )}
 
-          {activeTab === "Personal Info" && <PatientFormPersonalSection register={register} errors={errors} />}
-          {activeTab === "Dental History" && <PatientFormDentalHistorySection register={register} />}
-          {activeTab === "Medical History" && (
-            <>
-              <PatientFormMedicalQuestionsSection register={register} />
-              <PatientFormAllergyConditionsSection register={register} watch={watch} setValue={setValue} conditions={conditions} />
-            </>
-          )}
+          <div className="flex-1 overflow-y-auto pr-1 space-y-4 pb-4">
+            {activeTab === "Personal Info" && <PatientFormPersonalSection register={register} errors={errors} />}
+            {activeTab === "Dental History" && <PatientFormDentalHistorySection register={register} />}
+            {activeTab === "Medical History" && (
+              <>
+                <PatientFormMedicalQuestionsSection register={register} />
+                <PatientFormAllergyConditionsSection register={register} watch={watch} setValue={setValue} conditions={conditions} />
+              </>
+            )}
+          </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-              className="h-9 rounded-xl text-xs border-border/80"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={isPending}
-              className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs"
-            >
-              {isPending ? (
-                <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Saving...</>
-              ) : (
-                isEdit ? "Save Patient Changes" : "Register Patient"
+          <div className="flex items-center justify-between gap-2 pt-3 border-t border-border/40 shrink-0 mt-auto bg-card -mx-6 px-6 pb-1">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenChange(false)}
+                disabled={isPending}
+                className="h-9 rounded-xl text-xs border-border/80"
+              >
+                Cancel
+              </Button>
+              {activeTab !== "Personal Info" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrevTab}
+                  disabled={isPending}
+                  className="h-9 rounded-xl text-xs border-border/80"
+                >
+                  ◄ Previous Section
+                </Button>
               )}
-            </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {activeTab !== "Medical History" ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleNextTab}
+                  className="h-9 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-xs"
+                >
+                  Next Section ►
+                </Button>
+              ) : null}
+
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isPending}
+                className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs"
+              >
+                {isPending ? (
+                  <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Saving...</>
+                ) : (
+                  isEdit ? "Save Patient Changes" : "Complete Registration"
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

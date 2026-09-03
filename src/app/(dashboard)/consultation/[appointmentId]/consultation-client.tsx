@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { parseAllergies } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { startConsultationAction } from "./actions";
 import { ConsentFormGenerator } from "./consent-form-generator";
 import { TreatmentForm } from "./treatment-form";
-import { Loader2, Stethoscope, Phone, AlertTriangle, CheckCircle2, Activity } from "lucide-react";
+import { RxHistoryViewer } from "./rx-history-viewer";
+import { RxGeneratorDialog } from "./rx-generator-dialog";
+import { Loader2, Stethoscope, Phone, AlertTriangle, CheckCircle2, Activity, Pill } from "lucide-react";
 import type { ConsentClause, DentalChart, ToothPresence, ToothFinding } from "@/lib/types/database";
 
 interface ConsultationClientProps {
@@ -25,6 +28,7 @@ interface ConsultationClientProps {
   dentistName: string;
   services: string[];
   hasConsent: boolean;
+  isConsentSigned?: boolean;
   consentClauses: ConsentClause[];
   dentalChart: DentalChart;
   dentalChartPresence: ToothPresence[];
@@ -44,15 +48,19 @@ export function ConsultationClient({
   dentistName,
   services,
   hasConsent,
+  isConsentSigned = false,
   consentClauses,
   dentalChart,
   dentalChartPresence,
   dentalChartFindings,
 }: ConsultationClientProps) {
+  const router = useRouter();
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [currentVisitStatus, setCurrentVisitStatus] = useState(visitStatus);
+  const [isConsentGenerated, setIsConsentGenerated] = useState(hasConsent);
+  const [isRxDialogOpen, setIsRxDialogOpen] = useState(false);
 
   const handleStartConsultation = async () => {
     setIsStarting(true);
@@ -63,6 +71,7 @@ export function ConsultationClient({
       if (result.success) {
         setCurrentVisitStatus("in_consultation");
         setSuccess("Consultation started");
+        router.refresh();
       } else {
         setError(result.error ?? "Failed to start consultation");
       }
@@ -72,7 +81,6 @@ export function ConsultationClient({
   };
 
   const canStartConsultation = ["waiting", "checked_in"].includes(currentVisitStatus);
-  const hasAllergies = patientAllergies && patientAllergies.trim().toLowerCase() !== "none" && patientAllergies.trim().toLowerCase() !== "";
 
   return (
     <div className="space-y-6">
@@ -85,7 +93,7 @@ export function ConsultationClient({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold tracking-tight text-foreground">Clinical Consultation Workspace</h1>
-              <Badge variant="outline" className="border-cyan-500/30 text-cyan-600 font-mono text-[10px] uppercase">
+              <Badge variant="outline" className="border-cyan-500/30 text-cyan-600 font-mono text-[10px] uppercase font-bold">
                 {currentVisitStatus.replace(/_/g, " ")}
               </Badge>
             </div>
@@ -93,12 +101,22 @@ export function ConsultationClient({
           </div>
         </div>
 
-        {canStartConsultation && (
-          <Button onClick={handleStartConsultation} disabled={isStarting} size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs">
-            {isStarting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Activity className="mr-1.5 h-3.5 w-3.5" />}
-            Start Patient Treatment Session
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            onClick={() => setIsRxDialogOpen(true)}
+            className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs"
+          >
+            <Pill className="mr-1.5 h-3.5 w-3.5" /> Compose RX Prescription
           </Button>
-        )}
+
+          {canStartConsultation && (
+            <Button onClick={handleStartConsultation} disabled={isStarting} size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs">
+              {isStarting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Stethoscope className="mr-1.5 h-3.5 w-3.5" />}
+              Start Clinical Consultation
+            </Button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -155,12 +173,26 @@ export function ConsultationClient({
         </div>
       </Card>
 
+      {/* ISSUED PRESCRIPTIONS HISTORY VIEWER */}
+      <RxHistoryViewer
+        appointmentId={appointmentId}
+        patientId={patientId}
+        patientName={patientName}
+        dentistName={dentistName}
+        onOpenCreateDialog={() => setIsRxDialogOpen(true)}
+      />
+
       {/* CONSENT FORM GENERATOR */}
       <ConsentFormGenerator
         appointmentId={appointmentId}
+        visitStatus={currentVisitStatus}
         consentClauses={consentClauses}
-        hasConsent={hasConsent}
-        onGenerated={() => setSuccess("Consent form generated — patient can sign on tablet")}
+        hasConsent={isConsentGenerated}
+        onGenerated={() => {
+          setIsConsentGenerated(true);
+          setSuccess("Consent form generated — patient can now sign on tablet");
+          router.refresh();
+        }}
         onError={setError}
       />
 
@@ -169,9 +201,25 @@ export function ConsultationClient({
         appointmentId={appointmentId}
         patientId={patientId}
         visitStatus={currentVisitStatus}
+        hasConsent={isConsentGenerated}
+        isConsentSigned={isConsentSigned}
         dentalChart={dentalChart}
         dentalChartPresence={dentalChartPresence}
         dentalChartFindings={dentalChartFindings}
+      />
+
+      {/* RX GENERATOR DIALOG MODAL */}
+      <RxGeneratorDialog
+        open={isRxDialogOpen}
+        onOpenChange={setIsRxDialogOpen}
+        appointmentId={appointmentId}
+        patientId={patientId}
+        patientName={patientName}
+        dentistName={dentistName}
+        onPrescriptionCreated={() => {
+          setSuccess("Prescription recorded successfully.");
+          router.refresh();
+        }}
       />
     </div>
   );

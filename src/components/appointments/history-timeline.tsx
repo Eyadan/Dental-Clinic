@@ -92,8 +92,9 @@ export const HistoryTimeline = memo(function HistoryTimeline({ appointmentId }: 
                     {new Date(entry.changed_at).toLocaleString("en-PH", {
                       month: "short",
                       day: "numeric",
-                      hour: "2-digit",
+                      hour: "numeric",
                       minute: "2-digit",
+                      hour12: true,
                     })}
                   </span>
                 </div>
