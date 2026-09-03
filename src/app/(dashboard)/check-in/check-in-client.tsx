@@ -241,7 +241,7 @@ export function CheckInClient({ initialAppointments }: CheckInClientProps) {
                     <Button
                       size="sm"
                       onClick={() => handleCheckIn(appt.id, appt.patient_name)}
-                      disabled={pendingId === appt.id || appt.visit_status === "checked_in" || appt.visit_status === "in_consultation"}
+                      disabled={pendingId === appt.id || ["checked_in", "in_consultation", "completed", "checkout"].includes(appt.visit_status ?? "")}
                       className="bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs h-9 shadow-xs"
                     >
                       {pendingId === appt.id ? (
