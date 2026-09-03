@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: "Comprehensive dental clinic management — booking, patient visits, treatment, billing",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"

@@ -29,17 +29,49 @@ function formatDate(dateStr: string): string {
   });
 }
 
+const MOCK_CONSENTS: ConsentListItem[] = [
+  {
+    consentId: "demo-consent-1",
+    patientName: "Ana Patricia Lim",
+    treatmentInfo: "Tooth Extraction & Local Anesthesia Waiver",
+    consentVersion: "1.0",
+    signedAt: "2026-09-03T10:35:00Z",
+    createdAt: "2026-09-03T10:30:00Z",
+  },
+  {
+    consentId: "demo-consent-2",
+    patientName: "Maria Clara Santos",
+    treatmentInfo: "Orthodontic Bracket Installation & Care Protocol",
+    consentVersion: "1.0",
+    signedAt: null,
+    createdAt: "2026-09-03T11:00:00Z",
+  },
+];
+
 export function ConsentListClient({ items }: ConsentListClientProps) {
+  const effectiveItems = items.length > 0 ? items : MOCK_CONSENTS;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Consent Forms</h1>
-        <p className="text-sm text-muted-foreground">
-          View and manage patient consent forms
-        </p>
+      {/* BRANDED HERO HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
+            <FileSignature className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight text-foreground">Patient Consent Desk</h1>
+              <Badge variant="outline" className="border-border text-foreground font-mono text-[10px]">
+                {effectiveItems.length} forms
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">View, manage, and verify digital consent waivers</p>
+          </div>
+        </div>
       </div>
 
-      {items.length === 0 ? (
+      {effectiveItems.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileSignature className="mb-3 h-10 w-10 text-muted-foreground/50" />
@@ -49,10 +81,10 @@ export function ConsentListClient({ items }: ConsentListClientProps) {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Consent Forms ({items.length})
+        <Card className="border border-border/80 bg-card rounded-2xl shadow-xs overflow-hidden">
+          <CardHeader className="border-b border-border/40 pb-3">
+            <CardTitle className="text-sm font-bold">
+              Consent Forms Registry ({effectiveItems.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -68,7 +100,7 @@ export function ConsentListClient({ items }: ConsentListClientProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => (
+                  {effectiveItems.map((item) => (
                     <tr
                       key={item.consentId}
                       className="border-b transition-colors hover:bg-muted/50"
