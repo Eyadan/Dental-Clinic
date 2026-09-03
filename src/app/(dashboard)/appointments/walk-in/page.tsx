@@ -11,6 +11,20 @@ export default async function WalkInPage() {
   const dentistService = new DentistService(supabase);
   const dentalServiceService = new DentalServiceService(supabase);
 
+  const { data: { user } } = await supabase.auth.getUser();
+  let userRole: string | null = null;
+  let currentDentistId: string | null = null;
+
+  if (user) {
+    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
+    userRole = profile?.role ?? null;
+
+    if (userRole === "dentist") {
+      const { data: dentist } = await supabase.from("dentists").select("id").eq("user_id", user.id).single();
+      currentDentistId = dentist?.id ?? null;
+    }
+  }
+
   const [patientsResult, dentists, services] = await Promise.all([
     patientService.getPatients({ query: "", page: 1, pageSize: 100 }),
     dentistService.getAllDentists(),
@@ -30,6 +44,8 @@ export default async function WalkInPage() {
         dentists={dentists}
         services={services}
         onSubmit={createWalkInAction}
+        currentUserRole={userRole}
+        currentDentistId={currentDentistId}
       />
     </div>
   );
