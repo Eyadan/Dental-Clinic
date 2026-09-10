@@ -157,7 +157,8 @@ app/
 │   └── register/[token]/page.tsx   # QR self-registration
 │
 ├── api/
-│   ├── webhooks/messenger/route.ts   # Messenger webhook
+│   ├── webhooks/messenger/route.ts   # Messenger webhook handler
+│   ├── messenger-profile/route.ts    # Messenger profile setup (persistent menu, greeting, ice breakers)
 │   └── cron/
 │       ├── reminders/route.ts        # Reminder cron
 │       └── expiration/route.ts       # Expiration cron
@@ -226,6 +227,7 @@ lib/services/
 ├── billing.service.ts       # Invoices, payments, partial payments
 ├── schedule.service.ts      # Dentist schedules, clinic holidays, slot calculation
 ├── messenger.service.ts     # Send API calls, conversation management
+├── booking-parser.ts        # Messenger bot intent detection, booking flow, Quick Replies, Templates
 ├── livechat.service.ts      # Takeover, end chat, message relay
 ├── qr.service.ts            # QR code generation, validation, invalidation
 ├── settings.service.ts      # System settings CRUD
@@ -335,6 +337,9 @@ All tables conform to **Third Normal Form** — no transitive dependencies, no r
 | `consent_form_clauses` | `id`, `consent_form_id` (FK), `clause_id` (FK) | Junction table |
 | `dental_chart_history` | `id`, `dental_chart_id` (FK), `changed_by` (FK), `action`, `entity_type`, `entity_id`, `tooth_number`, `field`, `old_value`, `new_value`, `changed_at` | **IMMUTABLE** (INSERT only) — audit trail for dental chart changes |
 | `dental_chart_snapshots` | `id`, `dental_chart_id` (FK), `appointment_id` (FK), `snapshot_data` (JSONB), `created_by` (FK), `created_at` | N:1 ← `dental_charts`, N:1 ← `appointments` — point-in-time chart copy per visit |
+| `payment_receipt_versions` | `id`, `payment_id` (FK), `version_number`, `proof_image_url`, `correction_reason`, `status` (pending/approved/rejected), `requested_by` (FK), `reviewed_by` (FK), `rejection_reason`, `created_at`, `reviewed_at` | N:1 ← `payments` — receipt replacement request/approval workflow |
+| `prescriptions` | `id`, `appointment_id` (FK), `patient_id` (FK), `dentist_id` (FK), `prescription_no` (UQ), `ptr_no`, `s2_license_no`, `clinic_name`, `clinic_address`, `clinic_contact`, `notes`, `created_at` | 1:N → `prescription_items` |
+| `prescription_items` | `id`, `prescription_id` (FK), `medication_name`, `generic_name`, `dosage`, `duration`, `quantity`, `instructions`, `created_at` | N:1 ← `prescriptions` |
 
 ### 5.2 Indexes
 
@@ -401,7 +406,7 @@ RLS enabled on **all tables**. Key policies:
 | `patients` | All authenticated staff (non-archived) | Reception, dentists, admins |
 | `appointments` | All staff; dentists see own | Reception, dentists (own), admins |
 | `qr_codes` | Staff; public validates by token | All staff (admin, reception, dentist) |
-| `consent_forms` | Dentist (own), admin | Dentist, admin |
+| `consent_forms` | Dentist (own), admin | Dentist, admin INSERT; admin/reception/dentist UPDATE (signed_at, signature_image_url) |
 | `treatment_records` | Dentist (own), admin | Dentist, admin |
 | `dental_charts` | All staff | Dentist, admin |
 | `tooth_presence` | All staff | Dentist, admin |
@@ -409,6 +414,9 @@ RLS enabled on **all tables**. Key policies:
 | `finding_surfaces` | All staff | Dentist, admin |
 | `dental_chart_history` | All staff | **INSERT only** (immutable — no UPDATE/DELETE) |
 | `dental_chart_snapshots` | All staff | Dentist, admin |
+| `payment_receipt_versions` | All staff (admin, reception, dentist) | Staff INSERT; **admin UPDATE only** (approve/reject) |
+| `prescriptions` | All staff (admin, reception, dentist) | Staff INSERT/DELETE |
+| `prescription_items` | All staff (admin, reception, dentist) | Staff INSERT/DELETE |
 | `booking_sessions` | Service role only | Service role only |
 | `medical_conditions` | All authenticated | Admin only |
 | `patient_medical_records` | All staff | Reception, dentist, admin |
@@ -497,6 +505,32 @@ POST https://graph.facebook.com/v21.0/{page-id}/messages?access_token={PAGE_ACCE
 | Waitlist slot available | Slot release event | FR-112 |
 
 **Messenger fallback:** If messaging window restrictions prevent delivery, Edge Function creates `pending_staff_notification` in `audit_logs` for manual follow-up (FR-90/91).
+
+**Messenger Profile Setup:** `POST /api/messenger-profile` configures the bot profile via the Messenger Profile API:
+- **Get Started button** — payload `GET_STARTED`
+- **Greeting text** — welcome message with booking instructions
+- **Persistent Menu** — 3 postback buttons: Book Appointment, Services & Pricing, Call Clinic (Facebook v21.0 limit: 3 top-level, no nested type)
+- **Ice Breakers** — 3 suggested questions (Book, Hours, Reschedule)
+
+**Rich Message Types** (sent via `booking-parser.ts`):
+
+| Type | Helper Function | Usage |
+|---|---|---|
+| **Quick Replies** | `sendQuickReplies()` | Date selection: Today/Tomorrow/Day-after buttons. Time selection: slots from `getAvailableTimeSlots()` filtered by total service duration across all available dentists. |
+| **Generic Template** | `sendGenericTemplate()` | Appointment confirmation: clinic image + date/time/dentist + Reschedule/Get Directions buttons. Booking completion: appointment details + Reschedule/Cancel/Get Directions buttons. Services carousel (MENU_SERVICES): per-service cards with duration/price + "Book This" button. Service selection: per-service cards with duration/price + "Add This" button for multi-select. |
+| **Receipt Template** | `sendReceiptTemplate()` | Booking receipt: itemized services with prices, total cost (PHP), "Pay at clinic" payment method, order number (reference no). |
+| **Plain Text** | `sendMessengerMessage()` | All other conversational responses (date/time prompts, error messages, help text). |
+
+**Quick Reply Payloads:**
+
+| Payload | Trigger | Action |
+|---|---|---|
+| `QR_DATE_TODAY` | "Today" button | Selects today as booking date |
+| `QR_DATE_TOMORROW` | "Tomorrow" button | Selects tomorrow as booking date |
+| `QR_DATE_DAYAFTER` | Day-after button | Selects day after tomorrow as booking date |
+| `QR_TIME_{HH:MM}` | Time slot button | Selects that time for the appointment |
+| `ADD_SERVICE_{id}` | "Add This" button on service card | Adds service to multi-select list; user types "done" to proceed |
+| `MENU_BOOK_{id}` | "Book This" button on MENU_SERVICES carousel | Starts booking with that service pre-selected (skips service selection step) |
 
 ### 6.2 Cloudflare R2
 

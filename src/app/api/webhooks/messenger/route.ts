@@ -123,9 +123,8 @@ interface MessengerEvent {
   sender?: { id?: string };
   recipient?: { id?: string };
   timestamp?: number;
-  message?: { mid?: string; text?: string };
+  message?: { mid?: string; text?: string; quick_reply?: { payload?: string } };
   postback?: { payload?: string };
-  quick_reply?: { payload?: string };
 }
 
 async function processEntry(entry: unknown): Promise<void> {
@@ -160,9 +159,9 @@ async function processMessagingEvent(event: MessengerEvent): Promise<void> {
 
   const messageText = event.message?.text;
   const postbackPayload = event.postback?.payload;
-  const quickReplyPayload = event.quick_reply?.payload;
+  const quickReplyPayload = event.message?.quick_reply?.payload;
 
-  const content = messageText ?? postbackPayload ?? quickReplyPayload;
+  const content = quickReplyPayload ?? postbackPayload ?? messageText;
 
   if (!content) {
     return;

@@ -259,6 +259,175 @@ async function sendMessengerMessage(psid: string, text: string): Promise<void> {
   }
 }
 
+interface QuickReplyOption {
+  title: string;
+  payload: string;
+  imageUrl?: string;
+}
+
+async function sendQuickReplies(
+  psid: string,
+  text: string,
+  replies: QuickReplyOption[],
+): Promise<void> {
+  if (!PAGE_ACCESS_TOKEN) {
+    console.warn("[Booking Parser] MESSENGER_PAGE_ACCESS_TOKEN not configured — skipping send");
+    return;
+  }
+
+  const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/me/messages?access_token=${PAGE_ACCESS_TOKEN}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient: { id: psid },
+        messaging_type: "RESPONSE",
+        message: {
+          text,
+          quick_replies: replies.map((r) => ({
+            content_type: "text",
+            title: r.title,
+            payload: r.payload,
+            ...(r.imageUrl ? { image_url: r.imageUrl } : {}),
+          })),
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`[Booking Parser] Quick replies send error ${response.status}: ${errorBody}`);
+    }
+  } catch (error) {
+    console.error("[Booking Parser] Failed to send quick replies:", error);
+  }
+}
+
+interface GenericTemplateElement {
+  title: string;
+  subtitle?: string;
+  imageUrl?: string;
+  buttons?: { type: string; title: string; payload?: string; url?: string }[];
+}
+
+async function sendGenericTemplate(
+  psid: string,
+  elements: GenericTemplateElement[],
+): Promise<void> {
+  if (!PAGE_ACCESS_TOKEN) {
+    console.warn("[Booking Parser] MESSENGER_PAGE_ACCESS_TOKEN not configured — skipping send");
+    return;
+  }
+
+  const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/me/messages?access_token=${PAGE_ACCESS_TOKEN}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient: { id: psid },
+        messaging_type: "RESPONSE",
+        message: {
+          attachment: {
+            type: "template",
+            payload: {
+              template_type: "generic",
+              elements: elements.map((el) => ({
+                title: el.title,
+                ...(el.subtitle ? { subtitle: el.subtitle } : {}),
+                ...(el.imageUrl ? { image_url: el.imageUrl } : {}),
+                ...(el.buttons ? { buttons: el.buttons } : {}),
+              })),
+            },
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`[Booking Parser] Generic template send error ${response.status}: ${errorBody}`);
+    }
+  } catch (error) {
+    console.error("[Booking Parser] Failed to send generic template:", error);
+  }
+}
+
+interface ReceiptTemplateElement {
+  title: string;
+  subtitle?: string;
+  quantity?: number;
+  price: number;
+  image_url?: string;
+}
+
+interface ReceiptTemplateParams {
+  recipientName: string;
+  orderNumber: string;
+  currency: string;
+  paymentMethod: string;
+  summary: { totalCost: number };
+  elements: ReceiptTemplateElement[];
+  timestamp?: string;
+  imageUrl?: string;
+}
+
+async function sendReceiptTemplate(
+  psid: string,
+  params: ReceiptTemplateParams,
+): Promise<void> {
+  if (!PAGE_ACCESS_TOKEN) {
+    console.warn("[Booking Parser] MESSENGER_PAGE_ACCESS_TOKEN not configured — skipping send");
+    return;
+  }
+
+  const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/me/messages?access_token=${PAGE_ACCESS_TOKEN}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient: { id: psid },
+        messaging_type: "RESPONSE",
+        message: {
+          attachment: {
+            type: "template",
+            payload: {
+              template_type: "receipt",
+              recipient_name: params.recipientName,
+              order_number: params.orderNumber,
+              currency: params.currency,
+              payment_method: params.paymentMethod,
+              ...(params.timestamp ? { timestamp: params.timestamp } : {}),
+              summary: {
+                total_cost: params.summary.totalCost,
+              },
+              elements: params.elements.map((el) => ({
+                title: el.title,
+                ...(el.subtitle ? { subtitle: el.subtitle } : {}),
+                ...(el.quantity ? { quantity: el.quantity } : {}),
+                price: el.price,
+                ...(el.image_url ? { image_url: el.image_url } : {}),
+              })),
+            },
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`[Booking Parser] Receipt template send error ${response.status}: ${errorBody}`);
+    }
+  } catch (error) {
+    console.error("[Booking Parser] Failed to send receipt template:", error);
+  }
+}
+
 async function getActiveServices(): Promise<{ id: string; name: string; default_duration_minutes: number; default_price: number | null }[]> {
   const supabase = getServiceClient();
   const { data } = await supabase
@@ -634,12 +803,76 @@ export async function processIncomingMessage(
     return;
   }
 
-  if (text === "GET_STARTED" || text === "ICE_BOOK" || text === "MENU_BOOK") {
+  if (text === "GET_STARTED" || text === "ICE_BOOK") {
     await sendMessengerMessage(
       psid,
       "Hello! I can help you book a dental appointment. Reply with \"book\" to get started, " +
         "or tell me what you'd like to do (e.g., \"I want to book an appointment\").",
     );
+    return;
+  }
+
+  if (text === "MENU_BOOK" || text.startsWith("MENU_BOOK_")) {
+    const preselectedServiceId = text.startsWith("MENU_BOOK_") ? text.slice("MENU_BOOK_".length) : undefined;
+    const newSession: BookingSessionData = {
+      conversationId: conversation.id,
+      patientPsid: psid,
+      step: "awaiting_date",
+      ...(preselectedServiceId ? { collectedServiceIds: [preselectedServiceId] } : {}),
+    };
+    await saveSession(newSession);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dayAfter = new Date(today);
+    dayAfter.setDate(dayAfter.getDate() + 2);
+    const fmt = (d: Date) => d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" });
+    await sendQuickReplies(
+      psid,
+      "Great! Let's book an appointment. What date would you like? " +
+        "(e.g., \"tomorrow\", \"Monday\", or \"25/12\")",
+      [
+        { title: `Today (${fmt(today)})`, payload: `QR_DATE_TODAY` },
+        { title: `Tomorrow (${fmt(tomorrow)})`, payload: `QR_DATE_TOMORROW` },
+        { title: `${fmt(dayAfter)}`, payload: `QR_DATE_DAYAFTER` },
+      ],
+    );
+    return;
+  }
+
+  if (text === "MENU_SERVICES") {
+    const services = await getActiveServices();
+    if (services.length === 0) {
+      await sendMessengerMessage(psid, "No services are currently available. Please call the clinic directly.");
+      return;
+    }
+
+    const elements: GenericTemplateElement[] = services.slice(0, 10).map((s) => ({
+      title: s.name,
+      subtitle: `Duration: ${s.default_duration_minutes} min` +
+        (s.default_price ? ` | Price: ₱${Number(s.default_price).toFixed(2)}` : ""),
+      buttons: [
+        { type: "postback", title: "Book This", payload: `MENU_BOOK_${s.id}` },
+      ],
+    }));
+
+    await sendGenericTemplate(psid, elements);
+    return;
+  }
+
+  if (text === "MENU_CALL") {
+    await sendMessengerMessage(
+      psid,
+      "📞 For dental emergencies or immediate assistance, please call us at:\n" +
+        "(02) 123-4567\n\n" +
+        "We're available Monday to Friday, 9:00 AM to 6:00 PM, and Saturday 9:00 AM to 1:00 PM.\n" +
+        "Reply \"book\" to schedule an appointment online.",
+    );
+    return;
+  }
+
+  if (text === "MENU_MY_APPOINTMENTS") {
+    await sendUserBookings(psid);
     return;
   }
 
@@ -799,10 +1032,21 @@ export async function processIncomingMessage(
       step: "awaiting_date",
     };
     await saveSession(newSession);
-    await sendMessengerMessage(
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dayAfter = new Date(today);
+    dayAfter.setDate(dayAfter.getDate() + 2);
+    const fmt = (d: Date) => d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" });
+    await sendQuickReplies(
       psid,
       "Great! Let's book an appointment. What date would you like? " +
         "(e.g., \"tomorrow\", \"Monday\", or \"25/12\")",
+      [
+        { title: `Today (${fmt(today)})`, payload: `QR_DATE_TODAY` },
+        { title: `Tomorrow (${fmt(tomorrow)})`, payload: `QR_DATE_TOMORROW` },
+        { title: `${fmt(dayAfter)}`, payload: `QR_DATE_DAYAFTER` },
+      ],
     );
     return;
   }
@@ -1023,7 +1267,15 @@ export async function processIncomingMessage(
   }
 
   if (session.step === "awaiting_date") {
-    const date = parseDate(text);
+    let dateInput = text;
+    if (text === "QR_DATE_TODAY") dateInput = "today";
+    else if (text === "QR_DATE_TOMORROW") dateInput = "tomorrow";
+    else if (text === "QR_DATE_DAYAFTER") {
+      const d = new Date();
+      d.setDate(d.getDate() + 2);
+      dateInput = d.toLocaleDateString("en-PH", { day: "2-digit", month: "2-digit" });
+    }
+    const date = parseDate(dateInput);
     if (!date) {
       await sendMessengerMessage(
         psid,
@@ -1047,19 +1299,77 @@ export async function processIncomingMessage(
     }
 
     session.collectedDate = date;
-    session.step = "awaiting_time";
     await saveSession(session);
 
-    const dentistNames = availableDentists.map((d) => `• ${d.name} (${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)})`).join("\n");
+    if (session.collectedServiceIds && session.collectedServiceIds.length > 0) {
+      const services = await getActiveServices();
+      const totalDuration = session.collectedServiceIds.reduce((sum, id) => {
+        const svc = services.find((s) => s.id === id);
+        return sum + (svc?.default_duration_minutes ?? 30);
+      }, 0);
+
+      const timeSet = new Set<string>();
+      for (const dentist of availableDentists) {
+        const slots = await getAvailableTimeSlots(dentist.id, date, totalDuration);
+        for (const slot of slots) {
+          const timeStr = slot;
+          timeSet.add(timeStr);
+        }
+      }
+      const timeQuickReplies: QuickReplyOption[] = [...timeSet]
+        .map((timeStr) => ({ raw: parseTime(timeStr) ?? timeStr, display: timeStr }))
+        .sort((a, b) => a.raw.localeCompare(b.raw))
+        .slice(0, 10)
+        .map(({ raw, display }) => ({
+          title: display,
+          payload: `QR_TIME_${raw}`,
+        }));
+
+      session.step = "awaiting_time";
+      await saveSession(session);
+
+      const dentistNames = availableDentists.map((d) => `• ${d.name} (${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)})`).join("\n");
+      await sendQuickReplies(
+        psid,
+        `Great! Available dentists on this day:\n${dentistNames}\n\nWhat time would you prefer? (e.g., "9am", "2:30pm", "14:00")`,
+        timeQuickReplies,
+      );
+      return;
+    }
+
+    session.step = "awaiting_service";
+    await saveSession(session);
+
+    const services = await getActiveServices();
+    if (services.length === 0) {
+      await sendMessengerMessage(psid, "No services are currently available. Please call the clinic directly.");
+      await deleteSession(sessionKey);
+      return;
+    }
+
+    const elements: GenericTemplateElement[] = services.slice(0, 10).map((s) => ({
+      title: s.name,
+      subtitle: `Duration: ${s.default_duration_minutes} min` +
+        (s.default_price ? ` | Price: ₱${Number(s.default_price).toFixed(2)}` : ""),
+      buttons: [
+        { type: "postback", title: "Add This", payload: `ADD_SERVICE_${s.id}` },
+      ],
+    }));
+
     await sendMessengerMessage(
       psid,
-      `Great! Available dentists on this day:\n${dentistNames}\n\nWhat time would you prefer? (e.g., "9am", "2:30pm", "14:00")`,
+      `What service(s) do you need? Tap "Add This" on each service you want, then type "done" when finished.`,
     );
+    await sendGenericTemplate(psid, elements);
     return;
   }
 
   if (session.step === "awaiting_time") {
-    const time = parseTime(text);
+    let timeInput = text;
+    if (text.startsWith("QR_TIME_")) {
+      timeInput = text.replace("QR_TIME_", "");
+    }
+    const time = parseTime(timeInput);
     if (!time) {
       await sendMessengerMessage(
         psid,
@@ -1103,31 +1413,216 @@ export async function processIncomingMessage(
     }
 
     session.collectedTime = time;
-    session.step = "awaiting_service";
     await saveSession(session);
 
-    const dentistNote = dentistsAvailableAtTime.length === availableDentists.length
-      ? ""
-      : `\n\nDentists available at ${formatTimeDisplay(time)}: ${dentistsAvailableAtTime.map((d) => d.name).join(", ")}`;
-
     const services = await getActiveServices();
-    if (services.length === 0) {
-      await sendMessengerMessage(psid, "No services are currently available. Please call the clinic directly.");
-      await deleteSession(sessionKey);
+    const totalDuration = (session.collectedServiceIds ?? []).reduce((sum, id) => {
+      const svc = services.find((s) => s.id === id);
+      return sum + (svc?.default_duration_minutes ?? 30);
+    }, 0);
+
+    const allDentists = await getAvailableDentistsForDate(session.collectedDate);
+    const reqTime2 = new Date(`2000-01-01T${time}`);
+    const dentists = allDentists.filter((d) => {
+      const schedStart = new Date(`2000-01-01T${d.startTime}`);
+      const schedEnd = new Date(`2000-01-01T${d.endTime}`);
+      const reqEnd = new Date(reqTime2.getTime() + totalDuration * 60000);
+      return reqTime2 >= schedStart && reqEnd <= schedEnd;
+    });
+
+    if (dentists.length === 0) {
+      const timeRanges = allDentists
+        .map((d) => `• ${d.name}: ${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)}`)
+        .join("\n");
+      await sendMessengerMessage(
+        psid,
+        `No dentist is available at ${formatTimeDisplay(time)} for ${totalDuration} minutes on that day.\n\nAvailable hours:\n${timeRanges}\n\nPlease try a different time.`,
+      );
       return;
     }
 
-    const serviceList = services.map((s, i) => `${i + 1}. ${s.name} (${s.default_duration_minutes} min)`).join("\n");
+    session.step = "awaiting_dentist";
+    await saveSession(session);
+
+    if (dentists.length === 1) {
+      session.collectedDentistId = dentists[0].id;
+      await saveSession(session);
+
+      const conflict = await checkBookingConflict(
+        dentists[0].id,
+        session.collectedDate!,
+        time,
+        totalDuration,
+      );
+
+      if (conflict.hasConflict) {
+        const serviceDetails = (session.collectedServiceIds ?? []).map((id) => {
+          const svc = services.find((s) => s.id === id)!;
+          return { id: svc.id, name: svc.name, duration: svc.default_duration_minutes };
+        });
+
+        const split = await trySplitServices(
+          dentists[0].id,
+          session.collectedDate!,
+          time,
+          serviceDetails,
+        );
+
+        if (split.fitsNow.length > 0 && split.remaining.length > 0) {
+          const fitsNames = split.fitsNow.map((s) => s.name).join(", ");
+          const fitsDuration = split.fitsNow.reduce((sum, s) => sum + s.duration, 0);
+          const remainingNames = split.remaining.map((s) => s.name).join(", ");
+          const remainingDuration = split.remaining.reduce((sum, s) => sum + s.duration, 0);
+
+          let msg = `⚠️ You requested ${split.fitsNow.map((s) => s.name).join(", ")} at ${formatTimeDisplay(time)}, but there's only ${split.availableUntil ? formatTimeDisplay(split.availableUntil) : "limited time"} available.\n\n`;
+          msg += `✅ Can fit now: ${fitsNames} (${fitsDuration} min)\n`;
+          msg += `⏳ Need separate booking: ${remainingNames} (${remainingDuration} min)`;
+
+          if (split.nextSlotForRemaining) {
+            msg += `\n\nNext available slot for the remaining service(s): ${split.nextSlotForRemaining}`;
+          }
+
+          session.collectedServiceIds = split.fitsNow.map((s) => s.id);
+          session.step = "awaiting_confirmation";
+          await saveSession(session);
+
+          msg += `\n\nReply "yes" to book ${fitsNames} now${split.nextSlotForRemaining ? `, then type "book" for the remaining service(s)` : ""}. Reply "no" to cancel.`;
+          await sendMessengerMessage(psid, msg);
+          return;
+        }
+
+        const slots = await getAvailableTimeSlots(dentists[0].id, session.collectedDate!, totalDuration);
+        let msg2 = `⚠️ ${conflict.reason}`;
+        if (slots.length > 0) {
+          msg2 += `\n\nAvailable time slots with ${dentists[0].name} on this day:\n${slots.slice(0, 8).map((s) => `• ${s}`).join("\n")}`;
+          msg2 += `\n\nPlease type "book" to try one of these times.`;
+        } else {
+          msg2 += `\n\nPlease type "book" to try a different date or time.`;
+        }
+        await sendMessengerMessage(psid, msg2);
+        await deleteSession(sessionKey);
+        return;
+      }
+
+      session.step = "awaiting_confirmation";
+      await saveSession(session);
+      const matchedNames = (session.collectedServiceIds ?? [])
+        .map((id) => services.find((s) => s.id === id)?.name ?? "Unknown")
+        .filter((n) => n !== "Unknown");
+      await sendBookingSummary(session, psid, dentists[0].name, matchedNames, totalDuration);
+      return;
+    }
+
+    const dentistList = dentists.map((d, i) => `${i + 1}. ${d.name} (${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)})`).join("\n");
     await sendMessengerMessage(
       psid,
-      `What service(s) do you need?\n\n${serviceList}\n\nReply with the number(s) — you can choose multiple, e.g. "1,3,5". Or type the service name.${dentistNote}`,
+      `Which dentist?\n\n${dentistList}\n\nReply with the number.`,
     );
     return;
   }
 
   if (session.step === "awaiting_service") {
     const services = await getActiveServices();
-    const lower = text.toLowerCase().trim();
+
+    if (text.startsWith("ADD_SERVICE_")) {
+      const serviceId = text.replace("ADD_SERVICE_", "");
+      const svc = services.find((s) => s.id === serviceId);
+      if (!svc) {
+        await sendMessengerMessage(psid, "That service is no longer available. Please try again or type \"done\" to finish.");
+        return;
+      }
+      if (!session.collectedServiceIds) session.collectedServiceIds = [];
+      if (session.collectedServiceIds.includes(serviceId)) {
+        await sendMessengerMessage(psid, `"${svc.name}" is already in your selection. Tap more services or type "done" to continue.`);
+        return;
+      }
+      session.collectedServiceIds.push(serviceId);
+      await saveSession(session);
+      const selectedNames = session.collectedServiceIds
+        .map((id) => services.find((s) => s.id === id)?.name ?? "Unknown")
+        .filter((n) => n !== "Unknown");
+      await sendMessengerMessage(
+        psid,
+        `✅ Added: ${svc.name}\n\nYour services: ${selectedNames.join(", ")}\n\nTap "Add This" on more services, or type "done" to continue.`,
+      );
+      return;
+    }
+
+    if (text.toLowerCase().trim() === "done") {
+      if (!session.collectedServiceIds || session.collectedServiceIds.length === 0) {
+        await sendMessengerMessage(psid, "You haven't selected any services yet. Tap \"Add This\" on the services you want, or type a service name/number.");
+        return;
+      }
+      const matchedIds = session.collectedServiceIds;
+      const matchedNames = matchedIds
+        .map((id) => services.find((s) => s.id === id)?.name ?? "Unknown")
+        .filter((n) => n !== "Unknown");
+
+      const totalDuration = matchedIds.reduce((sum, id) => {
+        const svc = services.find((s) => s.id === id);
+        return sum + (svc?.default_duration_minutes ?? 30);
+      }, 0);
+
+      await sendMessengerMessage(
+        psid,
+        `You selected: ${matchedNames.join(", ")}\nTotal duration: ${totalDuration} minutes`,
+      );
+
+      const availableDentists = await getAvailableDentistsForDate(session.collectedDate!);
+      if (availableDentists.length === 0) {
+        await sendMessengerMessage(psid, "No dentists are available on this date. Please type \"book\" to try a different date.");
+        await deleteSession(sessionKey);
+        return;
+      }
+
+      const timeSet = new Set<string>();
+      for (const dentist of availableDentists) {
+        const slots = await getAvailableTimeSlots(dentist.id, session.collectedDate!, totalDuration);
+        for (const slot of slots) {
+          timeSet.add(slot);
+        }
+      }
+
+      if (timeSet.size === 0) {
+        await sendMessengerMessage(
+          psid,
+          `No time slots are available for ${totalDuration} minutes on this date. Please type "book" to try a different date.`,
+        );
+        await deleteSession(sessionKey);
+        return;
+      }
+
+      const timeQuickReplies: QuickReplyOption[] = [...timeSet]
+        .map((timeStr) => ({ raw: parseTime(timeStr) ?? timeStr, display: timeStr }))
+        .sort((a, b) => a.raw.localeCompare(b.raw))
+        .slice(0, 10)
+        .map(({ raw, display }) => ({
+          title: display,
+          payload: `QR_TIME_${raw}`,
+        }));
+
+      session.step = "awaiting_time";
+      await saveSession(session);
+
+      const dentistNames = availableDentists.map((d) => `• ${d.name} (${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)})`).join("\n");
+      await sendQuickReplies(
+        psid,
+        `Available dentists on this day:\n${dentistNames}\n\nWhat time would you prefer? (e.g., "9am", "2:30pm", "14:00")`,
+        timeQuickReplies,
+      );
+      return;
+    }
+
+    let inputText = text;
+
+    if (text.startsWith("QR_SERVICE_")) {
+      const num = parseInt(text.replace("QR_SERVICE_", ""), 10);
+      if (!isNaN(num) && num >= 1 && num <= services.length) {
+        inputText = String(num);
+      }
+    }
+
+    const lower = inputText.toLowerCase().trim();
 
     const parts = lower.split(",").map((p) => p.trim()).filter(Boolean);
     const matchedIds: string[] = [];
@@ -1159,8 +1654,6 @@ export async function processIncomingMessage(
     }
 
     session.collectedServiceIds = matchedIds;
-    session.step = "awaiting_dentist";
-    await saveSession(session);
 
     const totalDuration = matchedIds.reduce((sum, id) => {
       const svc = services.find((s) => s.id === id);
@@ -1172,94 +1665,47 @@ export async function processIncomingMessage(
       `You selected: ${matchedNames.join(", ")}\nTotal duration: ${totalDuration} minutes`,
     );
 
-    const allDentists = await getAvailableDentistsForDate(session.collectedDate!);
-    const reqTime = new Date(`2000-01-01T${session.collectedTime}`);
-    const dentists = allDentists.filter((d) => {
-      const schedStart = new Date(`2000-01-01T${d.startTime}`);
-      const schedEnd = new Date(`2000-01-01T${d.endTime}`);
-      const reqEnd = new Date(reqTime.getTime() + totalDuration * 60000);
-      return reqTime >= schedStart && reqEnd <= schedEnd;
-    });
+    const availableDentists = await getAvailableDentistsForDate(session.collectedDate!);
+    if (availableDentists.length === 0) {
+      await sendMessengerMessage(psid, "No dentists are available on this date. Please type \"book\" to try a different date.");
+      await deleteSession(sessionKey);
+      return;
+    }
 
-    if (dentists.length === 0) {
+    const timeSet = new Set<string>();
+    for (const dentist of availableDentists) {
+      const slots = await getAvailableTimeSlots(dentist.id, session.collectedDate!, totalDuration);
+      for (const slot of slots) {
+        timeSet.add(slot);
+      }
+    }
+
+    if (timeSet.size === 0) {
       await sendMessengerMessage(
         psid,
-        `No dentist is available at ${formatTimeDisplay(session.collectedTime!)} for ${totalDuration} minutes on that day.\n\nPlease type "book" to try a different time.`,
+        `No time slots are available for ${totalDuration} minutes on this date. Please type "book" to try a different date.`,
       );
       await deleteSession(sessionKey);
       return;
     }
 
-    if (dentists.length === 1) {
-      session.collectedDentistId = dentists[0].id;
-      await saveSession(session);
+    const timeQuickReplies: QuickReplyOption[] = [...timeSet]
+      .map((timeStr) => ({ raw: parseTime(timeStr) ?? timeStr, display: timeStr }))
+      .sort((a, b) => a.raw.localeCompare(b.raw))
+      .slice(0, 10)
+      .map(({ raw, display }) => ({
+        title: display,
+        payload: `QR_TIME_${raw}`,
+      }));
 
-      const conflict = await checkBookingConflict(
-        dentists[0].id,
-        session.collectedDate!,
-        session.collectedTime!,
-        totalDuration,
-      );
+    session.step = "awaiting_time";
+    await saveSession(session);
 
-      if (conflict.hasConflict) {
-        const serviceDetails = matchedIds.map((id) => {
-          const svc = services.find((s) => s.id === id)!;
-          return { id: svc.id, name: svc.name, duration: svc.default_duration_minutes };
-        });
-
-        const split = await trySplitServices(
-          dentists[0].id,
-          session.collectedDate!,
-          session.collectedTime!,
-          serviceDetails,
-        );
-
-        if (split.fitsNow.length > 0 && split.remaining.length > 0) {
-          const fitsNames = split.fitsNow.map((s) => s.name).join(", ");
-          const fitsDuration = split.fitsNow.reduce((sum, s) => sum + s.duration, 0);
-          const remainingNames = split.remaining.map((s) => s.name).join(", ");
-          const remainingDuration = split.remaining.reduce((sum, s) => sum + s.duration, 0);
-
-          let msg = `⚠️ You requested ${matchedNames.join(", ")} at ${formatTimeDisplay(session.collectedTime!)}, but there's only ${split.availableUntil ? formatTimeDisplay(split.availableUntil) : "limited time"} available.\n\n`;
-          msg += `✅ Can fit now: ${fitsNames} (${fitsDuration} min)\n`;
-          msg += `⏳ Need separate booking: ${remainingNames} (${remainingDuration} min)`;
-
-          if (split.nextSlotForRemaining) {
-            msg += `\n\nNext available slot for the remaining service(s): ${split.nextSlotForRemaining}`;
-          }
-
-          session.collectedServiceIds = split.fitsNow.map((s) => s.id);
-          session.step = "awaiting_confirmation";
-          await saveSession(session);
-
-          msg += `\n\nReply "yes" to book ${fitsNames} now${split.nextSlotForRemaining ? `, then type "book" for the remaining service(s)` : ""}. Reply "no" to cancel.`;
-          await sendMessengerMessage(psid, msg);
-          return;
-        }
-
-        const slots = await getAvailableTimeSlots(dentists[0].id, session.collectedDate!, totalDuration);
-        let msg = `⚠️ ${conflict.reason}`;
-        if (slots.length > 0) {
-          msg += `\n\nAvailable time slots with ${dentists[0].name} on this day:\n${slots.slice(0, 8).map((s) => `• ${s}`).join("\n")}`;
-          msg += `\n\nPlease type "book" to try one of these times.`;
-        } else {
-          msg += `\n\nPlease type "book" to try a different date or time.`;
-        }
-        await sendMessengerMessage(psid, msg);
-        await deleteSession(sessionKey);
-        return;
-      }
-
-      session.step = "awaiting_confirmation";
-      await saveSession(session);
-      await sendBookingSummary(session, psid, dentists[0].name, matchedNames, totalDuration);
-      return;
-    }
-
-    const dentistList = dentists.map((d, i) => `${i + 1}. ${d.name} (${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)})`).join("\n");
-    await sendMessengerMessage(
+    const dentistNames = availableDentists.map((d) => `• ${d.name} (${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)})`).join("\n");
+    await sendQuickReplies(
       psid,
-      `Which dentist?\n\n${dentistList}\n\nReply with the number.`,
+      `Available dentists on this day:\n${dentistNames}\n\nWhat time would you prefer? (e.g., "9am", "2:30pm", "14:00")`,
+      timeQuickReplies,
     );
     return;
   }
@@ -1614,15 +2060,77 @@ async function finalizeBooking(session: BookingSessionData, psid: string): Promi
     .map((id) => services.find((s) => s.id === id)?.name ?? "Unknown")
     .filter((n) => n !== "Unknown");
 
+  const receiptElements: ReceiptTemplateElement[] = (session.collectedServiceIds ?? []).map((id) => {
+    const svc = services.find((s) => s.id === id);
+    return {
+      title: svc?.name ?? "Unknown Service",
+      subtitle: `${svc?.default_duration_minutes ?? 30} minutes`,
+      quantity: 1,
+      price: Number(svc?.default_price ?? 0),
+    };
+  });
+
+  const totalCost = receiptElements.reduce((sum, el) => sum + el.price, 0);
+
+  const { data: dentist } = await supabase
+    .from("dentists")
+    .select("user_id")
+    .eq("id", session.collectedDentistId!)
+    .single();
+
+  let dentistName = "TBD";
+  if (dentist?.user_id) {
+    const { data: userData } = await supabase
+      .from("users")
+      .select("first_name, last_name")
+      .eq("id", dentist.user_id)
+      .single();
+    if (userData) {
+      dentistName = `Dr. ${userData.first_name} ${userData.last_name}`;
+    }
+  }
+
+  if (totalCost > 0) {
+    await sendReceiptTemplate(psid, {
+      recipientName: `Messenger User`,
+      orderNumber: result.referenceNo,
+      currency: "PHP",
+      paymentMethod: "Pay at clinic",
+      timestamp: Math.floor(Date.now() / 1000).toString(),
+      summary: { totalCost },
+      elements: receiptElements,
+    });
+  }
+
+  await sendGenericTemplate(psid, [
+    {
+      title: `✅ Appointment Request Received`,
+      subtitle: `${dateFormatted} at ${formatTimeDisplay(session.collectedTime!)} with ${dentistName}\nRef: ${result.referenceNo} | Duration: ${totalDuration} min`,
+      imageUrl: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=400",
+      buttons: [
+        {
+          type: "postback",
+          title: "📅 Reschedule",
+          payload: `RESCHEDULE_${result.referenceNo}`,
+        },
+        {
+          type: "postback",
+          title: "🚫 Cancel",
+          payload: `CANCEL_${result.referenceNo}`,
+        },
+        {
+          type: "web_url",
+          title: "📍 Get Directions",
+          url: "https://maps.google.com/?q=dental+clinic",
+        },
+      ],
+    },
+  ]);
+
   await sendMessengerMessage(
     psid,
-    `✅ Your appointment request has been received!\n\n` +
-      `Reference: ${result.referenceNo}\n` +
-      `Date: ${dateFormatted}\n` +
-      `Time: ${formatTimeDisplay(session.collectedTime)}\n` +
-      `Service(s): ${serviceNames.join(", ")}\n` +
-      `Duration: ${totalDuration} minutes\n\n` +
-      `Our staff will review and confirm your appointment. You'll receive a message once it's approved.`,
+    `Our staff will review and confirm your appointment. You'll receive a message once it's approved. ` +
+      `Type "my bookings" to view your appointments.`,
   );
 
   await saveMessage(session.conversationId, "outbound", `Appointment confirmation sent — Ref: ${result.referenceNo}`);
@@ -1749,10 +2257,68 @@ async function handleConfirmResponse(psid: string, referenceNo: string): Promise
     return;
   }
 
-  await sendMessengerMessage(
-    psid,
-    `✅ Thank you for confirming your appointment (${referenceNo}). We'll see you at the clinic!`,
-  );
+  const { data: fullAppt } = await supabase
+    .from("appointments")
+    .select(`
+      reference_no,
+      scheduled_date,
+      scheduled_time,
+      dentist_id
+    `)
+    .eq("id", appointment.id)
+    .maybeSingle();
+
+  let dentistName = "your dentist";
+  if (fullAppt?.dentist_id) {
+    const { data: dentist } = await supabase
+      .from("dentists")
+      .select("user_id")
+      .eq("id", fullAppt.dentist_id)
+      .single();
+    if (dentist?.user_id) {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("first_name, last_name")
+        .eq("id", dentist.user_id)
+        .single();
+      if (userData) {
+        dentistName = `Dr. ${userData.first_name} ${userData.last_name}`;
+      }
+    }
+  }
+
+  if (fullAppt) {
+    const dateFormatted = new Date(fullAppt.scheduled_date + "T00:00:00").toLocaleDateString("en-PH", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    });
+
+    await sendGenericTemplate(psid, [
+      {
+        title: `✅ Appointment Confirmed`,
+        subtitle: `${dateFormatted} at ${formatTimeDisplay(fullAppt.scheduled_time)} with ${dentistName}\nRef: ${referenceNo}`,
+        imageUrl: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=400",
+        buttons: [
+          {
+            type: "postback",
+            title: "📅 Reschedule",
+            payload: `RESCHEDULE_${referenceNo}`,
+          },
+          {
+            type: "web_url",
+            title: "📍 Get Directions",
+            url: "https://maps.google.com/?q=dental+clinic",
+          },
+        ],
+      },
+    ]);
+  } else {
+    await sendMessengerMessage(
+      psid,
+      `✅ Thank you for confirming your appointment (${referenceNo}). We'll see you at the clinic!`,
+    );
+  }
 }
 
 async function handleRescheduleResponse(psid: string, referenceNo: string): Promise<void> {

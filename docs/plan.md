@@ -185,6 +185,54 @@
 
 ---
 
+## Part 9 — Messenger Bot Rich UI (FEAT-009)
+
+| # | Task | Status | Dependencies | Notes |
+|---|------|--------|--------------|-------|
+| P9-01 | Update Persistent Menu with 3 postback buttons | ✅ Done | — | `src/app/api/messenger-profile/route.ts` — Book/Services/Call Clinic (Facebook v21.0 limit: 3 top-level, no nested) |
+| P9-02 | Add `sendQuickReplies()` helper function | ✅ Done | — | `src/lib/services/booking-parser.ts` |
+| P9-03 | Add `sendGenericTemplate()` helper function | ✅ Done | — | `src/lib/services/booking-parser.ts` |
+| P9-04 | Add `sendReceiptTemplate()` helper function | ✅ Done | — | `src/lib/services/booking-parser.ts` |
+| P9-05 | Quick Replies on existing date selection step | ✅ Done | P9-02 | Today/Tomorrow/Day-after buttons (`QR_DATE_TODAY`, `QR_DATE_TOMORROW`, `QR_DATE_DAYAFTER`) |
+| P9-06 | Service selection as Generic Template carousel multi-select | ✅ Done | P9-03 | Replaced text list + Quick Replies with carousel. Each card has "Add This" button (`ADD_SERVICE_{id}`). User taps multiple, then types "done". Fallback text input still works. |
+| P9-07 | Generic Template for appointment confirmation | ✅ Done | P9-03 | Clinic image + Reschedule/Get Directions buttons |
+| P9-08 | Generic Template for booking completion | ✅ Done | P9-03 | Reschedule/Cancel/Get Directions buttons |
+| P9-09 | Receipt Template for completed booking | ✅ Done | P9-04 | Service line items, prices, total cost (PHP), "Pay at clinic" |
+| P9-10 | Handle new menu payloads (MENU_SERVICES, MENU_CALL) | ✅ Done | P9-03 | Services carousel via Generic Template, clinic phone info |
+| P9-11 | Apply 3 pending DB migrations | ✅ Done | — | consent_forms RLS, payment_receipt_versions, prescriptions |
+| P9-12 | Quick Replies for time selection step | ✅ Done | P9-02 | Hourly slots from union of all available dentists' schedules. `QR_TIME_{HH:MM}` payloads. |
+| P9-13 | Fix webhook quick_reply extraction | ✅ Done | — | Facebook nests `quick_reply` inside `message` object, not at event root. Fixed interface + extraction priority. |
+| P9-14 | Fix MENU_BOOK to start booking flow directly | ✅ Done | — | Split from GET_STARTED. `MENU_BOOK_{serviceId}` pre-selects service and skips service step. |
+| P9-15 | Fix Live Chat take/end chat button not updating | ✅ Done | — | Pass `onConversationChange` prop to `ChatThread` so conversation status refreshes without page reload. |
+| P9-16 | Reorder booking flow: Date → Service → Time → Dentist | ✅ Done | P9-05,P9-06,P9-12 | Time Quick Replies now show only slots that fit total service duration. No more "no dentist available" dead-ends. |
+
+### Design Decisions
+
+**Persistent Menu:**
+- 3 postback buttons: Book Appointment, Services & Pricing, Call Clinic
+- Facebook v21.0 limits to 3 top-level buttons; `nested` type not supported in this API version
+- Other options (Hours, Cancel, Contact) accessible via ice breakers and text commands
+
+**Quick Replies (enhancing existing flow, no new steps):**
+- Date selection step: Quick Reply buttons for Today, Tomorrow, and day-after with formatted dates (`QR_DATE_*`)
+- Service selection step: Generic Template carousel with "Add This" buttons for multi-select (`ADD_SERVICE_*`), then type "done" to proceed
+- Time selection step: Quick Reply buttons for slots that fit the total service duration, from union of all available dentists' schedules (`QR_TIME_*`)
+- `QR_DATE_*`, `QR_TIME_*`, and `ADD_SERVICE_*` payloads translated internally to existing parsing logic
+
+**Booking Flow Order (reordered):**
+1. Date → Quick Reply buttons (Today/Tomorrow/Day-after)
+2. Service → Generic Template carousel multi-select ("Add This" + "done")
+3. Time → Quick Reply buttons (duration-filtered slots from `getAvailableTimeSlots`)
+4. Dentist → auto-selected if only one available, otherwise numbered list
+5. Confirmation → booking summary with Generic Template
+
+**Message Templates:**
+- **Generic Template**: Used for (1) appointment confirmation — clinic image + Reschedule/Get Directions buttons, (2) booking completion — Reschedule/Cancel/Get Directions buttons, (3) services carousel — per-service cards with duration/price + "Add This" button for multi-select, (4) MENU_SERVICES — same carousel with "Book This" buttons (`MENU_BOOK_{serviceId}`)
+- **Receipt Template**: Sent after successful booking with itemized services, prices, and total — gives patients a visual "booking receipt" in chat
+- Image URLs use Unsplash placeholder dental clinic photos — replace with actual clinic photos in production
+
+---
+
 ## Legend
 
 | Symbol | Meaning |

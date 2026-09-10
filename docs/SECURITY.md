@@ -125,7 +125,7 @@ Threat modeling uses the **STRIDE** methodology (Spoofing, Tampering, Repudiatio
 |---|---|---|
 | Appointment status manipulation | Direct API call with invalid status transition | Database trigger `appointment_status_validate` rejects invalid transitions; Server Actions validate before writing |
 | Treatment record alteration | Unauthorized edit of clinical notes | RLS policy: dentists can only update own appointments; `updated_at` optimistic concurrency control detects conflicts (NFR-25) |
-| Consent form tampering | Modifying signed consent after the fact | Consent forms are INSERT-only via RLS (no UPDATE/DELETE); `consent_version` + `signed_at` + `signature_image_url` are immutable once written; template changes don't alter past consents (FR-56) |
+| Consent form tampering | Modifying signed consent after the fact | Consent forms are INSERT + limited UPDATE via RLS (UPDATE only for `signed_at`, `signature_image_url` by admin/reception/dentist); no DELETE; `consent_version` + `signed_at` + `signature_image_url` are immutable once signed; template changes don't alter past consents (FR-56) |
 | Audit log modification | Admin or attacker deleting logs | `audit_logs` table: RLS denies UPDATE/DELETE for ALL users including admins; only service role can INSERT via triggers; trigger-based insertion prevents bypassing |
 | Double-booking via race condition | Concurrent booking approvals | Pessimistic locking: `SELECT ... FOR UPDATE` on dentist schedule row within transaction (NFR-24) |
 | Webhook payload tampering | MITM on Messenger webhook | HMAC-SHA256 signature verification; TLS; reject unsigned requests |
@@ -654,7 +654,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 | Status transition validation | `appointment_status_validate` trigger — database-level enforcement |
 | Foreign key constraints | All relationships enforced with `ON DELETE RESTRICT` (prevent orphaned records) |
 | Check constraints | Enum-like constraints on status columns |
-| Immutable tables | `audit_logs`, `appointment_history`, `consent_forms`, `messenger_messages`, `reassignment_logs`, `dental_chart_history` — INSERT-only via RLS |
+| Immutable tables | `audit_logs`, `appointment_history`, `messenger_messages`, `reassignment_logs`, `dental_chart_history` — INSERT-only via RLS. `consent_forms` — INSERT + limited UPDATE (signing fields only), no DELETE |
 
 ### 7.4 Backup & Recovery
 
@@ -761,7 +761,7 @@ function verifySignature(body: string, signature: string, secret: string): boole
 |---|---|---|
 | `get_started` button | First interaction trigger — sends `GET_STARTED` postback payload when user taps it | POST to Messenger Profile API |
 | `greeting` text | Welcome message on chat screen: "Welcome to Dental Clinic! Tap Get Started to book an appointment." | POST to Messenger Profile API |
-| `persistent_menu` | Always-visible menu: Book Appointment, Clinic Hours, Contact Us, Cancel Appointment | POST to Messenger Profile API |
+| `persistent_menu` | Always-visible menu: Book Appointment, Services & Pricing, Call Clinic (3 postback buttons — Facebook v21.0 limit) | POST to Messenger Profile API |
 | `ice_breakers` | Suggested conversation starters for new users | POST to Messenger Profile API |
 | `whitelisted_domains` | Domain allowlist for Messenger Extensions (if web views used) | POST to Messenger Profile API |
 
@@ -782,6 +782,17 @@ function verifySignature(body: string, signature: string, secret: string): boole
 | Bot pause on takeover | System sets `messenger_conversations.taken_over_by` — Edge Function checks this before sending automated replies |
 | Message content | Staff messages are plain text; no file sharing via Messenger (patients directed to clinic for documents) |
 | Conversation history | Accessible only to `reception` and `admin` via RLS |
+
+### 9.6 Rich Message Security
+
+| Control | Implementation |
+|---|---|
+| Quick Reply payloads | All payloads are hardcoded constants (`QR_DATE_TODAY`, `QR_DATE_TOMORROW`, `QR_DATE_DAYAFTER`, `QR_TIME_{HH:MM}`, `ADD_SERVICE_{id}`, `MENU_BOOK_{id}`) — no user-supplied data in payloads |
+| Template content | Generic Template and Receipt Template content is generated from validated database records (appointment, services, dentist name) — no raw user input injected into template fields |
+| Template image URLs | Clinic images use hardcoded Unsplash placeholder URLs — no user-supplied URLs in `image_url` fields |
+| Template buttons | All postback payloads use reference numbers (`RESCHEDULE_{ref}`, `CANCEL_{ref}`) validated against patient's own appointments; web_url buttons use hardcoded Google Maps URL |
+| Receipt amounts | Prices pulled from `dental_services.default_price` — not user-editable; currency hardcoded to `PHP` |
+| No PHI in templates | Templates show appointment date/time/dentist/services only — no medical history, diagnosis, or treatment details in Messenger messages |
 | Audit trail | All takeover/end events logged to `audit_logs` |
 
 ---

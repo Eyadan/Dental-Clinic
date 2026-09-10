@@ -25,18 +25,13 @@ const PROFILE_CONFIG = {
         },
         {
           type: "postback",
-          title: "Clinic Hours",
-          payload: "MENU_HOURS",
+          title: "Services & Pricing",
+          payload: "MENU_SERVICES",
         },
         {
           type: "postback",
-          title: "Contact Us",
-          payload: "MENU_CONTACT",
-        },
-        {
-          type: "postback",
-          title: "Cancel Appointment",
-          payload: "MENU_CANCEL",
+          title: "Call Clinic",
+          payload: "MENU_CALL",
         },
       ],
     },
