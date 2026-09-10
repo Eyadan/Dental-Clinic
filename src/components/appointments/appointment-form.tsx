@@ -28,26 +28,32 @@ interface AppointmentFormProps {
   dentists: Dentist[];
   services: DentalService[];
   onSubmit: (formData: FormData) => Promise<{ success: boolean; error?: string; data?: { id: string; reference_no: string } }>;
+  currentUserRole?: string | null;
+  currentDentistId?: string | null;
 }
 
 function formatPeso(amount: number): string {
   return `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function AppointmentForm({ patients, dentists, services, onSubmit }: AppointmentFormProps) {
+export function AppointmentForm({ patients, dentists, services, onSubmit, currentUserRole, currentDentistId }: AppointmentFormProps) {
+  const isDentistRole = currentUserRole === "dentist";
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [patientId, setPatientId] = useState<string | null>(null);
-  const [dentistId, setDentistId] = useState<string | null>(null);
+  const [dentistId, setDentistId] = useState<string | null>(() => {
+    return isDentistRole && currentDentistId ? currentDentistId : (dentists.length === 1 ? dentists[0].id : null);
+  });
   const [slots, setSlots] = useState<Slot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [selectedTime, setSelectedTime] = useState("09:00");
   const [isVerballyApproved, setIsVerballyApproved] = useState(false);
 
+  const effectiveDentistId = isDentistRole && currentDentistId ? currentDentistId : dentistId;
   const selectedPatient = useMemo(() => patients.find((p) => p.id === patientId) ?? null, [patients, patientId]);
-  const selectedDentist = useMemo(() => dentists.find((d) => d.id === dentistId) ?? null, [dentists, dentistId]);
+  const selectedDentist = useMemo(() => dentists.find((d) => d.id === effectiveDentistId) ?? null, [dentists, effectiveDentistId]);
 
   const totalDuration = useMemo(() => {
     return services
@@ -71,14 +77,15 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
   const handleDentistChange = (value: string | null) => setDentistId(value);
 
   const handleCheckSlots = () => {
-    if (!dentistId || totalDuration === 0) return;
+    const targetDentistId = effectiveDentistId;
+    if (!targetDentistId || totalDuration === 0) return;
     const dateInput = document.getElementById("scheduled_date") as HTMLInputElement | null;
     if (!dateInput?.value) return;
 
     setIsLoadingSlots(true);
     setSlots([]);
     startTransition(async () => {
-      const result = await getAvailableSlotsAction(dentistId, dateInput.value, totalDuration);
+      const result = await getAvailableSlotsAction(targetDentistId, dateInput.value, totalDuration);
       setIsLoadingSlots(false);
       if (result.success && result.data) {
         setSlots(result.data);
@@ -97,11 +104,13 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
     setError(null);
     setSuccess(null);
 
+    const targetDentistId = effectiveDentistId;
+
     if (!patientId) {
       setError("Please select a patient");
       return;
     }
-    if (!dentistId) {
+    if (!targetDentistId) {
       setError("Please select a dentist");
       return;
     }
@@ -112,10 +121,10 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
 
     const formData = new FormData(e.currentTarget);
     formData.set("patient_id", patientId);
-    formData.set("dentist_id", dentistId);
+    formData.set("dentist_id", targetDentistId);
     formData.set("scheduled_time", selectedTime);
     formData.set("total_duration", String(totalDuration));
-    formData.set("isVerballyApproved", isVerballyApproved ? "true" : "false");
+    formData.set("isVerballyApproved", isDentistRole ? "true" : (isVerballyApproved ? "true" : "false"));
     selectedServiceIds.forEach((id) => formData.append("service_ids", id));
 
     startTransition(async () => {
@@ -177,47 +186,66 @@ export function AppointmentForm({ patients, dentists, services, onSubmit }: Appo
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="dentist" className="text-xs font-semibold text-muted-foreground">Select Attending Dentist *</Label>
-              <Select value={dentistId ?? ""} onValueChange={handleDentistChange}>
-                <SelectTrigger id="dentist" className="w-full h-10 text-xs border-border/80 rounded-xl">
-                  <SelectValue placeholder="Choose dentist...">
-                    {selectedDentist ? `${selectedDentist.full_name ?? selectedDentist.license_no}${selectedDentist.specialization ? ` · ${selectedDentist.specialization}` : ""}` : undefined}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="w-[var(--anchor-width)] min-w-[var(--anchor-width)] rounded-xl p-1">
-                  {dentists.map((d) => (
-                    <SelectItem key={d.id} value={d.id} className="text-xs font-medium">
-                      {d.full_name ?? d.license_no}{d.specialization ? ` · ${d.specialization}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* VERBAL PRE-APPROVAL TOGGLE */}
-            <div className="pt-2 border-t border-border/40">
-              <label htmlFor="verbally_approved_checkbox" className="flex items-start gap-2.5 p-3 rounded-xl border border-border/60 bg-muted/20 hover:bg-muted/30 cursor-pointer transition-colors">
-                <input
-                  type="checkbox"
-                  id="verbally_approved_checkbox"
-                  checked={isVerballyApproved}
-                  onChange={(e) => setIsVerballyApproved(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded text-cyan-600 focus:ring-cyan-500 border-border cursor-pointer"
-                />
-                <div className="space-y-0.5">
-                  <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    Pre-Approved by Attending Dentist
-                    <Badge variant="outline" className={`text-[10px] ${isVerballyApproved ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" : "bg-amber-500/10 text-amber-700 border-amber-500/30"}`}>
-                      {isVerballyApproved ? "APPROVED IMMEDIATELY" : "REQUIRES DENTIST APPROVAL"}
-                    </Badge>
+            {isDentistRole ? (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-muted-foreground">Attending Dentist</Label>
+                <div className="flex items-center justify-between p-3 rounded-xl border border-cyan-500/30 bg-cyan-500/5">
+                  <div className="flex items-center gap-2">
+                    <Stethoscope className="h-4 w-4 text-cyan-600 shrink-0" />
+                    <span className="text-xs font-bold text-foreground">
+                      {selectedDentist ? `${selectedDentist.full_name ?? selectedDentist.license_no}${selectedDentist.specialization ? ` · ${selectedDentist.specialization}` : ""}` : "Attending Dentist"}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground leading-snug">
-                    Check this if the attending dentist has verbally confirmed schedule availability for this patient.
-                  </p>
+                  <Badge variant="outline" className="border-cyan-500/30 text-cyan-600 bg-cyan-500/10 font-mono text-[10px]">
+                    YOUR SCHEDULE (LOCKED)
+                  </Badge>
                 </div>
-              </label>
-            </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="dentist" className="text-xs font-semibold text-muted-foreground">Select Attending Dentist *</Label>
+                <Select value={effectiveDentistId ?? ""} onValueChange={handleDentistChange}>
+                  <SelectTrigger id="dentist" className="w-full h-10 text-xs border-border/80 rounded-xl">
+                    <SelectValue placeholder="Choose dentist...">
+                      {selectedDentist ? `${selectedDentist.full_name ?? selectedDentist.license_no}${selectedDentist.specialization ? ` · ${selectedDentist.specialization}` : ""}` : undefined}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="w-[var(--anchor-width)] min-w-[var(--anchor-width)] rounded-xl p-1">
+                    {dentists.map((d) => (
+                      <SelectItem key={d.id} value={d.id} className="text-xs font-medium">
+                        {d.full_name ?? d.license_no}{d.specialization ? ` · ${d.specialization}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* VERBAL PRE-APPROVAL TOGGLE (ONLY FOR RECEPTION / ADMIN) */}
+            {!isDentistRole && (
+              <div className="pt-2 border-t border-border/40">
+                <label htmlFor="verbally_approved_checkbox" className="flex items-start gap-2.5 p-3 rounded-xl border border-border/60 bg-muted/20 hover:bg-muted/30 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    id="verbally_approved_checkbox"
+                    checked={isVerballyApproved}
+                    onChange={(e) => setIsVerballyApproved(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded text-cyan-600 focus:ring-cyan-500 border-border cursor-pointer"
+                  />
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      Pre-Approved by Attending Dentist
+                      <Badge variant="outline" className={`text-[10px] ${isVerballyApproved ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" : "bg-amber-500/10 text-amber-700 border-amber-500/30"}`}>
+                        {isVerballyApproved ? "APPROVED IMMEDIATELY" : "REQUIRES DENTIST APPROVAL"}
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Check this if the attending dentist has verbally confirmed schedule availability for this patient.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
           </CardContent>
         </Card>
 

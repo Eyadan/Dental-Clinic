@@ -31,13 +31,25 @@ interface BookingDashboardClientProps {
 }
 
 const STATUS_FILTERS = [
-  { key: "pending", label: "Pending Review" },
-  { key: "approved", label: "Approved" },
-  { key: "reschedule_required", label: "Reschedule Req." },
-  { key: "rescheduled", label: "Rescheduled" },
-  { key: "pending_cancellation", label: "Pending Cancel" },
-  { key: "all", label: "All Requests" },
+  { key: "pending", label: "Pending Review", badgeColor: "bg-amber-500/10 text-amber-700 border-amber-500/30" },
+  { key: "approved", label: "Approved", badgeColor: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" },
+  { key: "completed", label: "Completed", badgeColor: "bg-cyan-500/10 text-cyan-700 border-cyan-500/30" },
+  { key: "reschedule_required", label: "Reschedule Req.", badgeColor: "bg-orange-500/10 text-orange-700 border-orange-500/30" },
+  { key: "rescheduled", label: "Rescheduled", badgeColor: "bg-blue-500/10 text-blue-700 border-blue-500/30" },
+  { key: "pending_cancellation", label: "Pending Cancel", badgeColor: "bg-red-500/10 text-red-700 border-red-500/30" },
+  { key: "all", label: "All Requests", badgeColor: "bg-slate-500/10 text-slate-700 border-slate-500/30" },
 ];
+
+const STATUS_PRIORITY: Record<string, number> = {
+  pending: 1,
+  approved: 2,
+  completed: 3,
+  rescheduled: 4,
+  reschedule_required: 5,
+  pending_cancellation: 6,
+  declined: 7,
+  cancelled: 8,
+};
 
 export function BookingDashboardClient({ bookings: initialBookings, activeFilter: initialFilter = "pending", userRole = "reception" }: BookingDashboardClientProps) {
   const router = useRouter();
@@ -47,10 +59,17 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const filteredBookings = bookings.filter((b) => {
-    if (activeFilter === "all") return true;
-    return b.booking_status === activeFilter;
-  });
+  const filteredBookings = bookings
+    .filter((b) => {
+      if (activeFilter === "all") return true;
+      return b.booking_status === activeFilter;
+    })
+    .sort((a, b) => {
+      const priorityA = STATUS_PRIORITY[a.booking_status] ?? 99;
+      const priorityB = STATUS_PRIORITY[b.booking_status] ?? 99;
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
   const pendingCount = bookings.filter((b) => b.booking_status === "pending").length;
 
@@ -199,28 +218,39 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredBookings.map((b) => (
-            <Card key={b.id} className="border border-border/80 bg-card rounded-2xl shadow-xs hover:border-cyan-500/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between overflow-hidden">
-              <CardHeader className="pb-3 pt-4 px-4 bg-muted/20 border-b border-border/40 flex flex-row items-center justify-between space-y-0">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-9 w-9 rounded-xl bg-cyan-600/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold text-xs">
-                    {getInitials(b.patient_name)}
+          {filteredBookings.map((b) => {
+            const statusLeftBorder =
+              b.booking_status === "pending" ? "border-l-4 border-l-amber-500" :
+              b.booking_status === "approved" ? "border-l-4 border-l-emerald-500" :
+              b.booking_status === "completed" ? "border-l-4 border-l-cyan-500" :
+              b.booking_status === "rescheduled" ? "border-l-4 border-l-blue-500" :
+              b.booking_status === "reschedule_required" ? "border-l-4 border-l-orange-500" :
+              b.booking_status === "pending_cancellation" || b.booking_status === "declined" || b.booking_status === "cancelled" ? "border-l-4 border-l-red-500" : "border-l-4 border-l-slate-400";
+
+            const statusBadgeClass =
+              b.booking_status === "pending" ? "border-amber-500/30 text-amber-600 bg-amber-500/10" :
+              b.booking_status === "approved" ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10" :
+              b.booking_status === "completed" ? "border-cyan-500/30 text-cyan-600 bg-cyan-500/10" :
+              b.booking_status === "rescheduled" ? "border-blue-500/30 text-blue-600 bg-blue-500/10" :
+              b.booking_status === "reschedule_required" ? "border-orange-500/30 text-orange-600 bg-orange-500/10" :
+              b.booking_status === "pending_cancellation" || b.booking_status === "declined" || b.booking_status === "cancelled" ? "border-red-500/30 text-red-600 bg-red-500/10" : "border-slate-500/30 text-slate-600 bg-slate-500/10";
+
+            return (
+              <Card key={b.id} className={`border border-border/80 bg-card rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between overflow-hidden ${statusLeftBorder}`}>
+                <CardHeader className="pb-3 pt-4 px-4 bg-muted/20 border-b border-border/40 flex flex-row items-center justify-between space-y-0">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-9 w-9 rounded-xl bg-cyan-600/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold text-xs">
+                      {getInitials(b.patient_name)}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-foreground leading-tight">{b.patient_name}</h3>
+                      <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Ref: {b.reference_no}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-foreground leading-tight">{b.patient_name}</h3>
-                    <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Ref: {b.reference_no}</p>
-                  </div>
-                </div>
-                <Badge variant="outline" className={`text-[10px] font-bold uppercase border ${
-                  b.booking_status === "pending" ? "border-amber-500/30 text-amber-600 bg-amber-500/10" :
-                  b.booking_status === "approved" ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10" :
-                  b.booking_status === "rescheduled" ? "border-blue-500/30 text-blue-600 bg-blue-500/10" :
-                  b.booking_status === "reschedule_required" ? "border-orange-500/30 text-orange-600 bg-orange-500/10" :
-                  b.booking_status === "pending_cancellation" ? "border-red-500/30 text-red-600 bg-red-500/10" : ""
-                }`}>
-                  {b.booking_status.replace(/_/g, " ")}
-                </Badge>
-              </CardHeader>
+                  <Badge variant="outline" className={`text-[10px] font-bold uppercase border ${statusBadgeClass}`}>
+                    {b.booking_status.replace(/_/g, " ")}
+                  </Badge>
+                </CardHeader>
               <CardContent className="p-4 space-y-3.5">
                 <div className="space-y-2 text-xs">
                   {b.service_name && (
@@ -281,9 +311,10 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

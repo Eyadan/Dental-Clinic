@@ -205,7 +205,10 @@ export async function completeTreatmentAction(
 
     const { error: apptError } = await supabase
       .from("appointments")
-      .update({ visit_status: "completed" })
+      .update({
+        visit_status: "completed",
+        booking_status: "completed",
+      })
       .eq("id", appointmentId);
 
     if (apptError) {

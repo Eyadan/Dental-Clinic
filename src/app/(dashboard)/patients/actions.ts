@@ -115,3 +115,25 @@ export async function checkDuplicatePatientAction(
     };
   }
 }
+
+export async function getPatientMedicalDetailsAction(
+  patientId: string,
+): Promise<ServiceResult<{ medicalRecord: any; conditionIds: string[] }>> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const service = new PatientService(supabase);
+    const [medicalRecord, conditionIds] = await Promise.all([
+      service.getMedicalRecord(patientId),
+      service.getPatientConditionIds(patientId),
+    ]);
+    return {
+      success: true,
+      data: { medicalRecord, conditionIds },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch patient medical details",
+    };
+  }
+}

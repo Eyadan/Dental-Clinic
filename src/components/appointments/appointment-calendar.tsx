@@ -34,6 +34,17 @@ const STATUS_COLORS: Record<string, string> = {
   reschedule_required: "bg-orange-500",
 };
 
+const STATUS_PRIORITY: Record<string, number> = {
+  pending: 1,
+  approved: 2,
+  completed: 3,
+  rescheduled: 4,
+  reschedule_required: 5,
+  pending_cancellation: 6,
+  declined: 7,
+  cancelled: 8,
+};
+
 export function AppointmentCalendar({ appointments, month }: AppointmentCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -85,7 +96,16 @@ export function AppointmentCalendar({ appointments, month }: AppointmentCalendar
     return days;
   }, [firstDayOfWeek, daysInMonth, year, monthNum]);
 
-  const selectedDayAppointments = selectedDate ? appointmentsByDate[selectedDate] ?? [] : [];
+  const selectedDayAppointments = useMemo(() => {
+    if (!selectedDate) return [];
+    const appts = appointmentsByDate[selectedDate] ?? [];
+    return [...appts].sort((a, b) => {
+      const priorityA = STATUS_PRIORITY[a.booking_status] ?? 99;
+      const priorityB = STATUS_PRIORITY[b.booking_status] ?? 99;
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      return a.scheduled_time.localeCompare(b.scheduled_time);
+    });
+  }, [selectedDate, appointmentsByDate]);
 
   return (
     <div className="space-y-6">
@@ -215,20 +235,40 @@ export function AppointmentCalendar({ appointments, month }: AppointmentCalendar
               </div>
             ) : (
               <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
-                {selectedDayAppointments.map((appt) => (
-                  <div key={appt.id} className="p-3 rounded-xl border border-border/60 bg-muted/20 space-y-1.5 hover:border-cyan-500/30 transition-all">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-foreground flex items-center gap-1.5">
-                        <User className="h-3.5 w-3.5 text-cyan-600" /> {appt.patient_name}
-                      </span>
-                      <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">{appt.scheduled_time}</span>
+                {selectedDayAppointments.map((appt) => {
+                  const statusLeftBorder =
+                    appt.booking_status === "pending" ? "border-l-4 border-l-amber-500" :
+                    appt.booking_status === "approved" ? "border-l-4 border-l-emerald-500" :
+                    appt.booking_status === "completed" ? "border-l-4 border-l-cyan-500" :
+                    appt.booking_status === "rescheduled" ? "border-l-4 border-l-blue-500" :
+                    appt.booking_status === "reschedule_required" ? "border-l-4 border-l-orange-500" :
+                    appt.booking_status === "declined" || appt.booking_status === "cancelled" ? "border-l-4 border-l-red-500" : "border-l-4 border-l-slate-400";
+
+                  const statusBadgeClass =
+                    appt.booking_status === "pending" ? "border-amber-500/30 text-amber-600 bg-amber-500/10" :
+                    appt.booking_status === "approved" ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10" :
+                    appt.booking_status === "completed" ? "border-cyan-500/30 text-cyan-600 bg-cyan-500/10" :
+                    appt.booking_status === "rescheduled" ? "border-blue-500/30 text-blue-600 bg-blue-500/10" :
+                    appt.booking_status === "reschedule_required" ? "border-orange-500/30 text-orange-600 bg-orange-500/10" :
+                    appt.booking_status === "declined" || appt.booking_status === "cancelled" ? "border-red-500/30 text-red-600 bg-red-500/10" : "border-slate-500/30 text-slate-600 bg-slate-500/10";
+
+                  return (
+                    <div key={appt.id} className={`p-3 rounded-xl border border-border/60 bg-card space-y-1.5 hover:border-cyan-500/40 transition-all ${statusLeftBorder}`}>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-foreground flex items-center gap-1.5">
+                          <User className="h-3.5 w-3.5 text-cyan-600" /> {appt.patient_name}
+                        </span>
+                        <span className="text-[10px] font-mono bg-muted/60 px-2 py-0.5 rounded-lg font-semibold text-foreground">{appt.scheduled_time.slice(0, 5)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
+                        <span className="font-mono text-[10px]">Ref: {appt.reference_no}</span>
+                        <Badge variant="outline" className={`text-[9px] uppercase font-bold border ${statusBadgeClass}`}>
+                          {appt.booking_status.replace(/_/g, " ")}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
-                      <span className="font-mono">Ref: {appt.reference_no}</span>
-                      <Badge variant="secondary" className="text-[9px] uppercase font-bold">{appt.booking_status}</Badge>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>

@@ -2,6 +2,35 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Patient, PatientMedicalRecord, MedicalCondition } from "@/lib/types/database";
 import type { PatientFormData, PatientSearchParams } from "@/lib/validations/patient.schema";
 import { BaseService, type PaginatedResult } from "./base-service";
+import { parseAllergies } from "@/lib/utils";
+
+function compileAllergiesSummary(data: Partial<PatientFormData>): string | null {
+  const items: string[] = [];
+  if (data.allergy_local_anesthetic) items.push("Local Anesthetic (Lidocaine)");
+  if (data.allergy_penicillin_antibiotics) items.push("Penicillin / Antibiotics");
+  if (data.allergy_sulfa_drugs) items.push("Sulfa Drugs");
+  if (data.allergy_aspirin) items.push("Aspirin");
+  if (data.allergy_latex) items.push("Latex");
+
+  if (data.allergy_others && data.allergy_others.trim() !== "") {
+    items.push(...parseAllergies(data.allergy_others));
+  }
+  if (data.allergies && data.allergies.trim() !== "") {
+    items.push(...parseAllergies(data.allergies));
+  }
+
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const item of items) {
+    const key = item.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(item);
+    }
+  }
+
+  return unique.length > 0 ? unique.join(", ") : null;
+}
 
 function buildPatientColumns(data: Partial<PatientFormData>) {
   return {
@@ -27,7 +56,7 @@ function buildPatientColumns(data: Partial<PatientFormData>) {
     referred_by: data.referred_by || null,
     consultation_reason: data.consultation_reason || null,
     medical_history: data.medical_history || null,
-    allergies: data.allergies || null,
+    allergies: compileAllergiesSummary(data),
   };
 }
 

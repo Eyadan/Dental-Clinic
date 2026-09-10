@@ -49,14 +49,7 @@ export default async function BillingListPage() {
     );
   }
 
-  const items: BillingListItem[] = (appointments ?? [])
-    .filter((appt: Record<string, unknown>) => {
-      const invoice = getSingleJoined<{ payment_status: string }>(appt.invoices);
-      const isCompleted = appt.visit_status === "completed" || appt.booking_status === "completed";
-      const isPaid = invoice?.payment_status === "paid";
-      return !(isCompleted && isPaid);
-    })
-    .map((appt: Record<string, unknown>) => {
+  const items: BillingListItem[] = (appointments ?? []).map((appt: Record<string, unknown>) => {
     const patient = getSingleJoined<{ first_name: string; last_name: string }>(appt.patients);
     const dentist = getSingleJoined<{ users: unknown }>(appt.dentists);
     const dentistUser = dentist ? getSingleJoined<{ first_name: string; last_name: string }>(dentist.users) : null;

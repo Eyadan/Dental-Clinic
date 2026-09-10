@@ -36,33 +36,37 @@ export function PatientFormAllergyConditionsSection({ register, watch, setValue,
     <div className="space-y-4">
       <div>
         <p className="text-[11px] font-bold text-muted-foreground uppercase mb-2">Allergic to any of the following?</p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {ALLERGY_ITEMS.map((item) => (
-            <label key={item.field} className="flex items-center gap-2 p-2 rounded-xl bg-muted/30 text-xs font-medium cursor-pointer">
-              <input type="checkbox" className="h-4 w-4 accent-cyan-600" {...register(item.field)} />
+            <label key={item.field} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-border/60 bg-card hover:bg-muted/30 text-xs font-medium cursor-pointer transition-colors shadow-2xs">
+              <input type="checkbox" className="h-4 w-4 rounded accent-cyan-600 cursor-pointer" {...register(item.field)} />
               {item.label}
             </label>
           ))}
         </div>
-        <div className="mt-2 space-y-1.5">
+        <div className="mt-3 space-y-1.5">
           <Label className="text-xs font-semibold text-muted-foreground">Other Allergies</Label>
-          <Input placeholder="Specify others..." className="h-9 text-xs rounded-xl" {...register("allergy_others")} />
+          <Input placeholder="Specify other allergies (e.g. Seafood, Dust, Pollen)..." className="h-10 text-xs rounded-xl border-border/80 focus-visible:ring-cyan-500" {...register("allergy_others")} />
         </div>
       </div>
 
       <div>
         <p className="text-[11px] font-bold text-muted-foreground uppercase mb-2">
-          Do you have or have you had any of the following?
+          Do you have or have you had any of the following? (Medical Conditions Checklist)
         </p>
-        <div className="grid grid-cols-3 gap-1.5 max-h-64 overflow-y-auto p-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-72 overflow-y-auto p-1 border border-border/60 rounded-2xl bg-card">
           {conditions.map((condition) => (
             <label
               key={condition.id}
-              className="flex items-center gap-1.5 p-1.5 rounded-lg bg-muted/30 text-[11px] font-medium cursor-pointer hover:bg-cyan-500/10"
+              className={`flex items-center gap-2 p-2 rounded-xl text-xs font-medium cursor-pointer border transition-colors ${
+                selectedIds.includes(condition.id)
+                  ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-900 dark:text-cyan-200"
+                  : "bg-muted/20 border-border/40 hover:bg-muted/40 text-foreground"
+              }`}
             >
               <input
                 type="checkbox"
-                className="h-3.5 w-3.5 accent-cyan-600 shrink-0"
+                className="h-4 w-4 rounded accent-cyan-600 shrink-0 cursor-pointer"
                 checked={selectedIds.includes(condition.id)}
                 onChange={() => toggleCondition(condition.id)}
               />
