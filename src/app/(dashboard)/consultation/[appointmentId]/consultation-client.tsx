@@ -12,7 +12,7 @@ import { ConsentFormGenerator } from "./consent-form-generator";
 import { TreatmentForm } from "./treatment-form";
 import { RxHistoryViewer } from "./rx-history-viewer";
 import { RxGeneratorDialog } from "./rx-generator-dialog";
-import { Loader2, Stethoscope, Phone, AlertTriangle, CheckCircle2, Activity, Pill } from "lucide-react";
+import { Loader2, Stethoscope, Phone, AlertTriangle, CheckCircle2, Activity } from "lucide-react";
 import type { ConsentClause, DentalChart, ToothPresence, ToothFinding } from "@/lib/types/database";
 
 interface ConsultationClientProps {
@@ -61,6 +61,7 @@ export function ConsultationClient({
   const [currentVisitStatus, setCurrentVisitStatus] = useState(visitStatus);
   const [isConsentGenerated, setIsConsentGenerated] = useState(hasConsent);
   const [isRxDialogOpen, setIsRxDialogOpen] = useState(false);
+  const [rxRefreshKey, setRxRefreshKey] = useState(0);
 
   const handleStartConsultation = async () => {
     setIsStarting(true);
@@ -101,22 +102,14 @@ export function ConsultationClient({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            size="sm"
-            onClick={() => setIsRxDialogOpen(true)}
-            className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs"
-          >
-            <Pill className="mr-1.5 h-3.5 w-3.5" /> Compose RX Prescription
-          </Button>
-
-          {canStartConsultation && (
+        {canStartConsultation && (
+          <div className="flex items-center gap-2 flex-wrap">
             <Button onClick={handleStartConsultation} disabled={isStarting} size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs">
               {isStarting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Stethoscope className="mr-1.5 h-3.5 w-3.5" />}
               Start Clinical Consultation
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -180,6 +173,7 @@ export function ConsultationClient({
         patientName={patientName}
         dentistName={dentistName}
         onOpenCreateDialog={() => setIsRxDialogOpen(true)}
+        refreshKey={rxRefreshKey}
       />
 
       {/* CONSENT FORM GENERATOR */}
@@ -218,6 +212,7 @@ export function ConsultationClient({
         dentistName={dentistName}
         onPrescriptionCreated={() => {
           setSuccess("Prescription recorded successfully.");
+          setRxRefreshKey((prev) => prev + 1);
           router.refresh();
         }}
       />
