@@ -130,8 +130,8 @@ export function PatientFormDialog({
           )}
 
           <div className="flex-1 overflow-y-auto pr-1 space-y-4 pb-4">
-            {activeTab === "Personal Info" && <PatientFormPersonalSection register={register} errors={errors} />}
-            {activeTab === "Dental History" && <PatientFormDentalHistorySection register={register} />}
+            {activeTab === "Personal Info" && <PatientFormPersonalSection register={register} errors={errors} setValue={setValue} watch={watch} />}
+            {activeTab === "Dental History" && <PatientFormDentalHistorySection register={register} setValue={setValue} watch={watch} />}
             {activeTab === "Medical History" && (
               <>
                 <PatientFormMedicalQuestionsSection register={register} />

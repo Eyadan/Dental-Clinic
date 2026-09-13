@@ -12,7 +12,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { todayLocal } from "@/lib/utils/date-utils";
 import { checkInPatientAction } from "./actions";
-import { Search, Loader2, CheckCircle2, Clock, User, QrCode, Activity, Users, Calendar, UserCheck, RefreshCw } from "lucide-react";
+import { UserCheck, RefreshCw, CheckCircle2, Users, Clock, Activity, Search, Loader2, Calendar, User, QrCode } from "lucide-react";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 
 interface CheckInAppointment {
   id: string;
@@ -98,35 +99,23 @@ export function CheckInClient({ initialAppointments }: CheckInClientProps) {
   const inConsultationCount = results.filter((a) => a.visit_status === "in_consultation").length;
 
   return (
-    <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/60 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <UserCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Patient Check-In & Arrival Desk</h1>
-              <Badge variant="outline" className="border-border text-foreground font-mono text-[10px]">
-                {results.length} today
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Lookup patients, process arrivals, and track active queue status</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.refresh()}
-            className="h-9 rounded-xl border-border/60 text-xs hover:bg-muted/50 transition-all"
-          >
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Refresh Desk
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-6 pb-8">
+      {/* LIGHT SaaS HERO HEADER */}
+      <PageHeroBanner
+        icon={UserCheck}
+        title="Patient Check-In & Arrival Desk"
+        description="Lookup patient records, process clinic arrivals, and track active queue status"
+        badgeText={`${results.length} Scheduled Today`}
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.refresh()}
+          className="h-9 rounded-xl border-border/80 text-xs font-semibold"
+        >
+          <RefreshCw className="mr-1.5 h-3.5 w-3.5 text-cyan-600" /> Refresh Desk
+        </Button>
+      </PageHeroBanner>
 
       {error && (
         <Alert variant="destructive" className="border-red-500/20 bg-red-500/5 rounded-2xl">
@@ -145,36 +134,44 @@ export function CheckInClient({ initialAppointments }: CheckInClientProps) {
 
       {/* STATS SUMMARY ROW */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-border/60 bg-card p-4 flex items-center justify-between shadow-xs">
+        <div className="stat-card-glow flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-muted-foreground">Total Scheduled</p>
-            <p className="text-2xl font-extrabold text-foreground mt-1 tabular-nums">{results.length}</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Scheduled</p>
+            <p className="text-3xl font-black text-foreground mt-2 tabular-nums">{results.length}</p>
           </div>
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <div className="h-9 w-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-600">
+            <Users className="h-4.5 w-4.5" />
+          </div>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-card p-4 flex items-center justify-between shadow-xs">
+        <div className="stat-card-glow flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-muted-foreground">Awaiting Arrival</p>
-            <p className="text-2xl font-extrabold text-foreground mt-1 tabular-nums">{pendingArrivals}</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Awaiting Arrival</p>
+            <p className="text-3xl font-black text-amber-600 dark:text-amber-400 mt-2 tabular-nums">{pendingArrivals}</p>
           </div>
-          <Clock className="h-4 w-4 text-muted-foreground" />
+          <div className="h-9 w-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600">
+            <Clock className="h-4.5 w-4.5" />
+          </div>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-card p-4 flex items-center justify-between shadow-xs">
+        <div className="stat-card-glow flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-muted-foreground">Checked In</p>
-            <p className="text-2xl font-extrabold text-foreground mt-1 tabular-nums">{checkedInCount}</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Checked In</p>
+            <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-2 tabular-nums">{checkedInCount}</p>
           </div>
-          <CheckCircle2 className="h-4 w-4 text-cyan-600" />
+          <div className="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600">
+            <CheckCircle2 className="h-4.5 w-4.5" />
+          </div>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-card p-4 flex items-center justify-between shadow-xs">
+        <div className="stat-card-glow flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-muted-foreground">In Treatment</p>
-            <p className="text-2xl font-extrabold text-foreground mt-1 tabular-nums">{inConsultationCount}</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">In Treatment</p>
+            <p className="text-3xl font-black text-teal-600 dark:text-teal-400 mt-2 tabular-nums">{inConsultationCount}</p>
           </div>
-          <Activity className="h-4 w-4 text-muted-foreground" />
+          <div className="h-9 w-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-600">
+            <Activity className="h-4.5 w-4.5" />
+          </div>
         </div>
       </div>
 

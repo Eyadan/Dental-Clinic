@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Save, Loader2, AlertTriangle, Building2, Clock, CalendarCheck, Bell, CreditCard, ShieldCheck, CheckCircle2, RotateCcw, Settings as SettingsIcon } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { saveSettingsAction, type SettingItem } from "./actions";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 
 interface SettingsClientProps {
   settings: SettingItem[];
@@ -174,22 +175,17 @@ export function SettingsClient({ settings }: SettingsClientProps) {
 
   return (
     <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/60 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <SettingsIcon className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">Clinic System Settings</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Configure clinic profile, operating schedule, and security policies</p>
-          </div>
-        </div>
-
+      {/* LIGHT SaaS HERO HEADER */}
+      <PageHeroBanner
+        icon={SettingsIcon}
+        title="Clinic System Settings"
+        description="Configure clinic profile, operating schedule, and security policies"
+        badgeText="Admin Control"
+      >
         <div className="flex items-center gap-2">
           {hasUnsavedChanges && (
-            <Badge variant="outline" className="border-amber-500/50 text-amber-600 dark:text-amber-400 gap-1 text-xs">
-              <AlertTriangle className="h-3 w-3" />
+            <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-300 bg-amber-500/10 gap-1 text-xs font-semibold">
+              <AlertTriangle className="h-3 w-3 text-amber-500" />
               {Object.keys(editedValues).length} unsaved
             </Badge>
           )}
@@ -198,9 +194,9 @@ export function SettingsClient({ settings }: SettingsClientProps) {
             size="sm"
             onClick={() => setEditedValues({})}
             disabled={!hasUnsavedChanges || isSaving}
-            className="rounded-xl border-border/60 text-xs h-9"
+            className="rounded-xl border-border/80 text-xs h-9"
           >
-            <RotateCcw className="mr-1 h-3.5 w-3.5" />
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
             Reset
           </Button>
           <Button
@@ -216,12 +212,12 @@ export function SettingsClient({ settings }: SettingsClientProps) {
             )}
           </Button>
         </div>
-      </div>
+      </PageHeroBanner>
 
       {/* CATEGORY TABS & PANEL */}
       <div className="flex flex-col md:flex-row gap-6">
         {/* Category Side Navigation */}
-        <div className="w-full md:w-64 shrink-0 space-y-1.5">
+        <div className="w-full md:w-64 shrink-0 space-y-2">
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             const isActive = activeCategory === cat.key;
@@ -233,13 +229,18 @@ export function SettingsClient({ settings }: SettingsClientProps) {
                 onClick={() => handleCategoryChange(cat.key)}
                 className={`w-full flex items-center justify-between p-3.5 rounded-xl border text-left text-xs font-semibold transition-all ${
                   isActive
-                    ? "bg-card border-cyan-600 text-foreground font-bold shadow-2xs"
-                    : "bg-card border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    ? "bg-card border-cyan-500/50 text-foreground font-bold shadow-md border-l-4 border-l-cyan-500"
+                    : "bg-card/60 border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <Icon className={`h-4 w-4 ${isActive ? "text-cyan-600" : "text-muted-foreground"}`} />
-                  <span>{cat.label}</span>
+                <div className="flex items-center gap-3">
+                  <div className={`p-1.5 rounded-lg ${isActive ? "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400" : "text-muted-foreground"}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">{cat.label}</div>
+                    <div className="text-[10px] text-muted-foreground font-normal">{cat.description}</div>
+                  </div>
                 </div>
               </button>
             );
@@ -247,12 +248,14 @@ export function SettingsClient({ settings }: SettingsClientProps) {
         </div>
 
         {/* Selected Category Content Card */}
-        <Card className="flex-1 border border-border/60 bg-card rounded-2xl shadow-xs">
+        <Card className="flex-1 card-premium">
           <CardHeader className="border-b border-border/40 pb-4">
-            <div className="flex items-center gap-2.5">
-              <ActiveIcon className="h-5 w-5 text-cyan-600" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                <ActiveIcon className="h-5 w-5" />
+              </div>
               <div>
-                <CardTitle className="text-base font-bold">{activeCategoryMeta.label}</CardTitle>
+                <CardTitle className="text-base font-bold text-foreground">{activeCategoryMeta.label}</CardTitle>
                 <CardDescription className="text-xs">{activeCategoryMeta.description}</CardDescription>
               </div>
             </div>
@@ -270,20 +273,20 @@ export function SettingsClient({ settings }: SettingsClientProps) {
       </div>
 
       {showUnsavedWarning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <Card className="max-w-md border-border/80 rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="max-w-md border-rose-500/30 bg-slate-950 text-white rounded-2xl shadow-2xl">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-destructive text-base font-bold">
-                <AlertTriangle className="h-4 w-4" />
+              <CardTitle className="flex items-center gap-2 text-rose-400 text-base font-bold">
+                <AlertTriangle className="h-5 w-5" />
                 Unsaved Changes
               </CardTitle>
-              <CardDescription className="text-xs">
+              <CardDescription className="text-xs text-slate-300">
                 You have unsaved edits in your settings. Switching categories will discard these changes.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={handleCancelLeave} className="rounded-xl text-xs">Stay & Edit</Button>
-              <Button variant="destructive" size="sm" onClick={handleConfirmLeave} className="rounded-xl text-xs">Discard & Switch</Button>
+            <CardContent className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={handleCancelLeave} className="rounded-xl text-xs border-slate-700 bg-slate-900 text-slate-200">Stay & Edit</Button>
+              <Button variant="destructive" size="sm" onClick={handleConfirmLeave} className="rounded-xl text-xs bg-rose-600 hover:bg-rose-500">Discard & Switch</Button>
             </CardContent>
           </Card>
         </div>

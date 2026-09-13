@@ -39,6 +39,10 @@ import {
   type DentistOption,
   type WeeklyScheduleDay,
 } from "./actions";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
+import { format, addDays } from "date-fns";
 import type { AffectedAppointment, AlternateDentist } from "@/lib/services/reassignment-service";
 import type { BlockType } from "@/lib/types/enums";
 import type { DentistBlock } from "@/lib/types/database";
@@ -315,30 +319,18 @@ export default function UnavailabilityClient() {
 
   return (
     <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <CalendarX className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Dentist Schedule & Unavailability</h1>
-              {isDentistRole && (
-                <Badge variant="outline" className="border-cyan-500/30 text-cyan-600 bg-cyan-500/10 text-[10px] font-bold">
-                  <Lock className="mr-1 h-3 w-3" /> My Account Leave & Shift
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Manage weekly working hours, declare dentist leave, and reassign affected patient appointments</p>
-          </div>
-        </div>
-
+      {/* LIGHT SaaS HERO HEADER */}
+      <PageHeroBanner
+        icon={CalendarX}
+        title="Dentist Schedule & Leave Roster"
+        description="Manage weekly working hours, declare dentist leave, and reassign affected patient appointments"
+        badgeText={isDentistRole ? "My Leave & Shift" : undefined}
+      >
         {!isDentistRole && (
           <div className="w-full sm:w-64">
-            <Label className="text-[11px] font-bold text-muted-foreground uppercase mb-1 block">Selected Doctor</Label>
+            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 block">Selected Doctor</Label>
             <Select value={selectedDentistId} onValueChange={(v) => handleDentistChange(v ?? "")}>
-              <SelectTrigger className="h-10 text-xs border-border/80 rounded-xl bg-background">
+              <SelectTrigger className="h-9 text-xs border-border/80 rounded-xl bg-background">
                 <SelectValue placeholder="Select doctor...">
                   {(() => {
                     const d = dentists.find((item) => item.id === selectedDentistId);
@@ -349,14 +341,14 @@ export default function UnavailabilityClient() {
               <SelectContent className="rounded-xl">
                 {dentists.map((d) => (
                   <SelectItem key={d.id} value={d.id} className="text-xs">
-                    {d.name} {d.specialization ? `— ${d.specialization}` : ""}
+                    {d.name} {d.specialization ? `(${d.specialization})` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         )}
-      </div>
+      </PageHeroBanner>
 
       {/* PROMINENT TOP NOTIFICATION ALERT */}
       {notification && (
@@ -379,7 +371,7 @@ export default function UnavailabilityClient() {
       )}
 
       {/* WEEKLY WORK HOURS EDITOR CARD */}
-      <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
+      <Card className="border border-border/80 bg-card rounded-2xl shadow-xs overflow-visible">
         <CardHeader className="border-b border-border/40 pb-4 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -435,20 +427,18 @@ export default function UnavailabilityClient() {
                     <div className="space-y-2">
                       <div>
                         <Label className="text-[10px] text-muted-foreground font-semibold">Start Time</Label>
-                        <Input
-                          type="time"
+                        <TimePicker
                           value={day.start_time}
-                          onChange={(e) => handleTimeChange(day.day_of_week, "start_time", e.target.value)}
-                          className="h-8 text-xs font-mono rounded-lg border-border/80"
+                          onChange={(val) => handleTimeChange(day.day_of_week, "start_time", val)}
+                          placeholder="Start time"
                         />
                       </div>
                       <div>
                         <Label className="text-[10px] text-muted-foreground font-semibold">End Time</Label>
-                        <Input
-                          type="time"
+                        <TimePicker
                           value={day.end_time}
-                          onChange={(e) => handleTimeChange(day.day_of_week, "end_time", e.target.value)}
-                          className="h-8 text-xs font-mono rounded-lg border-border/80"
+                          onChange={(val) => handleTimeChange(day.day_of_week, "end_time", val)}
+                          placeholder="End time"
                         />
                       </div>
                     </div>
@@ -467,7 +457,7 @@ export default function UnavailabilityClient() {
       </Card>
 
       {/* DECLARE LEAVE / UNAVAILABILITY CARD */}
-      <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
+      <Card className="border border-border/80 bg-card rounded-2xl shadow-xs overflow-visible">
         <CardHeader className="border-b border-border/40 pb-4">
           <CardTitle className="text-base font-bold flex items-center gap-2">
             <Stethoscope className="h-4 w-4 text-amber-500" />
@@ -477,9 +467,9 @@ export default function UnavailabilityClient() {
             Submit vacation, sick leave, or temporary clinic absence to auto-detect and reassign affected patient appointments.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1.5">
+        <CardContent className="p-6 space-y-5">
+          <div className="grid gap-x-6 gap-y-5 md:grid-cols-2">
+            <div className="space-y-2">
               <Label htmlFor="dentist" className="text-xs font-semibold text-muted-foreground">Dentist Account</Label>
               <Select
                 value={selectedDentistId}
@@ -501,11 +491,13 @@ export default function UnavailabilityClient() {
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label htmlFor="blockType" className="text-xs font-semibold text-muted-foreground">Leave / Block Type</Label>
               <Select value={blockType} onValueChange={(v) => setBlockType(v ?? "vacation")}>
-                <SelectTrigger id="blockType" className="h-10 text-xs border-border/80 rounded-xl">
-                  <SelectValue />
+                <SelectTrigger id="blockType" className="h-10 text-xs border-border/80 rounded-xl font-medium">
+                  <SelectValue placeholder="Select leave type">
+                    {BLOCK_TYPES.find((t) => t.value === blockType)?.label || "Vacation"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
                   {BLOCK_TYPES.map((t) => (
@@ -515,30 +507,71 @@ export default function UnavailabilityClient() {
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="startDate" className="text-xs font-semibold text-muted-foreground">Start Date</Label>
-              <Input
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="startDate" className="text-xs font-semibold text-muted-foreground">Start Date</Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const todayStr = format(new Date(), "yyyy-MM-dd");
+                    setStartDate(todayStr);
+                    setAffectedAppointments([]);
+                  }}
+                  className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 hover:underline"
+                >
+                  Set Today
+                </button>
+              </div>
+              <DatePicker
                 id="startDate"
-                type="date"
                 value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setAffectedAppointments([]); }}
-                className="h-10 text-xs border-border/80 rounded-xl"
+                onChange={(val) => { setStartDate(val); setAffectedAppointments([]); }}
+                placeholder="Pick start date..."
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="endDate" className="text-xs font-semibold text-muted-foreground">End Date</Label>
-              <Input
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="endDate" className="text-xs font-semibold text-muted-foreground">End Date</Label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const start = startDate ? new Date(startDate) : new Date();
+                      const endStr = format(addDays(start, 2), "yyyy-MM-dd");
+                      setEndDate(endStr);
+                      setAffectedAppointments([]);
+                    }}
+                    className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 hover:underline"
+                  >
+                    +3 Days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const start = startDate ? new Date(startDate) : new Date();
+                      const endStr = format(addDays(start, 6), "yyyy-MM-dd");
+                      setEndDate(endStr);
+                      setAffectedAppointments([]);
+                    }}
+                    className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 hover:underline"
+                  >
+                    +1 Week
+                  </button>
+                </div>
+              </div>
+              <DatePicker
                 id="endDate"
-                type="date"
                 value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setAffectedAppointments([]); }}
-                className="h-10 text-xs border-border/80 rounded-xl"
+                onChange={(val) => { setEndDate(val); setAffectedAppointments([]); }}
+                placeholder="Pick end date..."
+                minDate={startDate || undefined}
+                align="right"
               />
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label htmlFor="reason" className="text-xs font-semibold text-muted-foreground">Reason for Unavailability *</Label>
             <Textarea
               id="reason"

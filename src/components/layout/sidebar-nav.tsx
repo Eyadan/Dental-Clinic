@@ -33,11 +33,11 @@ export function SidebarNav({ role, collapsed = false }: SidebarNavProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "group relative flex h-10 items-center rounded-xl text-xs font-semibold transition-all duration-200",
+                "group relative flex h-10.5 items-center rounded-xl text-xs font-semibold transition-all duration-200",
                 collapsed ? "justify-center px-0" : "gap-3 px-3.5",
                 isActive
-                  ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-bold shadow-xs border border-cyan-500/20"
-                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  ? "bg-gradient-to-r from-cyan-500/15 to-teal-500/5 text-cyan-600 dark:text-cyan-400 font-bold shadow-xs border border-cyan-500/25 border-l-3 border-l-cyan-500"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white"
               )}
               aria-current={isActive ? "page" : undefined}
             >

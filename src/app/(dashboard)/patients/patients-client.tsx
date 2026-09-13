@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PatientSearch } from "@/components/patients/patient-search";
 import { PatientFormDialog } from "@/components/patients/patient-form-dialog";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 import { createPatientAction, updatePatientAction, archivePatientAction, getPatientMedicalDetailsAction } from "./actions";
 import { MoreHorizontal, Pencil, Archive, UserPlus, Eye, Users, Phone, Mail, AlertTriangle, ArrowUpRight, ShieldCheck, CheckCircle2 } from "lucide-react";
 import type { Patient, MedicalCondition, PatientMedicalRecord } from "@/lib/types/database";
@@ -158,43 +159,33 @@ export function PatientsClient({ initialPatients, totalCount, conditions }: Pati
   };
 
   return (
-    <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <Users className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Patient Records Directory</h1>
-              <Badge variant="outline" className="border-border text-foreground font-mono text-[10px]">
-                {totalCount} registered
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Manage patient demographics, medical history, and clinical records</p>
-          </div>
-        </div>
-
-        <Button onClick={handleCreate} size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95 transition-all">
+    <div className="space-y-6 pb-8">
+      {/* LIGHT SaaS HERO HEADER */}
+      <PageHeroBanner
+        icon={Users}
+        title="Patient Records Directory"
+        description="Demographics, medical alerts, clinical visit logs, and dental chart archives"
+        badgeText={`${totalCount} Active Patient File${totalCount === 1 ? "" : "s"}`}
+      >
+        <Button onClick={handleCreate} size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs">
           <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Register New Patient
         </Button>
-      </div>
+      </PageHeroBanner>
 
       {/* Search Input */}
       <PatientSearch onSearch={handleSearch} isLoading={isLoading} />
 
       {/* Patients Table Container */}
-      <Card className="border border-border/80 bg-card rounded-2xl shadow-xs overflow-hidden">
+      <div className="card-premium overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-border/60 bg-muted/30 hover:bg-muted/30">
-                <TableHead className="text-xs font-bold text-muted-foreground py-3.5">Patient Details</TableHead>
-                <TableHead className="text-xs font-bold text-muted-foreground py-3.5">Contact Details</TableHead>
-                <TableHead className="text-xs font-bold text-muted-foreground py-3.5">Birth Date & Age</TableHead>
-                <TableHead className="text-xs font-bold text-muted-foreground py-3.5">Medical Conditions & Allergies</TableHead>
-                <TableHead className="text-right text-xs font-bold text-muted-foreground pr-4 py-3.5">Actions</TableHead>
+              <TableRow className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-950/70">
+                <TableHead className="text-xs font-bold text-slate-700 dark:text-slate-300 py-4 uppercase tracking-wider">Patient Details</TableHead>
+                <TableHead className="text-xs font-bold text-slate-700 dark:text-slate-300 py-4 uppercase tracking-wider">Contact Details</TableHead>
+                <TableHead className="text-xs font-bold text-slate-700 dark:text-slate-300 py-4 uppercase tracking-wider">Birth Date & Age</TableHead>
+                <TableHead className="text-xs font-bold text-slate-700 dark:text-slate-300 py-4 uppercase tracking-wider">Medical Conditions & Allergies</TableHead>
+                <TableHead className="text-right text-xs font-bold text-slate-700 dark:text-slate-300 pr-5 py-4 uppercase tracking-wider">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -295,7 +286,7 @@ export function PatientsClient({ initialPatients, totalCount, conditions }: Pati
             </TableBody>
           </Table>
         </CardContent>
-      </Card>
+      </div>
 
       <PatientFormDialog
         open={dialogOpen}

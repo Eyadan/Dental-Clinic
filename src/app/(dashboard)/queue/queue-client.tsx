@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/dialog";
 import { callNextAction, callSpecificAction, markDelayedAction, markNoShowAction, moveToLaterSlotAction } from "./actions";
 import { Loader2, UserCheck, Users, Clock, ChevronRight, ClockAlert, UserX, CalendarClock } from "lucide-react";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
+import { TimePicker } from "@/components/ui/time-picker";
 
 interface QueueItem {
   id: string;
@@ -210,114 +212,124 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Queue Management</h1>
-          <p className="text-muted-foreground">Real-time patient queue for today</p>
-        </div>
-        <Button onClick={handleCallNext} disabled={isCallingNext || waitingCount === 0} size="lg">
+      {/* LIGHT SaaS HERO HEADER */}
+      <PageHeroBanner
+        icon={Users}
+        title="Live Clinic Queue"
+        description="Manage patient calling, delays, and consultation routing for today"
+        badgeText="Realtime Dispatch"
+      >
+        <Button
+          onClick={handleCallNext}
+          disabled={isCallingNext || waitingCount === 0}
+          size="sm"
+          className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs"
+        >
           {isCallingNext ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
           ) : (
-            <UserCheck className="mr-2 h-4 w-4" />
+            <UserCheck className="mr-1.5 h-3.5 w-3.5" />
           )}
-          Call Next
+          Call Next Patient
         </Button>
-      </div>
+      </PageHeroBanner>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+        <Alert variant="destructive" className="rounded-2xl border-rose-500/30 bg-rose-500/10 text-rose-300">
+          <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
         </Alert>
       )}
 
       {success && (
-        <Alert>
-          <AlertDescription>{success}</AlertDescription>
+        <Alert className="rounded-2xl border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">
+          <AlertDescription className="text-xs font-semibold">{success}</AlertDescription>
         </Alert>
       )}
 
+      {/* KPI METRIC CARDS */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="rounded-lg bg-blue-100 p-2">
-              <Users className="h-5 w-5 text-blue-700" />
+        <Card className="stat-card-glow p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              <Users className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{waitingCount}</p>
-              <p className="text-xs text-muted-foreground">Waiting</p>
+              <p className="text-2xl font-bold text-foreground font-mono">{waitingCount}</p>
+              <p className="text-xs text-muted-foreground font-medium">Waiting in Lobby</p>
             </div>
-          </CardContent>
+          </div>
         </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="rounded-lg bg-amber-100 p-2">
-              <Clock className="h-5 w-5 text-amber-700" />
+        <Card className="stat-card-glow p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              <Clock className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{calledCount}</p>
-              <p className="text-xs text-muted-foreground">Called</p>
+              <p className="text-2xl font-bold text-foreground font-mono">{calledCount}</p>
+              <p className="text-xs text-muted-foreground font-medium">Called to Operatory</p>
             </div>
-          </CardContent>
+          </div>
         </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="rounded-lg bg-purple-100 p-2">
-              <UserCheck className="h-5 w-5 text-purple-700" />
+        <Card className="stat-card-glow p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+              <UserCheck className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{inProgressCount}</p>
-              <p className="text-xs text-muted-foreground">In Progress</p>
+              <p className="text-2xl font-bold text-foreground font-mono">{inProgressCount}</p>
+              <p className="text-xs text-muted-foreground font-medium">Currently In Treatment</p>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
 
       <div className="space-y-3" role="region" aria-label="Patient queue" aria-live="polite">
         {items.length === 0 ? (
-          <div className="rounded-lg border border-dashed py-16 text-center">
-            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">No patients in queue</p>
+          <div className="card-premium py-16 text-center">
+            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-40" />
+            <p className="text-sm font-semibold text-muted-foreground">No patients currently in queue</p>
           </div>
         ) : (
           items.map((item, index) => (
-            <Card key={item.id}>
-              <CardContent className="flex items-center justify-between p-4">
+            <Card key={item.id} className="card-premium">
+              <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                    {index + 1}
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-mono font-bold text-sm">
+                    #{index + 1}
                   </div>
                   <div className="space-y-1">
-                    <div className="font-medium">{item.patient_name}</div>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <div className="font-bold text-sm text-foreground">{item.patient_name}</div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
                       <span>Ref: {item.reference_no}</span>
                       <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
+                        <Clock className="h-3.5 w-3.5 text-cyan-500" />
                         {item.scheduled_time}
                       </span>
-                      <span>{item.dentist_name}</span>
+                      <span className="font-sans text-foreground/80">{item.dentist_name}</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge
                     variant="outline"
-                    className={VISIT_STATUS_COLORS[item.visit_status] ?? ""}
+                    className={`font-semibold text-xs px-2.5 py-1 ${VISIT_STATUS_COLORS[item.visit_status] ?? ""}`}
                   >
                     {VISIT_STATUS_LABELS[item.visit_status] ?? item.visit_status}
                   </Badge>
+
                   {item.visit_status === "checked_in" && (
                     <>
                       <Button
                         size="sm"
-                        variant="outline"
                         onClick={() => handleCallSpecific(item.id)}
                         disabled={pendingId === item.id}
+                        className="h-8 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs"
                       >
                         {pendingId === item.id ? (
-                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <ChevronRight className="mr-1 h-3 w-3" />
+                          <ChevronRight className="mr-1 h-3.5 w-3.5" />
                         )}
                         Call
                       </Button>
@@ -326,8 +338,9 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
                         variant="outline"
                         onClick={() => handleMarkDelayed(item.id)}
                         disabled={pendingId === item.id}
+                        className="h-8 rounded-lg border-border/60 text-xs"
                       >
-                        <ClockAlert className="mr-1 h-3 w-3" />
+                        <ClockAlert className="mr-1 h-3.5 w-3.5 text-amber-500" />
                         Delay
                       </Button>
                       <Button
@@ -335,21 +348,22 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
                         variant="outline"
                         onClick={() => handleOpenMoveDialog(item.id)}
                         disabled={pendingId === item.id}
+                        className="h-8 rounded-lg border-border/60 text-xs"
                       >
-                        <CalendarClock className="mr-1 h-3 w-3" />
+                        <CalendarClock className="mr-1 h-3.5 w-3.5 text-cyan-500" />
                         Move
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-red-600 hover:text-red-700"
+                        className="h-8 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 text-xs"
                         onClick={() => handleMarkNoShow(item.id)}
                         disabled={pendingId === item.id}
                       >
                         {pendingId === item.id ? (
-                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <UserX className="mr-1 h-3 w-3" />
+                          <UserX className="mr-1 h-3.5 w-3" />
                         )}
                         No-Show
                       </Button>
@@ -359,14 +373,14 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
                     <>
                       <Button
                         size="sm"
-                        variant="outline"
                         onClick={() => handleCallSpecific(item.id)}
                         disabled={pendingId === item.id}
+                        className="h-8 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs"
                       >
                         {pendingId === item.id ? (
-                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <ChevronRight className="mr-1 h-3 w-3" />
+                          <ChevronRight className="mr-1 h-3.5 w-3.5" />
                         )}
                         Call
                       </Button>
@@ -375,21 +389,22 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
                         variant="outline"
                         onClick={() => handleOpenMoveDialog(item.id)}
                         disabled={pendingId === item.id}
+                        className="h-8 rounded-lg border-border/60 text-xs"
                       >
-                        <CalendarClock className="mr-1 h-3 w-3" />
+                        <CalendarClock className="mr-1 h-3.5 w-3.5 text-cyan-500" />
                         Move
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-red-600 hover:text-red-700"
+                        className="h-8 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 text-xs"
                         onClick={() => handleMarkNoShow(item.id)}
                         disabled={pendingId === item.id}
                       >
                         {pendingId === item.id ? (
-                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <UserX className="mr-1 h-3 w-3" />
+                          <UserX className="mr-1 h-3.5 w-3" />
                         )}
                         No-Show
                       </Button>
@@ -402,21 +417,22 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
                         variant="outline"
                         onClick={() => handleMarkDelayed(item.id)}
                         disabled={pendingId === item.id}
+                        className="h-8 rounded-lg border-border/60 text-xs"
                       >
-                        <ClockAlert className="mr-1 h-3 w-3" />
+                        <ClockAlert className="mr-1 h-3.5 w-3.5 text-amber-500" />
                         Delay
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-red-600 hover:text-red-700"
+                        className="h-8 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 text-xs"
                         onClick={() => handleMarkNoShow(item.id)}
                         disabled={pendingId === item.id}
                       >
                         {pendingId === item.id ? (
-                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <UserX className="mr-1 h-3 w-3" />
+                          <UserX className="mr-1 h-3.5 w-3" />
                         )}
                         No-Show
                       </Button>
@@ -430,31 +446,32 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
       </div>
 
       <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl border-border/80 bg-card">
           <DialogHeader>
-            <DialogTitle>Move to Later Slot</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base font-bold">Move to Later Slot</DialogTitle>
+            <DialogDescription className="text-xs">
               Assign the patient to a later time slot today. The patient will be moved back to "Checked In" status.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="newSlotTime">New Time Slot</Label>
-              <Input
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="newSlotTime" className="text-xs font-semibold">New Time Slot</Label>
+              <TimePicker
                 id="newSlotTime"
-                type="time"
                 value={newSlotTime}
-                onChange={(e) => setNewSlotTime(e.target.value)}
+                onChange={(val) => setNewSlotTime(val)}
+                placeholder="Pick new time..."
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMoveDialogOpen(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setMoveDialogOpen(false)} className="rounded-xl text-xs h-9">
               Cancel
             </Button>
             <Button
               onClick={handleConfirmMove}
               disabled={!newSlotTime || isMoving}
+              className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-xs h-9"
             >
               {isMoving ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Moving...</>

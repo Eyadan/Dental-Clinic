@@ -17,7 +17,20 @@ import {
   ShieldCheck,
   Calendar,
 } from "lucide-react";
-import type { ConsentListItem } from "./page";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
+
+export interface ConsentListItem {
+  consentId: string | null;
+  appointmentId: string | null;
+  patientName: string;
+  patientContact: string | null;
+  referenceNo: string | null;
+  dentistName: string | null;
+  treatmentInfo: string;
+  consentVersion: string;
+  signedAt: string | null;
+  createdAt: string;
+}
 
 interface ConsentListClientProps {
   items: ConsentListItem[];
@@ -96,39 +109,28 @@ export function ConsentListClient({ items }: ConsentListClientProps) {
 
   return (
     <div className="space-y-6">
-      {/* BRANDED HERO HEADER WITH KPI METRICS */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <ShieldCheck className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Patient Consent Desk</h1>
-              <Badge variant="outline" className="border-cyan-500/30 text-cyan-600 font-mono text-[10px] uppercase font-bold">
-                Digital Legal Waivers
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">View, manage, and verify patient informed consent documentation</p>
-          </div>
-        </div>
-
-        {/* TOP STAT METRIC BADGES */}
+      {/* LIGHT SaaS HERO HEADER */}
+      <PageHeroBanner
+        icon={ShieldCheck}
+        title="Patient Consent Desk"
+        description="View, manage, and verify patient informed consent documentation"
+        badgeText="Digital Legal Waivers"
+      >
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-muted/40 p-1.5 px-3 rounded-xl border border-border/60 text-xs">
+          <div className="flex items-center gap-2 bg-muted/40 p-2 px-3 rounded-xl border border-border/60 text-xs">
             <span className="text-muted-foreground font-medium">Total:</span>
             <span className="font-bold text-foreground font-mono">{totalCount}</span>
           </div>
-          <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-1.5 px-3 rounded-xl border border-emerald-500/20 text-xs font-semibold">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+          <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 p-2 px-3 rounded-xl border border-emerald-500/20 text-xs font-semibold">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
             <span>Signed: {signedCount}</span>
           </div>
-          <div className="flex items-center gap-2 bg-amber-500/10 text-amber-700 dark:text-amber-300 p-1.5 px-3 rounded-xl border border-amber-500/20 text-xs font-semibold">
-            <Clock className="h-3.5 w-3.5 text-amber-600" />
+          <div className="flex items-center gap-2 bg-amber-500/10 text-amber-600 dark:text-amber-300 p-2 px-3 rounded-xl border border-amber-500/20 text-xs font-semibold">
+            <Clock className="h-3.5 w-3.5 text-amber-500" />
             <span>Pending: {pendingCount}</span>
           </div>
         </div>
-      </div>
+      </PageHeroBanner>
 
       {/* FILTER & SEARCH BAR CONTROL RIBBON */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">

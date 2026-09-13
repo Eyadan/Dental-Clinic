@@ -40,29 +40,29 @@ export function DashboardShell({ role, userName, userEmail, children }: Dashboar
   const RoleIcon = roleInfo.icon;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-slate-50/60 dark:bg-[#090d16]">
       <aside
-        className={`hidden shrink-0 border-r border-border/60 bg-card/80 backdrop-blur-md lg:flex lg:flex-col transition-[width] duration-200 ease-in-out ${
+        className={`hidden shrink-0 border-r border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl lg:flex lg:flex-col transition-[width] duration-200 ease-in-out ${
           sidebarCollapsed ? "w-16" : "w-64"
         }`}
       >
-        <div className={`flex h-16 items-center gap-3 border-b border-border/60 ${sidebarCollapsed ? "justify-center px-2" : "px-4"}`}>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <Activity className="h-5 w-5" />
+        <div className={`flex h-16 items-center gap-3 border-b border-slate-200/80 dark:border-slate-800/80 ${sidebarCollapsed ? "justify-center px-2" : "px-4"}`}>
+          <div className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-500 to-teal-400 text-slate-950 shadow-md shadow-cyan-500/25 font-bold">
+            <Activity className="h-5 w-5 text-slate-950" />
           </div>
           {!sidebarCollapsed && (
             <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-extrabold leading-tight text-foreground tracking-tight truncate flex items-center gap-1">
-                Smile Dental <Sparkles className="h-3 w-3 text-cyan-600 inline" />
+              <span className="text-sm font-black leading-tight text-slate-900 dark:text-white tracking-tight truncate flex items-center gap-1">
+                Smile Dental <Sparkles className="h-3 w-3 text-cyan-500 inline" />
               </span>
-              <span className="text-[10px] font-semibold text-muted-foreground leading-none mt-0.5 flex items-center gap-1">
-                <RoleIcon className="h-3 w-3 inline shrink-0 text-cyan-600" />
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-none mt-0.5 flex items-center gap-1">
+                <RoleIcon className="h-3 w-3 inline shrink-0 text-cyan-500" />
                 {roleInfo.label}
               </span>
             </div>
           )}
         </div>
-        <div className="flex-1 overflow-y-auto py-2">
+        <div className="flex-1 overflow-y-auto py-3">
           <SidebarNav role={role} collapsed={sidebarCollapsed} />
         </div>
       </aside>
@@ -75,7 +75,7 @@ export function DashboardShell({ role, userName, userEmail, children }: Dashboar
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((prev) => !prev)}
         />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-muted/10 animate-in fade-in-50 duration-200">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-slate-50/40 dark:bg-[#090d16] animate-in fade-in-50 duration-200">
           {children}
         </main>
       </div>

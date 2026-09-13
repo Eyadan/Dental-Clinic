@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Receipt, Search, ArrowUpRight, Clock, User, Stethoscope, Sparkles } from "lucide-react";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 
 export interface BillingListItem {
   appointmentId: string;
@@ -78,79 +79,69 @@ export function BillingListClient({ items }: BillingListClientProps) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <Receipt className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Billing & Patient Invoices</h1>
-              <Badge variant="outline" className="border-border text-foreground font-mono text-[10px]">
-                {items.length} records
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Manage patient billing records, payment receipts, and invoices</p>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-6 pb-8">
+      {/* LIGHT SaaS HERO HEADER */}
+      <PageHeroBanner
+        icon={Receipt}
+        title="Billing & Patient Invoices"
+        description="Manage billing invoices, payment processing receipts, and partial balances"
+        badgeText={`${items.length} Invoice Record${items.length === 1 ? "" : "s"}`}
+      />
 
       {/* FILTER TABS & SEARCH */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 p-1 bg-muted/40 rounded-xl border border-border/60 text-xs font-semibold">
+        <div className="inline-flex items-center gap-1.5 p-1.5 bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs font-bold shadow-xs backdrop-blur-md">
           <button
             type="button"
             onClick={() => setStatusFilter("pending")}
-            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-2 ${
               statusFilter === "pending"
-                ? "bg-card text-cyan-600 shadow-xs border border-border/80 font-bold"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-gradient-to-r from-cyan-500/15 to-teal-500/5 text-cyan-600 dark:text-cyan-400 font-extrabold shadow-xs border border-cyan-500/30"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60"
             }`}
           >
             Unpaid & Pending
-            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusFilter === "pending" ? "bg-amber-500/10 text-amber-700 border-amber-500/30" : ""}`}>
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${statusFilter === "pending" ? "bg-amber-500/20 text-amber-700 dark:text-amber-300" : "bg-slate-100 dark:bg-slate-800 text-slate-500"}`}>
               {pendingCount}
-            </Badge>
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setStatusFilter("paid")}
-            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-2 ${
               statusFilter === "paid"
-                ? "bg-card text-cyan-600 shadow-xs border border-border/80 font-bold"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-gradient-to-r from-cyan-500/15 to-teal-500/5 text-cyan-600 dark:text-cyan-400 font-extrabold shadow-xs border border-cyan-500/30"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60"
             }`}
           >
             Paid & Settled
-            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusFilter === "paid" ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" : ""}`}>
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${statusFilter === "paid" ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" : "bg-slate-100 dark:bg-slate-800 text-slate-500"}`}>
               {paidCount}
-            </Badge>
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setStatusFilter("all")}
-            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-2 ${
               statusFilter === "all"
-                ? "bg-card text-cyan-600 shadow-xs border border-border/80 font-bold"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-gradient-to-r from-cyan-500/15 to-teal-500/5 text-cyan-600 dark:text-cyan-400 font-extrabold shadow-xs border border-cyan-500/30"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60"
             }`}
           >
             All Records
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold bg-slate-100 dark:bg-slate-800 text-slate-500">
               {items.length}
-            </Badge>
+            </span>
           </button>
         </div>
 
         <div className="relative min-w-[260px]">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search invoice or patient..."
-            className="pl-10 h-10 border-border/80 focus-visible:ring-cyan-500 rounded-xl text-xs"
+            className="pl-10 h-10 border-slate-200/80 dark:border-slate-800 focus-visible:ring-cyan-500 rounded-xl text-xs bg-white/80 dark:bg-slate-900/80 shadow-xs"
           />
         </div>
       </div>

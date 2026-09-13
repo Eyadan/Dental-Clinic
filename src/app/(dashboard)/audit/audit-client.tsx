@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Shield, ChevronLeft, ChevronRight, Filter, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { getAuditLogsAction, getStaffUsersAction, type AuditLogEntry } from "./actions";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const ENTITY_TYPES = [
   { value: "appointment", label: "Appointment" },
@@ -84,23 +86,13 @@ export function AuditLogClient() {
 
   return (
     <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/60 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <ShieldAlert className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Security Audit Trail</h1>
-              <Badge variant="outline" className="border-border text-foreground font-mono text-[10px]">
-                {total} logged
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Immutable audit record of system operations and staff actions</p>
-          </div>
-        </div>
-      </div>
+      {/* LIGHT SaaS HERO HEADER */}
+      <PageHeroBanner
+        icon={ShieldAlert}
+        title="Security Audit Trail"
+        description="Immutable audit record of system operations, data modifications, and staff access events"
+        badgeText={`${total} Logged Actions`}
+      />
 
       {error && (
         <Alert variant="destructive" className="rounded-2xl border-red-500/20 bg-red-500/5">
@@ -109,7 +101,7 @@ export function AuditLogClient() {
       )}
 
       {/* FILTER CARD */}
-      <Card className="border-border/60 bg-card rounded-2xl shadow-xs p-1">
+      <Card className="border-border/60 bg-card rounded-2xl shadow-xs p-1 overflow-visible">
         <CardContent className="p-4 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="space-y-1">
@@ -144,21 +136,21 @@ export function AuditLogClient() {
 
             <div className="space-y-1">
               <Label className="text-xs font-semibold text-muted-foreground">Start Date</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-                className="h-9 text-xs border-border/60 rounded-xl"
+                onChange={(val) => { setStartDate(val); setPage(1); }}
+                placeholder="Start date..."
               />
             </div>
 
             <div className="space-y-1">
               <Label className="text-xs font-semibold text-muted-foreground">End Date</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
-                className="h-9 text-xs border-border/60 rounded-xl"
+                onChange={(val) => { setEndDate(val); setPage(1); }}
+                placeholder="End date..."
+                minDate={startDate || undefined}
+                align="right"
               />
             </div>
           </div>

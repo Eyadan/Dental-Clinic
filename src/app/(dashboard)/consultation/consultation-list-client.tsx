@@ -3,24 +3,12 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { parseAllergies } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Stethoscope,
-  FileCheck,
-  FileText,
-  Search,
-  Clock,
-  User,
-  Activity,
-  AlertTriangle,
-  ArrowRight,
-  Phone,
-  CheckCircle2,
-  PauseCircle,
-} from "lucide-react";
+import { Stethoscope, Clock, Activity, CheckCircle2, PauseCircle, Phone, ArrowRight, Search, FileCheck, User, AlertTriangle, FileText } from "lucide-react";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 
 export interface ConsultationListItem {
   appointmentId: string;
@@ -170,25 +158,13 @@ export function ConsultationListClient({ items }: ConsultationListClientProps) {
 
   return (
     <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <Stethoscope className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Clinical Consultation Desk</h1>
-              <Badge variant="outline" className="border-cyan-500/30 text-cyan-600 font-mono text-[10px] uppercase font-bold">
-                {counts.total} Active Queue
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5 font-mono">
-              Real-time patient treatment workspace, dental charting, and clinical logs
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* LIGHT SaaS HERO HEADER */}
+      <PageHeroBanner
+        icon={Stethoscope}
+        title="Clinical Consultation Desk"
+        description="Real-time patient treatment workspace, dental charting, and clinical logs"
+        badgeText={`${counts.total} Active Queue`}
+      />
 
       {/* KPI DASHBOARD SUMMARY CARDS */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -12,6 +12,7 @@ import {
   updateServiceAction,
   toggleServiceActiveAction,
 } from "./actions";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 import type { DentalService } from "@/lib/types/database";
 
 interface ServicesClientProps {
@@ -78,27 +79,17 @@ export function ServicesClient({ services: initialServices }: ServicesClientProp
 
   return (
     <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <Layers className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Dental Services & Procedures Catalog</h1>
-              <Badge variant="outline" className="border-border text-foreground font-mono text-[10px]">
-                {services.length} active procedures
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Manage clinic procedure offerings, durations, and pricing</p>
-          </div>
-        </div>
-
-        <Button onClick={handleCreate} size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95 transition-all">
+      {/* LIGHT SaaS HERO HEADER */}
+      <PageHeroBanner
+        icon={Layers}
+        title="Dental Services & Pricing Catalog"
+        description="Manage clinical procedures, expected durations, and pricing schedules"
+        badgeText={`${services.length} Procedures`}
+      >
+        <Button onClick={handleCreate} size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs">
           <Plus className="mr-1.5 h-3.5 w-3.5" /> Add New Procedure
         </Button>
-      </div>
+      </PageHeroBanner>
 
       <ServiceList
         services={services}

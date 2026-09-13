@@ -19,6 +19,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 
@@ -48,8 +49,10 @@ export function ScheduleFormDialog({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [dayOfWeek, setDayOfWeek] = useState("1");
-
   const handleDayChange = (value: string | null) => setDayOfWeek(value ?? "1");
+
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("17:00");
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -57,6 +60,8 @@ export function ScheduleFormDialog({
     const formData = new FormData(e.currentTarget);
     formData.set("dentist_id", dentistId);
     formData.set("day_of_week", dayOfWeek);
+    formData.set("start_time", startTime);
+    formData.set("end_time", endTime);
 
     startTransition(async () => {
       const result = await onSubmit(formData);
@@ -98,11 +103,22 @@ export function ScheduleFormDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="start_time">Start Time</Label>
-              <Input id="start_time" type="time" name="start_time" defaultValue="09:00" required />
+              <TimePicker
+                id="start_time"
+                value={startTime}
+                onChange={setStartTime}
+                placeholder="Pick start time..."
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="end_time">End Time</Label>
-              <Input id="end_time" type="time" name="end_time" defaultValue="17:00" required />
+              <TimePicker
+                id="end_time"
+                value={endTime}
+                onChange={setEndTime}
+                align="right"
+                placeholder="Pick end time..."
+              />
             </div>
           </div>
           <DialogFooter>

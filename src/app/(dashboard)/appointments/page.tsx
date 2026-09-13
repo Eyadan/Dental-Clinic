@@ -20,38 +20,63 @@ export default async function AppointmentsPage({
 
   const supabase = await createServerSupabaseClient();
 
-  const { data: appointments, error } = await supabase
-    .from("appointments")
-    .select(`
-      id,
-      reference_no,
-      patient_id,
-      dentist_id,
-      booking_status,
-      visit_status,
-      payment_status,
-      scheduled_date,
-      scheduled_time,
-      total_duration,
-      is_archived,
-      created_at,
-      updated_at,
-      patients!inner(first_name, last_name)
-    `)
-    .eq("is_archived", false)
-    .gte("scheduled_date", startDate)
-    .lte("scheduled_date", endDate)
-    .order("scheduled_time", { ascending: true });
+  const [appointmentsRes, dentistsRes] = await Promise.all([
+    supabase
+      .from("appointments")
+      .select(`
+        id,
+        reference_no,
+        patient_id,
+        dentist_id,
+        booking_status,
+        visit_status,
+        payment_status,
+        scheduled_date,
+        scheduled_time,
+        total_duration,
+        is_archived,
+        created_at,
+        updated_at,
+        patients!inner(first_name, last_name),
+        dentists(id, specialization, users(first_name, last_name))
+      `)
+      .eq("is_archived", false)
+      .gte("scheduled_date", startDate)
+      .lte("scheduled_date", endDate)
+      .order("scheduled_time", { ascending: true }),
+    supabase
+      .from("dentists")
+      .select("id, specialization, users(first_name, last_name)")
+      .eq("is_active", true),
+  ]);
 
-  if (error) {
-    throw new Error(`Failed to fetch appointments: ${error.message}`);
+  if (appointmentsRes.error) {
+    throw new Error(`Failed to fetch appointments: ${appointmentsRes.error.message}`);
   }
 
-  const calendarAppointments = (appointments ?? []).map((appt: Record<string, unknown>) => {
+  const dentistsList = (dentistsRes.data ?? []).map((d: Record<string, unknown>) => {
+    const userObj = getSingleJoined<{ first_name: string; last_name: string }>(d.users);
+    const name = userObj ? `Dr. ${userObj.first_name} ${userObj.last_name}` : "Unknown Dentist";
+    return {
+      id: d.id as string,
+      name,
+      specialization: d.specialization as string | null,
+    };
+  });
+
+  const calendarAppointments = (appointmentsRes.data ?? []).map((appt: Record<string, unknown>) => {
     const patient = getSingleJoined<{
       first_name: string;
       last_name: string;
     }>(appt.patients);
+    const dentist = getSingleJoined<{
+      id: string;
+      specialization: string | null;
+      users: unknown;
+    }>(appt.dentists);
+    const dentistUser = dentist ? getSingleJoined<{ first_name: string; last_name: string }>(dentist.users) : null;
+    const dentistName = dentistUser ? `Dr. ${dentistUser.first_name} ${dentistUser.last_name}` : "Unassigned Dentist";
+
     return {
       id: appt.id as string,
       reference_no: appt.reference_no as string,
@@ -60,8 +85,17 @@ export default async function AppointmentsPage({
       scheduled_time: appt.scheduled_time as string,
       total_duration: appt.total_duration as number,
       patient_name: patient ? `${patient.first_name} ${patient.last_name}` : "Unknown Patient",
+      dentist_id: (appt.dentist_id as string) ?? null,
+      dentist_name: dentistName,
+      dentist_specialization: dentist?.specialization ?? null,
     };
   });
 
-  return <AppointmentCalendar appointments={calendarAppointments} month={targetMonth} />;
+  return (
+    <AppointmentCalendar
+      appointments={calendarAppointments}
+      dentists={dentistsList}
+      month={targetMonth}
+    />
+  );
 }

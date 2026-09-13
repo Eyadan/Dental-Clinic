@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   getWaitlistAction,
   getReleasedSlotsAction,
@@ -36,6 +37,7 @@ import {
 } from "./actions";
 import type { WaitlistEntryWithPatient, ReleasedSlot } from "@/lib/services/waitlist-service";
 import { todayLocal } from "@/lib/utils/date-utils";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 
 export default function WaitlistClient() {
   const [waitlist, setWaitlist] = useState<WaitlistEntryWithPatient[]>([]);
@@ -174,49 +176,38 @@ export default function WaitlistClient() {
 
   return (
     <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <ListPlus className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Waitlist Management Desk</h1>
-              <Badge variant="outline" className="border-border text-foreground font-mono text-[10px]">
-                {waitlist.length} waiting
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Manage same-day waitlist requests, released appointment slots, and patient auto-notifications</p>
-          </div>
-        </div>
-
+      {/* LIGHT SaaS HERO HEADER */}
+      <PageHeroBanner
+        icon={ListPlus}
+        title="Waitlist & Slot Dispatch Desk"
+        description="Manage same-day waitlist requests, released appointment slots, and patient auto-notifications"
+        badgeText={`${waitlist.length} Waiting Patients`}
+      >
         <Button onClick={() => { setJoinPatientId(""); setJoinDate(selectedDate); setJoinDialogOpen(true); }} size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs">
           <ListPlus className="mr-1.5 h-3.5 w-3.5" />
           Add Patient to Waitlist
         </Button>
-      </div>
+      </PageHeroBanner>
 
       {notification && (
-        <Alert variant={notification.type === "error" ? "destructive" : "default"} className="rounded-2xl border-border/80">
+        <Alert variant={notification.type === "error" ? "destructive" : "default"} className={`rounded-2xl ${notification.type === "error" ? "border-rose-500/30 bg-rose-500/10 text-rose-300" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"}`}>
           <AlertDescription className="text-xs font-semibold">{notification.message}</AlertDescription>
         </Alert>
       )}
 
       <div className="space-y-1.5 max-w-xs">
         <Label htmlFor="dateFilter" className="text-xs font-semibold text-muted-foreground">Filter by Date</Label>
-        <Input
+        <DatePicker
           id="dateFilter"
-          type="date"
           value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="h-10 text-xs border-border/80 rounded-xl"
+          onChange={(val) => setSelectedDate(val)}
+          placeholder="Filter date..."
         />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* RELEASED SLOTS */}
-        <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
+        <Card className="card-premium">
           <CardHeader className="border-b border-border/40 pb-4">
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-cyan-600" />
@@ -322,7 +313,11 @@ export default function WaitlistClient() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-muted-foreground">Desired Date</Label>
-              <Input type="date" value={joinDate} onChange={(e) => setJoinDate(e.target.value)} className="h-10 text-xs border-border/80 rounded-xl" />
+              <DatePicker
+                value={joinDate}
+                onChange={(val) => setJoinDate(val)}
+                placeholder="Pick desired date..."
+              />
             </div>
           </div>
           <DialogFooter>

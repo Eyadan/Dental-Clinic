@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { approveAppointmentAction, declineAppointmentAction } from "../appointments/actions";
 import { confirmCancellationAction, denyCancellationAction, rescheduleAppointmentAction } from "./actions";
 import { Check, X, Clock, Loader2, CalendarClock, Ban, User, Calendar, CheckCircle2, CalendarCheck, Sparkles, Inbox, RefreshCw, Phone, Stethoscope } from "lucide-react";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 
 interface Booking {
   id: string;
@@ -111,42 +112,20 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
   };
 
   return (
-    <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <CalendarClock className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Staff Booking Request Desk</h1>
-              {pendingCount > 0 && (
-                <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] rounded-full font-bold">
-                  {pendingCount} Pending Review
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Review, approve, reschedule, or decline patient appointment requests</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.refresh()}
-            className="h-9 rounded-xl border-border/80 text-xs hover:bg-muted/50 transition-all"
-          >
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Refresh
+    <div className="space-y-6 pb-8">
+      <PageHeroBanner
+        icon={CalendarClock}
+        title="Booking Desk & Online Requests"
+        description="Review, approve, or reschedule online appointment requests from patients"
+        badgeText={`${pendingCount} Pending`}
+      >
+        <Link href="/bookings/calendar">
+          <Button size="sm" variant="outline" className="h-9 rounded-xl text-xs font-semibold border-cyan-500/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/10">
+            <CalendarCheck className="mr-1.5 h-3.5 w-3.5" />
+            Switch to Calendar View
           </Button>
-          <Link href="/appointments/new">
-            <Button size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all">
-              <CalendarCheck className="mr-1.5 h-3.5 w-3.5" /> Book Appointment
-            </Button>
-          </Link>
-        </div>
-      </div>
+        </Link>
+      </PageHeroBanner>
 
       {error && (
         <Alert variant="destructive" className="rounded-2xl border-red-500/20 bg-red-500/5">
@@ -155,7 +134,7 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
       )}
 
       {/* COMPACT SEGMENTED CONTROL TABS */}
-      <div className="inline-flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/60 text-xs max-w-full overflow-x-auto">
+      <div className="inline-flex items-center gap-1.5 p-1.5 bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs max-w-full overflow-x-auto shadow-xs backdrop-blur-md">
         {STATUS_FILTERS.map((f) => {
           const isActive = activeFilter === f.key;
           const count = bookings.filter((b) => f.key === "all" ? true : b.booking_status === f.key).length;
@@ -168,14 +147,14 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
                 setActiveFilter(f.key);
                 router.push(`/bookings?status=${f.key}`, { scroll: false });
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all whitespace-nowrap ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold text-xs transition-all whitespace-nowrap ${
                 isActive
-                  ? "bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 font-bold shadow-xs border border-slate-200/80 dark:border-slate-800"
-                  : "text-muted-foreground hover:text-foreground hover:bg-white/40 dark:hover:bg-slate-900/40"
+                  ? "bg-gradient-to-r from-cyan-500/15 to-teal-500/5 text-cyan-600 dark:text-cyan-400 font-extrabold shadow-xs border border-cyan-500/30"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60"
               }`}
             >
               <span>{f.label}</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${isActive ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-bold" : "bg-slate-200/60 dark:bg-slate-700 text-muted-foreground"}`}>
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${isActive ? "bg-cyan-500/20 text-cyan-700 dark:text-cyan-300" : "bg-slate-100 dark:bg-slate-800 text-slate-500"}`}>
                 {count}
               </span>
             </button>
@@ -219,27 +198,38 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredBookings.map((b) => {
-            const statusLeftBorder =
-              b.booking_status === "pending" ? "border-l-4 border-l-amber-500" :
-              b.booking_status === "approved" ? "border-l-4 border-l-emerald-500" :
-              b.booking_status === "completed" ? "border-l-4 border-l-cyan-500" :
-              b.booking_status === "rescheduled" ? "border-l-4 border-l-blue-500" :
-              b.booking_status === "reschedule_required" ? "border-l-4 border-l-orange-500" :
-              b.booking_status === "pending_cancellation" || b.booking_status === "declined" || b.booking_status === "cancelled" ? "border-l-4 border-l-red-500" : "border-l-4 border-l-slate-400";
-
-            const statusBadgeClass =
-              b.booking_status === "pending" ? "border-amber-500/30 text-amber-600 bg-amber-500/10" :
-              b.booking_status === "approved" ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10" :
-              b.booking_status === "completed" ? "border-cyan-500/30 text-cyan-600 bg-cyan-500/10" :
-              b.booking_status === "rescheduled" ? "border-blue-500/30 text-blue-600 bg-blue-500/10" :
-              b.booking_status === "reschedule_required" ? "border-orange-500/30 text-orange-600 bg-orange-500/10" :
-              b.booking_status === "pending_cancellation" || b.booking_status === "declined" || b.booking_status === "cancelled" ? "border-red-500/30 text-red-600 bg-red-500/10" : "border-slate-500/30 text-slate-600 bg-slate-500/10";
+            const headerStyle =
+              b.booking_status === "pending" ? {
+                headerBg: "bg-amber-500/15 dark:bg-amber-950/40 border-b border-amber-500/30",
+                avatarBg: "bg-amber-500/25 text-amber-800 dark:text-amber-200 border border-amber-500/30",
+                badge: "border-amber-500/40 text-amber-700 dark:text-amber-300 bg-background/90",
+              } : b.booking_status === "approved" ? {
+                headerBg: "bg-emerald-500/15 dark:bg-emerald-950/40 border-b border-emerald-500/30",
+                avatarBg: "bg-emerald-500/25 text-emerald-800 dark:text-emerald-200 border border-emerald-500/30",
+                badge: "border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-background/90",
+              } : b.booking_status === "completed" ? {
+                headerBg: "bg-cyan-500/15 dark:bg-cyan-950/40 border-b border-cyan-500/30",
+                avatarBg: "bg-cyan-500/25 text-cyan-800 dark:text-cyan-200 border border-cyan-500/30",
+                badge: "border-cyan-500/40 text-cyan-700 dark:text-cyan-300 bg-background/90",
+              } : b.booking_status === "rescheduled" ? {
+                headerBg: "bg-blue-500/15 dark:bg-blue-950/40 border-b border-blue-500/30",
+                avatarBg: "bg-blue-500/25 text-blue-800 dark:text-blue-200 border border-blue-500/30",
+                badge: "border-blue-500/40 text-blue-700 dark:text-blue-300 bg-background/90",
+              } : b.booking_status === "reschedule_required" ? {
+                headerBg: "bg-orange-500/15 dark:bg-orange-950/40 border-b border-orange-500/30",
+                avatarBg: "bg-orange-500/25 text-orange-800 dark:text-orange-200 border border-orange-500/30",
+                badge: "border-orange-500/40 text-orange-700 dark:text-orange-300 bg-background/90",
+              } : {
+                headerBg: "bg-red-500/15 dark:bg-red-950/40 border-b border-red-500/30",
+                avatarBg: "bg-red-500/25 text-red-800 dark:text-red-200 border border-red-500/30",
+                badge: "border-red-500/40 text-red-700 dark:text-red-300 bg-background/90",
+              };
 
             return (
-              <Card key={b.id} className={`border border-border/80 bg-card rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between overflow-hidden ${statusLeftBorder}`}>
-                <CardHeader className="pb-3 pt-4 px-4 bg-muted/20 border-b border-border/40 flex flex-row items-center justify-between space-y-0">
+              <Card key={b.id} className="border border-border/80 bg-card rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between overflow-hidden">
+                <CardHeader className={`pb-3 pt-4 px-4 flex flex-row items-center justify-between space-y-0 ${headerStyle.headerBg}`}>
                   <div className="flex items-center gap-2.5">
-                    <div className="h-9 w-9 rounded-xl bg-cyan-600/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold text-xs">
+                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center font-bold text-xs ${headerStyle.avatarBg}`}>
                       {getInitials(b.patient_name)}
                     </div>
                     <div>
@@ -247,7 +237,7 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
                       <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Ref: {b.reference_no}</p>
                     </div>
                   </div>
-                  <Badge variant="outline" className={`text-[10px] font-bold uppercase border ${statusBadgeClass}`}>
+                  <Badge variant="outline" className={`text-[10px] font-bold uppercase border ${headerStyle.badge}`}>
                     {b.booking_status.replace(/_/g, " ")}
                   </Badge>
                 </CardHeader>
