@@ -9,6 +9,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createFollowUpAction } from "./actions";
 import { todayLocal } from "@/lib/utils/date-utils";
 import { Loader2, CalendarPlus } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 
 interface FollowUpSchedulerProps {
   appointmentId: string;
@@ -80,21 +82,22 @@ export function FollowUpScheduler({ appointmentId, services }: FollowUpScheduler
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor="followup-date">Date</Label>
-            <Input
+            <DatePicker
               id="followup-date"
-              type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              min={todayLocal()}
+              onChange={(val) => setDate(val)}
+              minDate={todayLocal()}
+              placeholder="Pick date..."
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="followup-time">Time</Label>
-            <Input
+            <TimePicker
               id="followup-time"
-              type="time"
               value={time}
-              onChange={(e) => setTime(e.target.value)}
+              onChange={(val) => setTime(val)}
+              align="right"
+              placeholder="Pick time..."
             />
           </div>
         </div>

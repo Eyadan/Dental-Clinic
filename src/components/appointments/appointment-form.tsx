@@ -20,6 +20,8 @@ import type { Dentist } from "@/lib/types/database";
 import type { DentalService } from "@/lib/types/database";
 import { getAvailableSlotsAction } from "@/app/(dashboard)/appointments/actions";
 import { todayLocal } from "@/lib/utils/date-utils";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 
 type Slot = { startTime: string; endTime: string; available: boolean };
 
@@ -38,6 +40,7 @@ function formatPeso(amount: number): string {
 
 export function AppointmentForm({ patients, dentists, services, onSubmit, currentUserRole, currentDentistId }: AppointmentFormProps) {
   const isDentistRole = currentUserRole === "dentist";
+  const today = todayLocal();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -48,6 +51,7 @@ export function AppointmentForm({ patients, dentists, services, onSubmit, curren
   });
   const [slots, setSlots] = useState<Slot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTime, setSelectedTime] = useState("09:00");
   const [isVerballyApproved, setIsVerballyApproved] = useState(false);
 
@@ -139,8 +143,6 @@ export function AppointmentForm({ patients, dentists, services, onSubmit, curren
       }
     });
   };
-
-  const today = todayLocal();
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -250,37 +252,35 @@ export function AppointmentForm({ patients, dentists, services, onSubmit, curren
         </Card>
 
         {/* DATE & TIME SELECTION */}
-        <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
+        <Card className="border border-border/80 bg-card rounded-2xl shadow-xs overflow-visible">
           <CardHeader className="border-b border-border/40 pb-3">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <Calendar className="h-4 w-4 text-cyan-600" /> Schedule Date & Time
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-4">
+            <input type="hidden" name="scheduled_date" value={selectedDate} />
+            <input type="hidden" name="scheduled_time" value={selectedTime} />
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="scheduled_date" className="text-xs font-semibold text-muted-foreground">Scheduled Date *</Label>
-                <Input
+                <DatePicker
                   id="scheduled_date"
-                  type="date"
-                  name="scheduled_date"
-                  min={today}
-                  defaultValue={today}
-                  required
-                  className="h-10 text-xs border-border/80 rounded-xl"
+                  value={selectedDate}
+                  onChange={(val) => setSelectedDate(val || today)}
+                  minDate={today}
+                  placeholder="Pick date..."
                 />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="scheduled_time" className="text-xs font-semibold text-muted-foreground">Scheduled Time *</Label>
-                <Input
+                <TimePicker
                   id="scheduled_time"
-                  type="time"
-                  name="scheduled_time"
                   value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  required
-                  className="h-10 text-xs border-border/80 rounded-xl"
+                  onChange={(val) => setSelectedTime(val)}
+                  align="right"
+                  placeholder="Pick time..."
                 />
               </div>
             </div>

@@ -31,6 +31,10 @@ export interface InvoiceData {
   patientName: string;
   patientContact: string;
   dentistName: string;
+  dentistLicenseNo?: string | null;
+  dentistPtrNo?: string | null;
+  dentistS2No?: string | null;
+  dentistSpecialization?: string | null;
   appointmentDate: string;
   createdAt: string;
 }
@@ -152,7 +156,7 @@ export async function getInvoiceAction(
         visit_status,
         booking_status,
         patients(first_name, last_name, contact_no),
-        dentists(users(first_name, last_name))
+        dentists(license_no, ptr_no, s2_license_no, specialization, users(first_name, last_name))
       `)
       .eq("id", appointmentId)
       .single();
@@ -162,9 +166,13 @@ export async function getInvoiceAction(
       last_name: string;
       contact_no: string;
     }>((appointment as unknown as Record<string, unknown>)?.patients);
-    const dentist = getSingleJoined<{ users: unknown }>(
-      (appointment as unknown as Record<string, unknown>)?.dentists,
-    );
+    const dentist = getSingleJoined<{
+      license_no: string | null;
+      ptr_no: string | null;
+      s2_license_no: string | null;
+      specialization: string | null;
+      users: unknown;
+    }>((appointment as unknown as Record<string, unknown>)?.dentists);
     const dentistUser = dentist
       ? getSingleJoined<{ first_name: string; last_name: string }>(dentist.users)
       : null;
@@ -196,6 +204,10 @@ export async function getInvoiceAction(
         patientName: patient ? `${patient.first_name} ${patient.last_name}` : "Unknown",
         patientContact: patient?.contact_no ?? "",
         dentistName: dentistUser ? `${dentistUser.first_name} ${dentistUser.last_name}` : "Unknown",
+        dentistLicenseNo: dentist?.license_no ?? null,
+        dentistPtrNo: dentist?.ptr_no ?? null,
+        dentistS2No: dentist?.s2_license_no ?? null,
+        dentistSpecialization: dentist?.specialization ?? null,
         appointmentDate: appointment?.scheduled_time ?? "",
         createdAt: invoice.created_at,
       },

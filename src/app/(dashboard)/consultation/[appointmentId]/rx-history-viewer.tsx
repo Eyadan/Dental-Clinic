@@ -14,6 +14,7 @@ interface RxHistoryViewerProps {
   patientName: string;
   dentistName: string;
   onOpenCreateDialog: () => void;
+  refreshKey?: number;
 }
 
 export function RxHistoryViewer({
@@ -22,6 +23,7 @@ export function RxHistoryViewer({
   patientName,
   dentistName,
   onOpenCreateDialog,
+  refreshKey = 0,
 }: RxHistoryViewerProps) {
   const [prescriptions, setPrescriptions] = useState<PrescriptionData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,7 +43,7 @@ export function RxHistoryViewer({
 
   useEffect(() => {
     fetchPrescriptions();
-  }, [appointmentId]);
+  }, [appointmentId, refreshKey]);
 
   const handleDelete = async (rxId: string) => {
     if (!confirm("Are you sure you want to delete this prescription record?")) return;

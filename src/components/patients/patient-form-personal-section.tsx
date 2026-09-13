@@ -1,18 +1,21 @@
 "use client";
 
-import type { UseFormRegister, FieldErrors } from "react-hook-form";
+import type { UseFormRegister, FieldErrors, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import type { PatientFormData } from "@/lib/validations/patient.schema";
 import { User, Phone, Mail, MapPin, ShieldCheck, HeartPulse } from "lucide-react";
 
 interface Props {
   register: UseFormRegister<PatientFormData>;
   errors: FieldErrors<PatientFormData>;
+  setValue?: UseFormSetValue<PatientFormData>;
+  watch?: UseFormWatch<PatientFormData>;
 }
 
-export function PatientFormPersonalSection({ register, errors }: Props) {
+export function PatientFormPersonalSection({ register, errors, setValue, watch }: Props) {
   return (
     <div className="space-y-5">
       {/* SECTION 1: PERSONAL IDENTIFICATION */}
@@ -42,7 +45,12 @@ export function PatientFormPersonalSection({ register, errors }: Props) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-foreground">Birthdate</Label>
-            <Input type="date" className="h-10 text-xs rounded-xl border-border/80 focus-visible:ring-cyan-500" {...register("birth_date")} />
+            <DatePicker
+              value={watch ? watch("birth_date") || "" : ""}
+              onChange={(val) => setValue?.("birth_date", val)}
+              placeholder="Pick birthdate..."
+            />
+            <input type="hidden" {...register("birth_date")} />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-foreground">Sex</Label>
@@ -135,7 +143,13 @@ export function PatientFormPersonalSection({ register, errors }: Props) {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground">Insurance Effective Date</Label>
-            <Input type="date" className="h-10 text-xs rounded-xl border-border/80 focus-visible:ring-cyan-500" {...register("insurance_effective_date")} />
+            <DatePicker
+              value={watch ? watch("insurance_effective_date") || "" : ""}
+              onChange={(val) => setValue?.("insurance_effective_date", val)}
+              placeholder="Pick effective date..."
+              align="right"
+            />
+            <input type="hidden" {...register("insurance_effective_date")} />
           </div>
         </div>
 

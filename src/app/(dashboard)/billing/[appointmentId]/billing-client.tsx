@@ -35,8 +35,10 @@ import {
   type ReceiptVersionData,
 } from "./actions";
 import { FollowUpScheduler } from "./follow-up-scheduler";
+import { PrintableInvoiceDialog } from "@/components/billing/printable-invoice-dialog";
 import type { PaymentMethod } from "@/lib/types/enums";
-import { Loader2, Receipt, CreditCard, CheckCircle2, Plus, Sparkles, User, Stethoscope, Clock, Copy, Activity, Image as ImageIcon, X, Eye, History, Upload, FileText, AlertTriangle, ShieldCheck, Check, XCircle } from "lucide-react";
+import { Loader2, Receipt, CreditCard, CheckCircle2, Plus, Sparkles, User, Stethoscope, Clock, Copy, Activity, Image as ImageIcon, X, Eye, History, Upload, FileText, AlertTriangle, ShieldCheck, Check, XCircle, Printer } from "lucide-react";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 
 interface BillingClientProps {
   appointmentId: string;
@@ -68,6 +70,7 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [proofImage, setProofImage] = useState<string | null>(null);
   const [selectedProofModalUrl, setSelectedProofModalUrl] = useState<string | null>(null);
+  const [showPrintInvoiceDialog, setShowPrintInvoiceDialog] = useState(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -379,18 +382,11 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
   if (!invoice) {
     return (
       <div className="space-y-6">
-        {/* BRANDED HERO HEADER */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-              <Receipt className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Billing & Invoice Generator</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">Generate treatment receipts and record patient payments</p>
-            </div>
-          </div>
-        </div>
+        <PageHeroBanner
+          icon={Receipt}
+          title="Billing & Invoice Generator"
+          description="Generate treatment receipts and record patient payments"
+        />
 
         {error && (
           <Alert variant="destructive" className="rounded-2xl border-red-500/20 bg-red-500/5">
@@ -421,38 +417,33 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
 
   return (
     <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <Receipt className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Patient Invoice #{invoice.id.slice(0, 8).toUpperCase()}</h1>
-              <Badge variant="outline" className={`text-[10px] font-bold uppercase ${
-                invoice.paymentStatus === "paid" ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10" :
-                invoice.paymentStatus === "partially_paid" ? "border-orange-500/30 text-orange-600 bg-orange-500/10" :
-                "border-amber-500/30 text-amber-600 bg-amber-500/10"
-              }`}>
-                {invoice.paymentStatus.replace(/_/g, " ")}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5 font-mono">Patient: {invoice.patientName} · Dentist: {invoice.dentistName}</p>
-          </div>
-        </div>
-
-        {isVisitCompleted ? (
-          <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 bg-emerald-500/10 text-xs font-semibold px-3 py-1.5 rounded-xl">
-            <CheckCircle2 className="mr-1.5 h-4 w-4 text-emerald-600 inline" /> Visit Completed & Checked Out
-          </Badge>
-        ) : (
-          <Button onClick={handleCheckout} disabled={isCheckingOut} size="sm" className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs">
-            {isCheckingOut ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}
-            Complete Visit & Checkout
+      <PageHeroBanner
+        icon={Receipt}
+        title={`Patient Invoice #${invoice.id.slice(0, 8).toUpperCase()}`}
+        description={`Patient: ${invoice.patientName} · Dentist: ${invoice.dentistName}`}
+        badgeText={invoice.paymentStatus.replace(/_/g, " ")}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setShowPrintInvoiceDialog(true)}
+            className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs"
+          >
+            <Printer className="mr-1.5 h-3.5 w-3.5" />
+            Print / Export Official Invoice
           </Button>
-        )}
-      </div>
+          {isVisitCompleted ? (
+            <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 bg-emerald-500/10 text-xs font-semibold px-3 py-1.5 rounded-xl">
+              <CheckCircle2 className="mr-1.5 h-4 w-4 text-emerald-600 inline" /> Visit Completed & Checked Out
+            </Badge>
+          ) : (
+            <Button onClick={handleCheckout} disabled={isCheckingOut} size="sm" className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs">
+              {isCheckingOut ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}
+              Complete Visit & Checkout
+            </Button>
+          )}
+        </div>
+      </PageHeroBanner>
 
       {pendingRequestsCount > 0 && (
         <div className="p-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200 flex items-center justify-between shadow-xs">
@@ -966,6 +957,14 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
           </div>
         </DialogContent>
       </Dialog>
+
+      {invoice && (
+        <PrintableInvoiceDialog
+          open={showPrintInvoiceDialog}
+          onOpenChange={setShowPrintInvoiceDialog}
+          invoice={invoice}
+        />
+      )}
     </div>
   );
 }

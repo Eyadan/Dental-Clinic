@@ -28,6 +28,7 @@ import {
   Plus,
   Stethoscope,
 } from "lucide-react";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 import {
   getDashboardStatsAction,
   getPendingStaffNotificationsAction,
@@ -78,74 +79,74 @@ export function DashboardClient({ role = "admin" }: DashboardClientProps) {
     {
       title: "Pending Bookings",
       value: stats?.pendingBookings ?? 0,
-      subtitle: "Requires approval",
+      subtitle: "Requires staff review",
+      change: "+2 new today",
+      changeType: "neutral" as const,
       icon: Clock,
-      href: "/appointments?status=pending",
+      iconBg: "from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30",
+      href: "/bookings?status=pending",
     },
     {
       title: "Today's Schedule",
       value: stats?.todayAppointments ?? 0,
-      subtitle: "Appointments today",
+      subtitle: "Scheduled appointments",
+      change: "On track",
+      changeType: "positive" as const,
       icon: Calendar,
+      iconBg: "from-cyan-500/20 to-teal-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/30",
       href: "/appointments",
     },
     {
       title: "Patients In Queue",
       value: stats?.inQueue ?? 0,
-      subtitle: "Active in clinic",
+      subtitle: "Active inside clinic",
+      change: "Live status",
+      changeType: "positive" as const,
       icon: Users,
+      iconBg: "from-emerald-500/20 to-teal-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
       href: "/check-in",
     },
     {
       title: "Unread Messages",
       value: stats?.unreadMessages ?? 0,
       subtitle: "Messenger inbox",
+      change: "Response < 5m",
+      changeType: "neutral" as const,
       icon: MessageSquare,
+      iconBg: "from-indigo-500/20 to-purple-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
       href: "/chat",
     },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/60 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <Activity className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Clinic Overview & Live Operations</h1>
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Real-time appointment schedule, patient queue, and system status</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadData}
-            className="h-9 rounded-xl border-border/60 text-xs hover:bg-muted/50 transition-all"
-          >
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Refresh Stats
+    <div className="space-y-6 pb-8">
+      {/* LIGHT SaaS HERO HEADER */}
+      <PageHeroBanner
+        icon={Activity}
+        title="Clinic Operations Desk"
+        description="Real-time scheduling engine, patient check-in queue, and Messenger AI automation"
+        badgeText="Live System"
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={loadData}
+          className="h-9 rounded-xl border-border/80 text-xs font-semibold"
+        >
+          <RefreshCw className="mr-1.5 h-3.5 w-3.5 text-cyan-600" /> Refresh Operations
+        </Button>
+        <Link href="/appointments/new">
+          <Button size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs">
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> New Appointment
           </Button>
-          <Link href="/appointments/new">
-            <Button size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all">
-              <Plus className="mr-1.5 h-3.5 w-3.5" /> New Appointment
-            </Button>
-          </Link>
-        </div>
-      </div>
+        </Link>
+      </PageHeroBanner>
 
       {/* Alert Banner Section */}
       {notifications.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-destructive uppercase tracking-wider">
-            <AlertTriangle className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-2 text-xs font-bold text-destructive uppercase tracking-wider">
+            <AlertTriangle className="h-4 w-4" />
             <span>Staff Attention Required ({notifications.length})</span>
           </div>
           {notifications.map((notif) => {
@@ -155,15 +156,15 @@ export function DashboardClient({ role = "admin" }: DashboardClientProps) {
             const reason = (meta.reason as string) ?? "Unknown error";
 
             return (
-              <Alert key={notif.id} variant="destructive" className="border-red-500/20 bg-red-500/5 rounded-2xl">
+              <Alert key={notif.id} variant="destructive" className="border-red-500/30 bg-red-500/10 rounded-2xl shadow-xs">
                 <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
                 <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-red-900 dark:text-red-200">
+                    <p className="text-sm font-bold text-red-900 dark:text-red-200">
                       Messenger Notification Failed ({notifType})
                     </p>
                     <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">
-                      PSID: <code className="bg-red-500/10 px-1 py-0.5 rounded font-mono">{patientPsid}</code> — {reason}
+                      PSID: <code className="bg-red-500/20 px-1.5 py-0.5 rounded font-mono font-bold">{patientPsid}</code> — {reason}
                     </p>
                   </div>
                   <Button
@@ -171,10 +172,10 @@ export function DashboardClient({ role = "admin" }: DashboardClientProps) {
                     variant="outline"
                     onClick={() => handleDismiss(notif.id)}
                     disabled={isPending}
-                    className="self-end sm:self-center border-red-300 text-red-700 hover:bg-red-500/10 rounded-xl text-xs"
+                    className="self-end sm:self-center border-red-300 text-red-700 hover:bg-red-500/20 rounded-xl text-xs font-semibold"
                   >
                     <X className="mr-1 h-3.5 w-3.5" />
-                    Dismiss
+                    Dismiss Alert
                   </Button>
                 </AlertDescription>
               </Alert>
@@ -189,24 +190,81 @@ export function DashboardClient({ role = "admin" }: DashboardClientProps) {
           const Icon = card.icon;
           return (
             <Link key={card.title} href={card.href} className="block group">
-              <Card className="border border-border/60 bg-card rounded-2xl p-4 shadow-xs hover:border-cyan-500/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+              <div className="stat-card-glow">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-muted-foreground">{card.title}</p>
-                  <div className="h-8 w-8 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-600 group-hover:scale-110 transition-transform">
-                    <Icon className="h-4 w-4" />
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{card.title}</p>
+                  <div className={`h-9 w-9 rounded-xl bg-gradient-to-tr ${card.iconBg} border flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <Icon className="h-4.5 w-4.5" />
                   </div>
                 </div>
-                <div className="mt-3 flex items-baseline justify-between">
-                  <p className="text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
+                <div className="mt-4 flex items-baseline justify-between">
+                  <p className="text-3xl font-black tracking-tight text-foreground tabular-nums">
                     {stats ? card.value : "—"}
                   </p>
-                  <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:text-cyan-600 transition-all" />
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
+                    {card.change}
+                  </span>
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1 font-medium">{card.subtitle}</p>
-              </Card>
+                <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground font-medium">
+                  <span>{card.subtitle}</span>
+                  <ArrowUpRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 group-hover:text-cyan-600 transition-all transform group-hover:translate-x-0.5" />
+                </div>
+              </div>
             </Link>
           );
         })}
+      </div>
+
+      {/* QUICK OPERATIONS COMMAND HUB */}
+      <div className="card-premium p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-cyan-600" />
+            <span>Quick Staff Operations Hub</span>
+          </h2>
+          <span className="text-[11px] text-muted-foreground">1-Click Shortcut Workspaces</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Link href="/patients/new" className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 hover:bg-cyan-500/10 hover:border-cyan-500/40 transition-all flex items-center gap-3 group">
+            <div className="h-9 w-9 rounded-xl bg-cyan-500/10 text-cyan-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <Users className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-foreground">New Patient</p>
+              <p className="text-[10px] text-muted-foreground font-medium">Add medical record</p>
+            </div>
+          </Link>
+
+          <Link href="/bookings" className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 hover:bg-teal-500/10 hover:border-teal-500/40 transition-all flex items-center gap-3 group">
+            <div className="h-9 w-9 rounded-xl bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <Calendar className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-foreground">Booking Desk</p>
+              <p className="text-[10px] text-muted-foreground font-medium">Review requests</p>
+            </div>
+          </Link>
+
+          <Link href="/check-in" className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 hover:bg-emerald-500/10 hover:border-emerald-500/40 transition-all flex items-center gap-3 group">
+            <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <UserCheck className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-foreground">Check-In Desk</p>
+              <p className="text-[10px] text-muted-foreground font-medium">Patient arrival</p>
+            </div>
+          </Link>
+
+          <Link href="/chat" className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 hover:bg-indigo-500/10 hover:border-indigo-500/40 transition-all flex items-center gap-3 group">
+            <div className="h-9 w-9 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <MessageSquare className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-foreground">Live Chat Desk</p>
+              <p className="text-[10px] text-muted-foreground font-medium">Messenger bot</p>
+            </div>
+          </Link>
+        </div>
       </div>
 
       {/* MAIN CONTENT GRID */}

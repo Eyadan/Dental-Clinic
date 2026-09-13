@@ -1,16 +1,19 @@
 "use client";
 
-import type { UseFormRegister } from "react-hook-form";
+import type { UseFormRegister, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import type { PatientFormData } from "@/lib/validations/patient.schema";
 import { Sparkles, Calendar, Stethoscope, AlertCircle } from "lucide-react";
 
 interface Props {
   register: UseFormRegister<PatientFormData>;
+  setValue?: UseFormSetValue<PatientFormData>;
+  watch?: UseFormWatch<PatientFormData>;
 }
 
-export function PatientFormDentalHistorySection({ register }: Props) {
+export function PatientFormDentalHistorySection({ register, setValue, watch }: Props) {
   return (
     <div className="space-y-4">
       {/* SECTION 1: PREVIOUS DENTAL CARE */}
@@ -27,7 +30,13 @@ export function PatientFormDentalHistorySection({ register }: Props) {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-foreground">Last Dental Visit Date</Label>
-            <Input type="date" className="h-10 text-xs rounded-xl border-border/80 focus-visible:ring-cyan-500" {...register("last_dental_visit")} />
+            <DatePicker
+              value={watch ? watch("last_dental_visit") || "" : ""}
+              onChange={(val) => setValue?.("last_dental_visit", val)}
+              placeholder="Pick last visit date..."
+              align="right"
+            />
+            <input type="hidden" {...register("last_dental_visit")} />
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { Loader2, Archive, RotateCcw, ArchiveRestore, User } from "lucide-react"
 import { EmptyState } from "@/components/shared/empty-state";
 import { getArchivedPatientsAction, unarchivePatientAction } from "@/app/(dashboard)/patients/archive-actions";
 import { useToast } from "@/components/ui/toast";
+import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 
 interface ArchivedPatient {
   id: string;
@@ -75,23 +76,12 @@ export function ArchivedRecordsClient() {
 
   return (
     <div className="space-y-6">
-      {/* BRANDED HERO HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-card p-5 rounded-2xl border border-border/80 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-500/20">
-            <Archive className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Archived Patient Files</h1>
-              <Badge variant="outline" className="border-border text-foreground font-mono text-[10px]">
-                {patients.length} archived
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">View archived patient records or restore them to active directory</p>
-          </div>
-        </div>
-      </div>
+      <PageHeroBanner
+        icon={Archive}
+        title="Archived Patient Files"
+        description="View archived patient records or restore them to active directory"
+        badgeText={`${patients.length} Archived`}
+      />
 
       {patients.length === 0 ? (
         <Card className="border border-border/80 bg-card rounded-2xl shadow-xs py-16 text-center">

@@ -67,47 +67,51 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
-      <Card className="w-full max-w-md border-border/60 shadow-xs rounded-2xl">
-        <CardHeader className="space-y-2 text-center pb-4">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-600 text-white shadow-xs">
-            <Activity className="h-6 w-6" />
+    <div className="relative min-h-screen flex items-center justify-center bg-slate-950 text-white px-4 py-8 overflow-hidden">
+      {/* GLOWING BACKGROUND ORBS */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      <Card className="relative z-10 w-full max-w-md border border-slate-800 bg-slate-900/90 backdrop-blur-xl shadow-2xl rounded-2xl text-white">
+        <CardHeader className="space-y-3 text-center pb-4 pt-6">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 shadow-lg shadow-cyan-500/20">
+            <Activity className="h-7 w-7" />
           </div>
           <div>
-            <CardTitle className="text-xl font-bold tracking-tight text-foreground">
+            <CardTitle className="text-2xl font-bold tracking-tight text-white">
               Smile Dental Clinic
             </CardTitle>
-            <CardDescription className="text-xs mt-0.5">
-              Sign in to your staff portal account
+            <CardDescription className="text-xs text-slate-300 mt-1 font-medium">
+              Enterprise Medical SaaS Staff Portal
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5 px-6 pb-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {authError && (
-              <Alert variant="destructive" className="rounded-xl border-red-500/20 bg-red-500/5">
+              <Alert variant="destructive" className="rounded-xl border-rose-500/30 bg-rose-500/10 text-rose-300">
                 <AlertDescription className="text-xs font-medium">{authError}</AlertDescription>
               </Alert>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Email Address
+              <Label htmlFor="email" className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                Staff Email Address
               </Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="admin@clinic.local"
                 autoComplete="email"
-                className="h-10 border-border/60 focus-visible:ring-cyan-500 rounded-xl text-xs"
+                className="h-10 border-slate-700 bg-slate-950/80 text-white focus-visible:ring-cyan-500 rounded-xl text-xs"
                 {...register("email")}
               />
               {errors.email && (
-                <p className="text-xs font-medium text-destructive">{errors.email.message}</p>
+                <p className="text-xs font-medium text-rose-400">{errors.email.message}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Label htmlFor="password" className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
                 Password
               </Label>
               <div className="relative">
@@ -116,38 +120,38 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••••••"
                   autoComplete="current-password"
-                  className="h-10 pr-10 border-border/60 focus-visible:ring-cyan-500 rounded-xl text-xs"
+                  className="h-10 pr-10 border-slate-700 bg-slate-950/80 text-white focus-visible:ring-cyan-500 rounded-xl text-xs"
                   {...register("password")}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors p-1"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
               {errors.password && (
-                <p className="text-xs font-medium text-destructive">{errors.password.message}</p>
+                <p className="text-xs font-medium text-rose-400">{errors.password.message}</p>
               )}
             </div>
 
             <Button
               type="submit"
-              className="w-full h-10 bg-cyan-600 hover:bg-cyan-700 text-white font-medium text-xs rounded-xl shadow-xs"
+              className="w-full h-10 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/20"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Signing in..." : "Sign In"}
+              {isSubmitting ? "Authenticating..." : "Sign In to Clinic Workspace"}
             </Button>
           </form>
 
-          <div className="relative my-3">
+          <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border/40" />
+              <div className="w-full border-t border-slate-800" />
             </div>
             <div className="relative flex justify-center text-[10px] uppercase">
-              <span className="bg-card px-2 text-muted-foreground font-semibold">Quick Test Login</span>
+              <span className="bg-slate-900 px-2 text-slate-400 font-bold tracking-wider">Quick Demo Logins</span>
             </div>
           </div>
 
@@ -159,12 +163,12 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
                   key={acc.email}
                   type="button"
                   onClick={() => handleQuickLogin(acc.email, acc.pass)}
-                  className="flex items-center gap-2 p-2 rounded-xl border border-border/60 bg-muted/20 hover:bg-muted/60 text-left transition-all"
+                  className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/80 hover:border-cyan-500/40 text-left transition-all group"
                 >
-                  <Icon className="h-3.5 w-3.5 text-cyan-600 shrink-0" />
+                  <Icon className="h-4 w-4 text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
                   <div className="overflow-hidden">
-                    <p className="text-xs font-semibold leading-none">{acc.role}</p>
-                    <p className="text-[10px] text-muted-foreground truncate mt-0.5">{acc.email.split("@")[0]}</p>
+                    <p className="text-xs font-bold text-slate-200 group-hover:text-white leading-none">{acc.role}</p>
+                    <p className="text-[10px] text-slate-400 truncate mt-0.5">{acc.email.split("@")[0]}</p>
                   </div>
                 </button>
               );

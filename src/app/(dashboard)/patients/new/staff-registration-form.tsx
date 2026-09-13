@@ -132,8 +132,8 @@ export function StaffRegistrationForm({ conditions }: StaffRegistrationFormProps
             <CardTitle className="text-sm font-medium">{activeTab}</CardTitle>
           </CardHeader>
           <CardContent onBlurCapture={handleDuplicateCheck}>
-            {activeTab === "Personal Info" && <PatientFormPersonalSection register={register} errors={errors} />}
-            {activeTab === "Dental History" && <PatientFormDentalHistorySection register={register} />}
+            {activeTab === "Personal Info" && <PatientFormPersonalSection register={register} errors={errors} watch={watch} setValue={setValue} />}
+            {activeTab === "Dental History" && <PatientFormDentalHistorySection register={register} watch={watch} setValue={setValue} />}
             {activeTab === "Medical History" && (
               <div className="space-y-4">
                 <PatientFormMedicalQuestionsSection register={register} />
