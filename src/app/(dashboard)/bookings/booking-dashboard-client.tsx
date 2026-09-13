@@ -226,7 +226,7 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
               };
 
             return (
-              <Card key={b.id} className="border border-border/80 bg-card rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between overflow-hidden">
+              <Card key={b.id} className="border border-border/80 bg-card rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between overflow-hidden pt-0">
                 <CardHeader className={`pb-3 pt-4 px-4 flex flex-row items-center justify-between space-y-0 ${headerStyle.headerBg}`}>
                   <div className="flex items-center gap-2.5">
                     <div className={`h-9 w-9 rounded-xl flex items-center justify-center font-bold text-xs ${headerStyle.avatarBg}`}>
