@@ -791,6 +791,64 @@ function formatTimeDisplay(time: string): string {
   return `${displayH}:${m.toString().padStart(2, "0")} ${period}`;
 }
 
+async function promptDentistOrTime(
+  session: BookingSessionData,
+  psid: string,
+  sessionKey: string,
+  totalDuration: number,
+  availableDentists: { id: string; name: string; startTime: string; endTime: string }[],
+): Promise<void> {
+  if (availableDentists.length === 1) {
+    session.collectedDentistId = availableDentists[0].id;
+    session.step = "awaiting_time";
+    await saveSession(session);
+
+    const slots = await getAvailableTimeSlots(availableDentists[0].id, session.collectedDate!, totalDuration);
+    if (slots.length === 0) {
+      await sendMessengerMessage(
+        psid,
+        `No time slots are available for ${totalDuration} minutes with ${availableDentists[0].name} on this date. Please type "book" to try a different date.`,
+      );
+      await deleteSession(sessionKey);
+      return;
+    }
+
+    const timeQuickReplies: QuickReplyOption[] = [...slots]
+      .map((timeStr) => ({ raw: parseTime(timeStr) ?? timeStr, display: timeStr }))
+      .sort((a, b) => a.raw.localeCompare(b.raw))
+      .slice(0, 10)
+      .map(({ raw, display }) => ({
+        title: display,
+        payload: `QR_TIME_${raw}`,
+      }));
+
+    await sendQuickReplies(
+      psid,
+      `Dentist: ${availableDentists[0].name} (${formatTimeDisplay(availableDentists[0].startTime)}–${formatTimeDisplay(availableDentists[0].endTime)})\n\nWhat time would you prefer? (e.g., "9am", "2:30pm", "14:00")`,
+      timeQuickReplies,
+    );
+    return;
+  }
+
+  session.step = "awaiting_dentist";
+  await saveSession(session);
+
+  const dentistQuickReplies: QuickReplyOption[] = availableDentists.slice(0, 10).map((d) => ({
+    title: d.name.length > 20 ? d.name.slice(0, 20) : d.name,
+    payload: `QR_DENTIST_${d.id}`,
+  }));
+
+  const dentistList = availableDentists
+    .map((d, i) => `${i + 1}. ${d.name} (${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)})`)
+    .join("\n");
+
+  await sendQuickReplies(
+    psid,
+    `Available dentists on this day:\n${dentistList}\n\nWhich dentist would you prefer? Reply with the name or number (e.g., "1" or "${availableDentists[0].name}").`,
+    dentistQuickReplies,
+  );
+}
+
 export async function processIncomingMessage(
   psid: string,
   text: string,
@@ -1308,32 +1366,7 @@ export async function processIncomingMessage(
         return sum + (svc?.default_duration_minutes ?? 30);
       }, 0);
 
-      const timeSet = new Set<string>();
-      for (const dentist of availableDentists) {
-        const slots = await getAvailableTimeSlots(dentist.id, date, totalDuration);
-        for (const slot of slots) {
-          const timeStr = slot;
-          timeSet.add(timeStr);
-        }
-      }
-      const timeQuickReplies: QuickReplyOption[] = [...timeSet]
-        .map((timeStr) => ({ raw: parseTime(timeStr) ?? timeStr, display: timeStr }))
-        .sort((a, b) => a.raw.localeCompare(b.raw))
-        .slice(0, 10)
-        .map(({ raw, display }) => ({
-          title: display,
-          payload: `QR_TIME_${raw}`,
-        }));
-
-      session.step = "awaiting_time";
-      await saveSession(session);
-
-      const dentistNames = availableDentists.map((d) => `• ${d.name} (${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)})`).join("\n");
-      await sendQuickReplies(
-        psid,
-        `Great! Available dentists on this day:\n${dentistNames}\n\nWhat time would you prefer? (e.g., "9am", "2:30pm", "14:00")`,
-        timeQuickReplies,
-      );
+      await promptDentistOrTime(session, psid, sessionKey, totalDuration, availableDentists);
       return;
     }
 
@@ -1371,6 +1404,42 @@ export async function processIncomingMessage(
     }
     const time = parseTime(timeInput);
     if (!time) {
+      // Check if user entered a dentist name instead of time
+      const availableDentists = await getAvailableDentistsForDate(session.collectedDate!);
+      const cleanInput = text.toLowerCase().replace(/^dr\.?\s*/i, "").trim();
+      const matchedDentist = availableDentists.find((d) => {
+        const cleanName = d.name.toLowerCase().replace(/^dr\.?\s*/i, "").trim();
+        return cleanName === cleanInput || cleanName.includes(cleanInput) || cleanInput.includes(cleanName);
+      });
+
+      if (matchedDentist) {
+        session.collectedDentistId = matchedDentist.id;
+        await saveSession(session);
+
+        const services = await getActiveServices();
+        const totalDuration = (session.collectedServiceIds ?? []).reduce((sum, id) => {
+          const svc = services.find((s) => s.id === id);
+          return sum + (svc?.default_duration_minutes ?? 30);
+        }, 0);
+
+        const slots = await getAvailableTimeSlots(matchedDentist.id, session.collectedDate!, totalDuration);
+        const timeQuickReplies: QuickReplyOption[] = [...slots]
+          .map((timeStr) => ({ raw: parseTime(timeStr) ?? timeStr, display: timeStr }))
+          .sort((a, b) => a.raw.localeCompare(b.raw))
+          .slice(0, 10)
+          .map(({ raw, display }) => ({
+            title: display,
+            payload: `QR_TIME_${raw}`,
+          }));
+
+        await sendQuickReplies(
+          psid,
+          `You selected: ${matchedDentist.name} (${formatTimeDisplay(matchedDentist.startTime)}–${formatTimeDisplay(matchedDentist.endTime)})\n\nWhat time would you prefer? (e.g., "9am", "2:30pm", "14:00")`,
+          timeQuickReplies,
+        );
+        return;
+      }
+
       await sendMessengerMessage(
         psid,
         "I couldn't understand that time. Please try: \"9am\", \"2:30pm\", or \"14:00\".",
@@ -1395,14 +1464,22 @@ export async function processIncomingMessage(
     const availableDentists = await getAvailableDentistsForDate(session.collectedDate);
     const reqTime = new Date(`2000-01-01T${time}`);
 
-    const dentistsAvailableAtTime = availableDentists.filter((d) => {
+    let dentistsToEvaluate = availableDentists;
+    if (session.collectedDentistId) {
+      const chosen = availableDentists.filter((d) => d.id === session.collectedDentistId);
+      if (chosen.length > 0) {
+        dentistsToEvaluate = chosen;
+      }
+    }
+
+    const dentistsAvailableAtTime = dentistsToEvaluate.filter((d) => {
       const schedStart = new Date(`2000-01-01T${d.startTime}`);
       const schedEnd = new Date(`2000-01-01T${d.endTime}`);
       return reqTime >= schedStart && reqTime < schedEnd;
     });
 
     if (dentistsAvailableAtTime.length === 0) {
-      const timeRanges = availableDentists
+      const timeRanges = dentistsToEvaluate
         .map((d) => `• ${d.name}: ${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)}`)
         .join("\n");
       await sendMessengerMessage(
@@ -1421,9 +1498,8 @@ export async function processIncomingMessage(
       return sum + (svc?.default_duration_minutes ?? 30);
     }, 0);
 
-    const allDentists = await getAvailableDentistsForDate(session.collectedDate);
     const reqTime2 = new Date(`2000-01-01T${time}`);
-    const dentists = allDentists.filter((d) => {
+    const dentists = dentistsToEvaluate.filter((d) => {
       const schedStart = new Date(`2000-01-01T${d.startTime}`);
       const schedEnd = new Date(`2000-01-01T${d.endTime}`);
       const reqEnd = new Date(reqTime2.getTime() + totalDuration * 60000);
@@ -1431,7 +1507,7 @@ export async function processIncomingMessage(
     });
 
     if (dentists.length === 0) {
-      const timeRanges = allDentists
+      const timeRanges = dentistsToEvaluate
         .map((d) => `• ${d.name}: ${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)}`)
         .join("\n");
       await sendMessengerMessage(
@@ -1440,9 +1516,6 @@ export async function processIncomingMessage(
       );
       return;
     }
-
-    session.step = "awaiting_dentist";
-    await saveSession(session);
 
     if (dentists.length === 1) {
       session.collectedDentistId = dentists[0].id;
@@ -1474,9 +1547,9 @@ export async function processIncomingMessage(
           const remainingNames = split.remaining.map((s) => s.name).join(", ");
           const remainingDuration = split.remaining.reduce((sum, s) => sum + s.duration, 0);
 
-          let msg = `⚠️ You requested ${split.fitsNow.map((s) => s.name).join(", ")} at ${formatTimeDisplay(time)}, but there's only ${split.availableUntil ? formatTimeDisplay(split.availableUntil) : "limited time"} available.\n\n`;
-          msg += `✅ Can fit now: ${fitsNames} (${fitsDuration} min)\n`;
-          msg += `⏳ Need separate booking: ${remainingNames} (${remainingDuration} min)`;
+          let msg = `You requested ${split.fitsNow.map((s) => s.name).join(", ")} at ${formatTimeDisplay(time)}, but there's only ${split.availableUntil ? formatTimeDisplay(split.availableUntil) : "limited time"} available.\n\n`;
+          msg += `Can fit now: ${fitsNames} (${fitsDuration} min)\n`;
+          msg += `Need separate booking: ${remainingNames} (${remainingDuration} min)`;
 
           if (split.nextSlotForRemaining) {
             msg += `\n\nNext available slot for the remaining service(s): ${split.nextSlotForRemaining}`;
@@ -1492,7 +1565,7 @@ export async function processIncomingMessage(
         }
 
         const slots = await getAvailableTimeSlots(dentists[0].id, session.collectedDate!, totalDuration);
-        let msg2 = `⚠️ ${conflict.reason}`;
+        let msg2 = conflict.reason ? `${conflict.reason}` : "Time slot conflict";
         if (slots.length > 0) {
           msg2 += `\n\nAvailable time slots with ${dentists[0].name} on this day:\n${slots.slice(0, 8).map((s) => `• ${s}`).join("\n")}`;
           msg2 += `\n\nPlease type "book" to try one of these times.`;
@@ -1513,10 +1586,13 @@ export async function processIncomingMessage(
       return;
     }
 
+    session.step = "awaiting_dentist";
+    await saveSession(session);
+
     const dentistList = dentists.map((d, i) => `${i + 1}. ${d.name} (${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)})`).join("\n");
     await sendMessengerMessage(
       psid,
-      `Which dentist?\n\n${dentistList}\n\nReply with the number.`,
+      `Which dentist?\n\n${dentistList}\n\nReply with the number or name.`,
     );
     return;
   }
@@ -1575,41 +1651,7 @@ export async function processIncomingMessage(
         return;
       }
 
-      const timeSet = new Set<string>();
-      for (const dentist of availableDentists) {
-        const slots = await getAvailableTimeSlots(dentist.id, session.collectedDate!, totalDuration);
-        for (const slot of slots) {
-          timeSet.add(slot);
-        }
-      }
-
-      if (timeSet.size === 0) {
-        await sendMessengerMessage(
-          psid,
-          `No time slots are available for ${totalDuration} minutes on this date. Please type "book" to try a different date.`,
-        );
-        await deleteSession(sessionKey);
-        return;
-      }
-
-      const timeQuickReplies: QuickReplyOption[] = [...timeSet]
-        .map((timeStr) => ({ raw: parseTime(timeStr) ?? timeStr, display: timeStr }))
-        .sort((a, b) => a.raw.localeCompare(b.raw))
-        .slice(0, 10)
-        .map(({ raw, display }) => ({
-          title: display,
-          payload: `QR_TIME_${raw}`,
-        }));
-
-      session.step = "awaiting_time";
-      await saveSession(session);
-
-      const dentistNames = availableDentists.map((d) => `• ${d.name} (${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)})`).join("\n");
-      await sendQuickReplies(
-        psid,
-        `Available dentists on this day:\n${dentistNames}\n\nWhat time would you prefer? (e.g., "9am", "2:30pm", "14:00")`,
-        timeQuickReplies,
-      );
+      await promptDentistOrTime(session, psid, sessionKey, totalDuration, availableDentists);
       return;
     }
 
@@ -1672,46 +1714,12 @@ export async function processIncomingMessage(
       return;
     }
 
-    const timeSet = new Set<string>();
-    for (const dentist of availableDentists) {
-      const slots = await getAvailableTimeSlots(dentist.id, session.collectedDate!, totalDuration);
-      for (const slot of slots) {
-        timeSet.add(slot);
-      }
-    }
-
-    if (timeSet.size === 0) {
-      await sendMessengerMessage(
-        psid,
-        `No time slots are available for ${totalDuration} minutes on this date. Please type "book" to try a different date.`,
-      );
-      await deleteSession(sessionKey);
-      return;
-    }
-
-    const timeQuickReplies: QuickReplyOption[] = [...timeSet]
-      .map((timeStr) => ({ raw: parseTime(timeStr) ?? timeStr, display: timeStr }))
-      .sort((a, b) => a.raw.localeCompare(b.raw))
-      .slice(0, 10)
-      .map(({ raw, display }) => ({
-        title: display,
-        payload: `QR_TIME_${raw}`,
-      }));
-
-    session.step = "awaiting_time";
-    await saveSession(session);
-
-    const dentistNames = availableDentists.map((d) => `• ${d.name} (${formatTimeDisplay(d.startTime)}–${formatTimeDisplay(d.endTime)})`).join("\n");
-    await sendQuickReplies(
-      psid,
-      `Available dentists on this day:\n${dentistNames}\n\nWhat time would you prefer? (e.g., "9am", "2:30pm", "14:00")`,
-      timeQuickReplies,
-    );
+    await promptDentistOrTime(session, psid, sessionKey, totalDuration, availableDentists);
     return;
   }
 
   if (session.step === "awaiting_dentist") {
-    if (!session.collectedDate || !session.collectedTime) {
+    if (!session.collectedDate) {
       await sendMessengerMessage(psid, "Session expired. Please type \"book\" to start again.");
       await deleteSession(sessionKey);
       return;
@@ -1724,87 +1732,165 @@ export async function processIncomingMessage(
     }, 0);
 
     const allDentists = await getAvailableDentistsForDate(session.collectedDate);
-    const reqTime = new Date(`2000-01-01T${session.collectedTime}`);
-    const dentists = allDentists.filter((d) => {
-      const schedStart = new Date(`2000-01-01T${d.startTime}`);
-      const schedEnd = new Date(`2000-01-01T${d.endTime}`);
-      const reqEnd = new Date(reqTime.getTime() + totalDuration * 60000);
-      return reqTime >= schedStart && reqEnd <= schedEnd;
-    });
-
-    const num = parseInt(text, 10);
-
-    if (isNaN(num) || num < 1 || num > dentists.length) {
-      await sendMessengerMessage(psid, "Please reply with the number next to the dentist's name.");
-      return;
-    }
-
-    session.collectedDentistId = dentists[num - 1].id;
-    await saveSession(session);
-
-    const matchedNames = (session.collectedServiceIds ?? [])
-      .map((id) => services.find((s) => s.id === id)?.name ?? "Unknown")
-      .filter((n) => n !== "Unknown");
-
-    const conflict = await checkBookingConflict(
-      dentists[num - 1].id,
-      session.collectedDate!,
-      session.collectedTime!,
-      totalDuration,
-    );
-
-    if (conflict.hasConflict) {
-      const serviceDetails = (session.collectedServiceIds ?? []).map((id) => {
-        const svc = services.find((s) => s.id === id)!;
-        return { id: svc.id, name: svc.name, duration: svc.default_duration_minutes };
-      });
-
-      const split = await trySplitServices(
-        dentists[num - 1].id,
-        session.collectedDate!,
-        session.collectedTime!,
-        serviceDetails,
-      );
-
-      if (split.fitsNow.length > 0 && split.remaining.length > 0) {
-        const fitsNames = split.fitsNow.map((s) => s.name).join(", ");
-        const fitsDuration = split.fitsNow.reduce((sum, s) => sum + s.duration, 0);
-        const remainingNames = split.remaining.map((s) => s.name).join(", ");
-        const remainingDuration = split.remaining.reduce((sum, s) => sum + s.duration, 0);
-
-        let msg = `⚠️ You requested ${matchedNames.join(", ")} at ${formatTimeDisplay(session.collectedTime!)}, but there's only ${split.availableUntil ? formatTimeDisplay(split.availableUntil) : "limited time"} available.\n\n`;
-        msg += `✅ Can fit now: ${fitsNames} (${fitsDuration} min)\n`;
-        msg += `⏳ Need separate booking: ${remainingNames} (${remainingDuration} min)`;
-
-        if (split.nextSlotForRemaining) {
-          msg += `\n\nNext available slot for the remaining service(s): ${split.nextSlotForRemaining}`;
-        }
-
-        session.collectedServiceIds = split.fitsNow.map((s) => s.id);
-        session.step = "awaiting_confirmation";
-        await saveSession(session);
-
-        msg += `\n\nReply "yes" to book ${fitsNames} now${split.nextSlotForRemaining ? `, then type "book" for the remaining service(s)` : ""}. Reply "no" to cancel.`;
-        await sendMessengerMessage(psid, msg);
-        return;
-      }
-
-      const slots = await getAvailableTimeSlots(dentists[num - 1].id, session.collectedDate!, totalDuration);
-      let msg = `⚠️ ${conflict.reason}`;
-      if (slots.length > 0) {
-        msg += `\n\nAvailable time slots with ${dentists[num - 1].name} on this day:\n${slots.slice(0, 8).map((s) => `• ${s}`).join("\n")}`;
-        msg += `\n\nPlease type "book" to try one of these times.`;
-      } else {
-        msg += `\n\nPlease type "book" to try a different date or time.`;
-      }
-      await sendMessengerMessage(psid, msg);
+    if (allDentists.length === 0) {
+      await sendMessengerMessage(psid, "No dentists are available on this date. Please type \"book\" to try a different date.");
       await deleteSession(sessionKey);
       return;
     }
 
-    session.step = "awaiting_confirmation";
+    let selectedDentist: { id: string; name: string; startTime: string; endTime: string } | undefined;
+
+    if (text.startsWith("QR_DENTIST_")) {
+      const dId = text.replace("QR_DENTIST_", "");
+      selectedDentist = allDentists.find((d) => d.id === dId);
+    } else {
+      const num = parseInt(text.trim(), 10);
+      if (!isNaN(num) && num >= 1 && num <= allDentists.length) {
+        selectedDentist = allDentists[num - 1];
+      } else {
+        const cleanInput = text.toLowerCase().replace(/^dr\.?\s*/i, "").trim();
+        selectedDentist = allDentists.find((d) => {
+          const cleanName = d.name.toLowerCase().replace(/^dr\.?\s*/i, "").trim();
+          return cleanName === cleanInput || cleanName.includes(cleanInput) || cleanInput.includes(cleanName);
+        });
+      }
+    }
+
+    // Check if user entered a time instead of a dentist name
+    if (!selectedDentist) {
+      const timeCandidate = parseTime(text);
+      if (timeCandidate) {
+        const reqTime = new Date(`2000-01-01T${timeCandidate}`);
+        const atTime = allDentists.filter((d) => {
+          const schedStart = new Date(`2000-01-01T${d.startTime}`);
+          const schedEnd = new Date(`2000-01-01T${d.endTime}`);
+          const reqEnd = new Date(reqTime.getTime() + totalDuration * 60000);
+          return reqTime >= schedStart && reqEnd <= schedEnd;
+        });
+
+        if (atTime.length === 1) {
+          selectedDentist = atTime[0];
+          session.collectedTime = timeCandidate;
+        } else if (atTime.length > 1) {
+          session.collectedTime = timeCandidate;
+          await saveSession(session);
+          const dentistList = atTime.map((d, i) => `${i + 1}. ${d.name}`).join("\n");
+          await sendMessengerMessage(
+            psid,
+            `Multiple dentists are available at ${formatTimeDisplay(timeCandidate)}:\n${dentistList}\n\nPlease reply with the number or name of your chosen dentist.`,
+          );
+          return;
+        }
+      }
+    }
+
+    if (!selectedDentist) {
+      const dentistList = allDentists.map((d, i) => `${i + 1}. ${d.name}`).join("\n");
+      await sendMessengerMessage(
+        psid,
+        `I couldn't match that dentist. Please reply with the number or name:\n\n${dentistList}`,
+      );
+      return;
+    }
+
+    session.collectedDentistId = selectedDentist.id;
+
+    // If time was already collected, proceed to conflict check and summary
+    if (session.collectedTime) {
+      const time = session.collectedTime;
+      const conflict = await checkBookingConflict(
+        selectedDentist.id,
+        session.collectedDate!,
+        time,
+        totalDuration,
+      );
+
+      const matchedNames = (session.collectedServiceIds ?? [])
+        .map((id) => services.find((s) => s.id === id)?.name ?? "Unknown")
+        .filter((n) => n !== "Unknown");
+
+      if (conflict.hasConflict) {
+        const serviceDetails = (session.collectedServiceIds ?? []).map((id) => {
+          const svc = services.find((s) => s.id === id)!;
+          return { id: svc.id, name: svc.name, duration: svc.default_duration_minutes };
+        });
+
+        const split = await trySplitServices(
+          selectedDentist.id,
+          session.collectedDate!,
+          time,
+          serviceDetails,
+        );
+
+        if (split.fitsNow.length > 0 && split.remaining.length > 0) {
+          const fitsNames = split.fitsNow.map((s) => s.name).join(", ");
+          const fitsDuration = split.fitsNow.reduce((sum, s) => sum + s.duration, 0);
+          const remainingNames = split.remaining.map((s) => s.name).join(", ");
+          const remainingDuration = split.remaining.reduce((sum, s) => sum + s.duration, 0);
+
+          let msg = `You requested ${matchedNames.join(", ")} at ${formatTimeDisplay(session.collectedTime!)}, but there's only ${split.availableUntil ? formatTimeDisplay(split.availableUntil) : "limited time"} available.\n\n`;
+          msg += `Can fit now: ${fitsNames} (${fitsDuration} min)\n`;
+          msg += `Need separate booking: ${remainingNames} (${remainingDuration} min)`;
+
+          if (split.nextSlotForRemaining) {
+            msg += `\n\nNext available slot for the remaining service(s): ${split.nextSlotForRemaining}`;
+          }
+
+          session.collectedServiceIds = split.fitsNow.map((s) => s.id);
+          session.step = "awaiting_confirmation";
+          await saveSession(session);
+
+          msg += `\n\nReply "yes" to book ${fitsNames} now${split.nextSlotForRemaining ? `, then type "book" for the remaining service(s)` : ""}. Reply "no" to cancel.`;
+          await sendMessengerMessage(psid, msg);
+          return;
+        }
+
+        const slots = await getAvailableTimeSlots(selectedDentist.id, session.collectedDate!, totalDuration);
+        let msg = conflict.reason ? `${conflict.reason}` : "Time slot conflict";
+        if (slots.length > 0) {
+          msg += `\n\nAvailable time slots with ${selectedDentist.name} on this day:\n${slots.slice(0, 8).map((s) => `• ${s}`).join("\n")}`;
+          msg += `\n\nPlease type "book" to try one of these times.`;
+        } else {
+          msg += `\n\nPlease type "book" to try a different date or time.`;
+        }
+        await sendMessengerMessage(psid, msg);
+        await deleteSession(sessionKey);
+        return;
+      }
+
+      session.step = "awaiting_confirmation";
+      await saveSession(session);
+      await sendBookingSummary(session, psid, selectedDentist.name, matchedNames, totalDuration);
+      return;
+    }
+
+    // Time is not yet collected: transition to awaiting_time with time slots for this dentist
+    const slots = await getAvailableTimeSlots(selectedDentist.id, session.collectedDate!, totalDuration);
+    if (slots.length === 0) {
+      await sendMessengerMessage(
+        psid,
+        `Sorry, ${selectedDentist.name} has no available slots for ${totalDuration} minutes on this date. Please reply with another dentist or type "book" to pick a different date.`,
+      );
+      return;
+    }
+
+    session.step = "awaiting_time";
     await saveSession(session);
-    await sendBookingSummary(session, psid, dentists[num - 1].name, matchedNames, totalDuration);
+
+    const timeQuickReplies: QuickReplyOption[] = [...slots]
+      .map((timeStr) => ({ raw: parseTime(timeStr) ?? timeStr, display: timeStr }))
+      .sort((a, b) => a.raw.localeCompare(b.raw))
+      .slice(0, 10)
+      .map(({ raw, display }) => ({
+        title: display,
+        payload: `QR_TIME_${raw}`,
+      }));
+
+    await sendQuickReplies(
+      psid,
+      `You selected: ${selectedDentist.name} (${formatTimeDisplay(selectedDentist.startTime)}–${formatTimeDisplay(selectedDentist.endTime)})\n\nWhat time would you prefer? (e.g., "9am", "2:30pm", "14:00")`,
+      timeQuickReplies,
+    );
     return;
   }
 
