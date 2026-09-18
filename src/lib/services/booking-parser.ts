@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { findOrCreateConversation, saveMessage } from "./messenger-service";
+import { findOrCreateConversation, saveMessage, updateConversationStatus } from "./messenger-service";
 import type { MessengerConversation } from "@/lib/types/database";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321";
@@ -7,7 +7,7 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const PAGE_ACCESS_TOKEN = process.env.MESSENGER_PAGE_ACCESS_TOKEN ?? "";
 const GRAPH_API_VERSION = process.env.MESSENGER_API_VERSION ?? "v21.0";
 
-type Intent = "book" | "confirm" | "reschedule" | "cancel" | "help" | "unknown" | "view_bookings";
+type Intent = "book" | "confirm" | "reschedule" | "cancel" | "help" | "unknown" | "view_bookings" | "talk_to_staff";
 
 interface ParsedIntent {
   intent: Intent;
@@ -133,11 +133,42 @@ function parseIntent(text: string): ParsedIntent {
     return { intent: "confirm", rawText: text };
   }
 
-  if (lower.includes("my bookings") || lower.includes("my appointments") || lower.includes("view booking") || lower.includes("view appointment")) {
+  if (
+    lower.includes("my bookings") ||
+    lower.includes("my appointments") ||
+    lower.includes("view booking") ||
+    lower.includes("view appointment") ||
+    lower === "qr_my_bookings"
+  ) {
     return { intent: "view_bookings", rawText: text };
   }
 
-  if (lower.includes("book") || lower.includes("appointment") || lower.includes("schedule")) {
+  if (
+    lower === "qr_talk_staff" ||
+    lower === "menu_talk_staff" ||
+    lower === "ice_talk_staff" ||
+    lower === "staff" ||
+    lower === "talk to staff" ||
+    lower === "speak to staff" ||
+    lower.includes("staff") ||
+    lower.includes("human") ||
+    lower.includes("agent") ||
+    lower.includes("representative") ||
+    lower.includes("receptionist") ||
+    lower.includes("operator") ||
+    lower.includes("talk to someone") ||
+    lower.includes("speak to someone") ||
+    lower.includes("speak with someone") ||
+    lower.includes("talk to a person") ||
+    lower.includes("talk to person") ||
+    lower.includes("talk to doctor") ||
+    lower.includes("talk to dentist") ||
+    lower.includes("talk to human")
+  ) {
+    return { intent: "talk_to_staff", rawText: text };
+  }
+
+  if (lower === "qr_book" || lower.includes("book") || lower.includes("appointment") || lower.includes("schedule")) {
     return { intent: "book", rawText: text };
   }
 
@@ -857,15 +888,33 @@ export async function processIncomingMessage(
   await saveMessage(conversation.id, "inbound", text);
 
   if (conversation.status === "taken_over") {
+    const lower = text.toLowerCase().trim();
+    if (lower === "bot" || lower === "restart bot" || lower === "start bot" || lower === "menu") {
+      await updateConversationStatus(conversation.id, "active");
+      await sendMessengerMessage(
+        psid,
+        "The automated assistant is back. Type \"help\" to see all options or \"book\" to schedule an appointment.",
+      );
+      return;
+    }
     console.log(`[Booking Parser] Conversation ${conversation.id} is taken over by staff — bot paused`);
     return;
   }
 
+  if (text === "MENU_TALK_STAFF" || text === "ICE_TALK_STAFF" || text === "QR_TALK_STAFF") {
+    await handleTalkToStaff(psid, conversation.id);
+    return;
+  }
+
   if (text === "GET_STARTED" || text === "ICE_BOOK") {
-    await sendMessengerMessage(
+    await sendQuickReplies(
       psid,
-      "Hello! I can help you book a dental appointment. Reply with \"book\" to get started, " +
-        "or tell me what you'd like to do (e.g., \"I want to book an appointment\").",
+      "Hello! I can help you book a dental appointment, view your bookings, or connect you with clinic staff. How can I help you today?",
+      [
+        { title: "Book Appointment", payload: "QR_BOOK" },
+        { title: "My Bookings", payload: "QR_MY_BOOKINGS" },
+        { title: "Talk to Staff", payload: "QR_TALK_STAFF" },
+      ],
     );
     return;
   }
@@ -1007,22 +1056,32 @@ export async function processIncomingMessage(
   if (parsed.intent === "help") {
     if (existingSession) {
       const isReschedule = existingSession.step.startsWith("reschedule_");
-      await sendMessengerMessage(
+      await sendQuickReplies(
         psid,
         isReschedule
-          ? "You're currently rescheduling an appointment. Type \"cancel\" to stop, or continue with your new date/time."
-          : "You're currently in a booking session. Type \"cancel\" to stop and start over, or continue with your booking.",
+          ? "You're currently rescheduling an appointment. Type \"cancel\" to stop, \"staff\" to talk to clinic staff, or continue with your new date/time."
+          : "You're currently in a booking session. Type \"cancel\" to stop, \"staff\" to talk to clinic staff, or continue with your booking.",
+        [
+          { title: "Talk to Staff", payload: "QR_TALK_STAFF" },
+          { title: "Cancel Booking", payload: "cancel" },
+        ],
       );
     } else {
-      await sendMessengerMessage(
+      await sendQuickReplies(
         psid,
         "Hello! I'm the dental clinic assistant. I can help you with:\n\n" +
           "• Book an appointment — say \"book\"\n" +
           "• View my bookings — say \"my bookings\"\n" +
           "• Confirm an appointment — say \"confirm\"\n" +
           "• Reschedule — say \"reschedule\"\n" +
-          "• Cancel — say \"cancel\"\n\n" +
+          "• Cancel — say \"cancel\"\n" +
+          "• Talk to clinic staff — say \"staff\"\n\n" +
           "How can I help you today?",
+        [
+          { title: "Book", payload: "QR_BOOK" },
+          { title: "My Bookings", payload: "QR_MY_BOOKINGS" },
+          { title: "Talk to Staff", payload: "QR_TALK_STAFF" },
+        ],
       );
     }
     return;
@@ -1063,6 +1122,11 @@ export async function processIncomingMessage(
 
   if (parsed.intent === "view_bookings") {
     await sendUserBookings(psid);
+    return;
+  }
+
+  if (parsed.intent === "talk_to_staff") {
+    await handleTalkToStaff(psid, conversation.id);
     return;
   }
 
@@ -2569,4 +2633,16 @@ export async function notifyAffectedPatients(
   }
 
   return notifiedCount;
+}
+
+async function handleTalkToStaff(psid: string, conversationId: string): Promise<void> {
+  const sessionKey = `${psid}`;
+  await deleteSession(sessionKey);
+  await updateConversationStatus(conversationId, "taken_over");
+  await sendMessengerMessage(
+    psid,
+    "A clinic staff member has been notified and will assist you here shortly.\n\n" +
+      "Please feel free to type your question or message, and our team will get back to you as soon as possible.\n\n" +
+      "(Type \"bot\" anytime if you wish to return to the automated booking assistant.)",
+  );
 }

@@ -25,13 +25,13 @@ const PROFILE_CONFIG = {
         },
         {
           type: "postback",
-          title: "Services & Pricing",
-          payload: "MENU_SERVICES",
+          title: "Talk to Staff",
+          payload: "MENU_TALK_STAFF",
         },
         {
           type: "postback",
-          title: "Call Clinic",
-          payload: "MENU_CALL",
+          title: "Services & Pricing",
+          payload: "MENU_SERVICES",
         },
       ],
     },
@@ -40,6 +40,10 @@ const PROFILE_CONFIG = {
     {
       question: "Book a new appointment",
       payload: "ICE_BOOK",
+    },
+    {
+      question: "Talk to clinic staff",
+      payload: "ICE_TALK_STAFF",
     },
     {
       question: "What are your clinic hours?",
