@@ -126,6 +126,34 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
     });
   };
 
+  const handleConfirmCancellation = (id: string) => {
+    setPendingId(id);
+    startTransition(async () => {
+      const res = await confirmCancellationAction(id);
+      if (res.success) {
+        setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, booking_status: "cancelled" } : b)));
+        router.refresh();
+      } else {
+        setError(res.error ?? "Failed to confirm cancellation");
+      }
+      setPendingId(null);
+    });
+  };
+
+  const handleDenyCancellation = (id: string) => {
+    setPendingId(id);
+    startTransition(async () => {
+      const res = await denyCancellationAction(id, "Cancellation request declined by clinic staff");
+      if (res.success) {
+        setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, booking_status: "approved" } : b)));
+        router.refresh();
+      } else {
+        setError(res.error ?? "Failed to deny cancellation");
+      }
+      setPendingId(null);
+    });
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -323,6 +351,30 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
                         </Button>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {b.booking_status === "pending_cancellation" && (
+                  <div className="pt-2 border-t border-border/40">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleConfirmCancellation(b.id)}
+                        disabled={pendingId === b.id || isPending}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs h-9 font-semibold shadow-xs"
+                      >
+                        {pendingId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />} Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDenyCancellation(b.id)}
+                        disabled={pendingId === b.id || isPending}
+                        className="flex-1 border-border/80 text-foreground hover:bg-muted/50 rounded-xl text-xs h-9 font-semibold"
+                      >
+                        {pendingId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="mr-1.5 h-3.5 w-3.5" />} Deny
+                      </Button>
+                    </div>
                   </div>
                 )}
                 </CardContent>
