@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware-client";
+import { updateSession, USER_ID_HEADER, USER_ROLE_HEADER } from "@/lib/supabase/middleware-client";
 import type { UserRole } from "@/lib/types/enums";
 
 const PUBLIC_ROUTES = ["/login", "/unauthorized", "/register", "/api/webhooks", "/api/cron", "/api/messenger-profile"];
@@ -35,7 +35,10 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isPublicRoute(pathname)) {
-    return NextResponse.next();
+    const headers = new Headers(request.headers);
+    headers.delete(USER_ID_HEADER);
+    headers.delete(USER_ROLE_HEADER);
+    return NextResponse.next({ request: { headers } });
   }
 
   const { supabaseResponse, user, role } = await updateSession(request);

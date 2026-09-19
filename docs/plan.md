@@ -272,6 +272,107 @@
 | /bookings | 1256ms | 939ms | -25% |
 | **Average** | **1391ms** | **921ms** | **-34%** |
 
+---
+
+## Implementation Phase 11 — Caching Strategy
+
+> **Status: PLAN ONLY — awaiting approval.**
+> Supabase JS does not use `fetch()`, so Next.js Data Cache does not apply automatically. Caching must be added explicitly via `unstable_cache()` (cross-request, shared) or `React.cache()` (per-request dedup), with `revalidateTag()` called from the mutation server actions.
+
+### Layer 1 — Cross-request cache (`unstable_cache` + `revalidateTag`)
+
+Reference/lookup data that is identical for all users and changes rarely. Safe to share across users because the content does not depend on who asks (RLS still enforced at write time).
+
+| Data | Fetch sites | Mutated by | Cache tag | TTL |
+|---|---|---|---|---|
+| `medical_conditions` | `patient-service.ts:155` → patients list, patient detail, patient form | Seeded only (never in app) | `medical-conditions` | 24h |
+| `dental_services` (active) | `services/index.ts:62` → appointments/new, walk-in, **register/[token] (public QR)** | `services/actions.ts` | `dental-services` | on-demand |
+| `dental_services` (all) | `services/index.ts:74` → services admin page | `services/actions.ts` | `dental-services-all` | on-demand |
+| `clinic_settings` | `services/index.ts:126` → settings page, booking/queue logic | `settings/actions.ts` | `clinic-settings` | on-demand |
+| `clinic_holidays` | `dentists/unavailability/actions.ts` → availability checks | `settings/actions.ts` (holidays section) | `clinic-holidays` | on-demand |
+| `dentists` + schedules | `dentist-service.ts` → appointments/new, walk-in, schedule pages | `dentists/*` + `unavailability/actions.ts` | `dentists` | on-demand |
+| `consent_clauses` | `consultation/[appointmentId]/page.tsx:56`, consent generator | Seeded only | `consent-clauses` | 24h |
+
+**Implementation:** wrap each service method in `unstable_cache(fn, [key], { tags: [...], revalidate })`. Add `revalidateTag(tag)` inside the corresponding mutation server actions (they already call `revalidatePath`, so the pattern exists).
+
+**Biggest win:** the public QR registration page (`register/[token]`) hits `dental_services` + `dentists` on every patient visit — caching removes 2 DB round-trips from unauthenticated traffic.
+
+### Layer 2 — Per-request dedup (`React.cache`)
+
+Wraps functions that get called multiple times within a single render tree — no persistence, no staleness risk.
+
+| Function | Why |
+|---|---|
+| `createServerSupabaseClient` | Called by page + layout + multiple actions in one request — cookie parsing is repeated each time |
+| `getServerUserContext` fallback path | Only the fallback hits DB; headers path is already free |
+| `getDentistByUserId`-style lookups | dentist layout + dentist pages + actions all repeat `dentists.eq("user_id")` |
+
+### Layer 3 — Client-side caching (TanStack Query)
+
+Already installed. Components that re-fetch the same data on mount/filter changes can use `staleTime` to avoid refetches:
+
+| Component | Data | Suggested staleTime |
+|---|---|---|
+| `waitlist-client.tsx` | services + patients for the add-form | 60s |
+| `patients-client.tsx` | patient search results | 30s |
+| `billing-list-client.tsx` | billing list (already server-rendered; only for client refreshes) | 30s |
+
+### Layer 3b — Browser storage (localStorage / sessionStorage)
+
+**Hard rule:** never store patient data, appointments, billing, signatures, tokens, or any PHI in web storage — it is readable by any JS on the page (XSS exfiltration risk) and survives logout. Only non-sensitive UI state goes here.
+
+| Use | Storage | What | Example call sites |
+|---|---|---|---|
+| UI preferences | `localStorage` | Sidebar collapsed state, table sort/filter prefs, last active bookings tab | `dashboard-shell.tsx`, `booking-dashboard-client.tsx`, `patients-client.tsx` |
+| Draft forms | `sessionStorage` | Multi-step wizard progress so accidental refresh/navigation doesn't lose input — cleared on submit | `registration-wizard.tsx` (public QR form), `staff-registration-form.tsx`, `appointment-form.tsx` |
+| Check-in kiosk state | `localStorage` | Last-used check-in view/device label on the front-desk machine | `check-in-client.tsx` |
+
+**Do NOT store:** `unread_count`, message content, patient names, queue entries, auth tokens (Supabase already manages its own session storage — do not duplicate it).
+
+### Layer 4 — Explicitly NOT cached
+
+| Data | Reason |
+|---|---|
+| Queue (`/api/queue`) | Operational real-time view — polling already optimized in PERF-04 |
+| `messenger_*` tables | Realtime subscriptions provide freshness; caching would fight it |
+| `appointments` lists | Change constantly during the workday; stale data causes double-booking risk |
+| `audit_logs` | Immutable append-only, but must always be fresh for security review |
+| User-specific queries (RLS-scoped rows) | `unstable_cache` is shared across users — keying by user adds complexity for little gain |
+
+### Planned Tasks
+
+| # | Task | Priority | Depends on |
+|---|------|----------|------------|
+| CACHE-01 | Create `src/lib/cache/` wrapper: `cachedQuery()` helper using `unstable_cache` with tag registry | 🔴 Critical | — |
+| CACHE-02 | Cache `medical_conditions` + `consent_clauses` (seeded, 24h TTL — zero invalidation wiring needed) | 🟡 Medium | CACHE-01 |
+| CACHE-03 | Cache `dental_services` + `dentists` + `clinic_settings` + `clinic_holidays`; add `revalidateTag` to their mutation actions | 🟡 Medium | CACHE-01 |
+| CACHE-04 | Wrap `createServerSupabaseClient` and dentist-by-user lookups in `React.cache` | 🟢 Low | — |
+| CACHE-05 | Add `staleTime` to TanStack Query usage in waitlist/patients/billing clients | 🟢 Low | — |
+| CACHE-06 | Re-run `perf-check.mjs` on /patients, /appointments/new, /register/[token] to measure cache-hit latency | — | CACHE-02, CACHE-03 |
+| CACHE-07 | Update `docs/plan_done.md` | — | CACHE-06 |
+
+### Risks & rules
+
+- **Stale reference data:** every cached tag MUST have a `revalidateTag` call in its mutation action, or staff edits won't appear. CACHE-03 depends on this.
+- **No user data in shared cache:** never cache a query whose rows differ per user unless the user id is in the cache key. All Layer-1 targets are user-agnostic.
+- **RLS still applies:** `unstable_cache` caches the *result* of the RLS-filtered query — since reference tables are world-readable by staff anyway, sharing is safe.
+- **`x-user-*` headers:** unchanged — `getServerUserContext` reads per-request headers, not the shared cache.
+
+### Security review (added 2026-09-19)
+
+Verified against `schema.sql` RLS policies and the codebase:
+
+| # | Check | Result | Action |
+|---|-------|--------|--------|
+| SEC-01 | Layer-1 tables return identical rows for all staff roles | ✅ Confirmed — all have `SELECT ... TO authenticated USING (true)` (`schema.sql:1252-1437`) | Safe to share across users |
+| SEC-02 | Public register page reads reference data | Uses `getPublicServiceClient()` (service role — bypasses RLS) at `register/[token]/actions.ts:10` | Rule: **never** `unstable_cache` a service-role query that returns per-user data. Reference data only. |
+| SEC-03 | `x-user-*` header spoofing on public routes | ⚠️ **Fixed** — public routes now strip both headers before `NextResponse.next()` (`middleware.ts`) | Previously they returned early without stripping |
+| SEC-04 | `getServerUserContext` in shared cache | ❌ Never wrap in `unstable_cache` — it's per-request identity. `React.cache` (per-request memoization) is fine. | Documented rule |
+| SEC-05 | Parameterized cache keys | Any cached query that takes params must include ALL params in the cache key, else wrong data is served (cache poisoning). Layer-1 targets take no params — safe. | Enforced in `cachedQuery()` helper design |
+| SEC-06 | `revalidateTag` coverage | Every mutation path for tagged data must invalidate — including deactivate/delete and admin edits, not just create/update. | Checklist in CACHE-03 |
+| SEC-07 | `sessionStorage` drafts on shared devices | Front-desk machines are shared. Draft persistence is patient-side only (`registration-wizard.tsx`). **Skip** staff-side form drafts — session data on a shared kiosk is a privacy risk. | Scope reduced |
+| SEC-08 | Sensitive values in cache keys | Cache keys may appear in logs. Never include patient names, emails, or IDs — use table tags only. | Enforced in `cachedQuery()` helper design |
+
 ### Explicitly out of scope for this pass
 
 - No changes to RLS policies, triggers, or database schema
