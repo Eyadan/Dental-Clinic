@@ -262,10 +262,28 @@ function isPastDateTime(date: string, time: string): boolean {
   return dateTime < now;
 }
 
+// A single bot turn frequently sends 2-4 messages back to back (e.g. a
+// text reply + quick replies + a carousel). findOrCreateConversation's
+// result never changes for a given PSID once the conversation exists, so
+// memoize it briefly to avoid re-querying messenger_conversations for
+// every message in the same turn.
+const CONVERSATION_ID_CACHE_TTL_MS = 60_000;
+const conversationIdCache = new Map<string, { id: string; expiresAt: number }>();
+
+async function getConversationIdCached(psid: string): Promise<string> {
+  const cached = conversationIdCache.get(psid);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.id;
+  }
+  const conversation = await findOrCreateConversation(psid);
+  conversationIdCache.set(psid, { id: conversation.id, expiresAt: Date.now() + CONVERSATION_ID_CACHE_TTL_MS });
+  return conversation.id;
+}
+
 async function recordOutboundMessage(psid: string, content: string): Promise<void> {
   try {
-    const conversation = await findOrCreateConversation(psid);
-    await saveMessage(conversation.id, "outbound", content);
+    const conversationId = await getConversationIdCached(psid);
+    await saveMessage(conversationId, "outbound", content);
   } catch (error) {
     console.error("[Booking Parser] Failed to record outbound message:", error);
   }
@@ -920,6 +938,7 @@ export async function processIncomingMessage(
   displayText?: string,
 ): Promise<void> {
   const conversation = await findOrCreateConversation(psid);
+  conversationIdCache.set(psid, { id: conversation.id, expiresAt: Date.now() + CONVERSATION_ID_CACHE_TTL_MS });
   await saveMessage(conversation.id, "inbound", displayText ?? text);
 
   if (conversation.status === "taken_over") {

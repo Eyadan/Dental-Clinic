@@ -894,6 +894,26 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Atomically apply multiple clinic_settings value updates in a single
+-- transaction (function body runs inside the caller's transaction, so a
+-- failure on any row rolls back all of them). SECURITY INVOKER (default) —
+-- runs with the caller's privileges, so the existing clinic_settings_update
+-- RLS policy (admin-only) still applies to every row.
+CREATE OR REPLACE FUNCTION bulk_update_clinic_settings(updates JSONB)
+RETURNS VOID AS $$
+DECLARE
+  item JSONB;
+BEGIN
+  FOR item IN SELECT * FROM jsonb_array_elements(updates)
+  LOOP
+    UPDATE clinic_settings
+    SET setting_value = item->>'setting_value',
+        updated_at = now()
+    WHERE id = (item->>'id')::UUID;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Dental chart meta history (AFTER INSERT/UPDATE on dental_charts)
 CREATE OR REPLACE FUNCTION log_dental_chart_meta_history()
 RETURNS TRIGGER

@@ -35,18 +35,16 @@ export async function saveSettingsAction(
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) return { success: false, error: "Not authenticated" };
+    if (settings.length === 0) return { success: true, data: undefined };
 
-    for (const setting of settings) {
-      const { error } = await supabase
-        .from("clinic_settings")
-        .update({
-          setting_value: setting.setting_value,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", setting.id);
+    // Single RPC call so all settings are updated in one transaction
+    // (atomic — either all values change or none do) instead of N
+    // sequential round-trips that could partially fail.
+    const { error: rpcError } = await supabase.rpc("bulk_update_clinic_settings", {
+      updates: settings,
+    });
 
-      if (error) return { success: false, error: `Failed to save setting: ${error.message}` };
-    }
+    if (rpcError) return { success: false, error: `Failed to save settings: ${rpcError.message}` };
 
     await supabase.from("audit_logs").insert({
       user_id: user.id,
