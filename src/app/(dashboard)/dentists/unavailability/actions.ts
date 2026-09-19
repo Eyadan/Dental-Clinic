@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateTag } from "next/cache";
+import { CACHE_TAGS, getCachedDentists, getCachedDentistSchedules } from "@/lib/cache/reference-data";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { ReassignmentService } from "@/lib/services/reassignment-service";
 import { DentistService } from "@/lib/services/dentist-service";
@@ -17,26 +18,13 @@ export interface DentistOption {
 
 export async function getDentistsAction(): Promise<ServiceResult<DentistOption[]>> {
   try {
-    const supabase = await createServerSupabaseClient();
-    const dentistService = new DentistService(supabase);
-    const dentists = await dentistService.getAllDentists();
+    const dentists = await getCachedDentists();
 
-    const dentistOptions: DentistOption[] = [];
-    for (const dentist of dentists) {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("first_name, last_name")
-        .eq("id", dentist.user_id)
-        .single();
-
-      dentistOptions.push({
-        id: dentist.id,
-        name: userData
-          ? `${userData.first_name} ${userData.last_name}`
-          : "Unknown",
-        specialization: dentist.specialization,
-      });
-    }
+    const dentistOptions: DentistOption[] = dentists.map((dentist) => ({
+      id: dentist.id,
+      name: dentist.full_name || "Unknown",
+      specialization: dentist.specialization,
+    }));
 
     return { success: true, data: dentistOptions };
   } catch (error) {
@@ -298,16 +286,7 @@ const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frid
 
 export async function getWeeklyScheduleAction(dentistId: string): Promise<ServiceResult<WeeklyScheduleDay[]>> {
   try {
-    const supabase = await createServerSupabaseClient();
-    const { data: dbSchedules, error } = await supabase
-      .from("dentist_schedules")
-      .select("*")
-      .eq("dentist_id", dentistId)
-      .order("day_of_week");
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
+    const dbSchedules = await getCachedDentistSchedules(dentistId);
 
     const scheduleMap = new Map<number, { start_time: string; end_time: string; is_active: boolean }>();
     if (dbSchedules) {
@@ -379,6 +358,7 @@ export async function saveWeeklyScheduleAction(
       }
     }
 
+    revalidateTag(CACHE_TAGS.dentistSchedules, { expire: 0 });
     return { success: true, data: undefined };
   } catch (error) {
     return {

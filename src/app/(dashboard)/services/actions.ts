@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache/reference-data";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { DentalServiceService } from "@/lib/services";
 import { dentalServiceSchema } from "@/lib/validations";
@@ -28,6 +29,7 @@ export async function createServiceAction(
     const supabase = await createServerSupabaseClient();
     const service = new DentalServiceService(supabase);
     const created = await service.createService(parsed.data);
+    revalidateTag(CACHE_TAGS.dentalServices, { expire: 0 });
     revalidatePath("/services");
     return { success: true, data: { id: created.id } };
   } catch (error) {
@@ -61,6 +63,7 @@ export async function updateServiceAction(
     const supabase = await createServerSupabaseClient();
     const service = new DentalServiceService(supabase);
     await service.updateService(id, parsed.data);
+    revalidateTag(CACHE_TAGS.dentalServices, { expire: 0 });
     revalidatePath("/services");
     return { success: true, data: undefined };
   } catch (error) {
@@ -79,6 +82,7 @@ export async function toggleServiceActiveAction(
     const supabase = await createServerSupabaseClient();
     const service = new DentalServiceService(supabase);
     await service.toggleActive(id, isActive);
+    revalidateTag(CACHE_TAGS.dentalServices, { expire: 0 });
     revalidatePath("/services");
     return { success: true, data: undefined };
   } catch (error) {

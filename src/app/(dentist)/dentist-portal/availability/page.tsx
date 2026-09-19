@@ -1,7 +1,8 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { getServerUserContext } from "@/lib/supabase/user-context";
+import { getCachedDentistSchedules } from "@/lib/cache/reference-data";
 import { AvailabilityClient } from "./availability-client";
-import type { DentistSchedule, DentistBlock } from "@/lib/types/database";
+import type { DentistBlock } from "@/lib/types/database";
 
 export default async function AvailabilityPage() {
   const { userId } = await getServerUserContext();
@@ -23,17 +24,14 @@ export default async function AvailabilityPage() {
 
   if (!dentist) return null;
 
-  const { data: schedules } = await supabase
-    .from("dentist_schedules")
-    .select("*")
-    .eq("dentist_id", dentist.id)
-    .order("day_of_week", { ascending: true });
-
-  const { data: blocks } = await supabase
-    .from("dentist_blocks")
-    .select("*")
-    .eq("dentist_id", dentist.id)
-    .order("start_datetime", { ascending: true });
+  const [schedules, { data: blocks }] = await Promise.all([
+    getCachedDentistSchedules(dentist.id),
+    supabase
+      .from("dentist_blocks")
+      .select("*")
+      .eq("dentist_id", dentist.id)
+      .order("start_datetime", { ascending: true }),
+  ]);
 
   const dentistName = userData ? `${userData.first_name} ${userData.last_name}` : "Unknown";
 
@@ -41,7 +39,7 @@ export default async function AvailabilityPage() {
     <AvailabilityClient
       dentistId={dentist.id}
       dentistName={dentistName}
-      schedules={(schedules ?? []) as unknown as DentistSchedule[]}
+      schedules={schedules}
       blocks={(blocks ?? []) as unknown as DentistBlock[]}
     />
   );

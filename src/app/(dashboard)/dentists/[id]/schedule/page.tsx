@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getCachedDentistSchedules } from "@/lib/cache/reference-data";
 import { DentistService } from "@/lib/services/dentist-service";
 import { ScheduleClient } from "./schedule-client";
 
@@ -18,7 +19,7 @@ export default async function DentistSchedulePage({
   }
 
   const [schedules, blocks] = await Promise.all([
-    service.getSchedules(id),
+    getCachedDentistSchedules(id),
     service.getBlocks(id),
   ]);
 

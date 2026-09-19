@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
+import { getCachedMedicalConditions } from "@/lib/cache/reference-data";
 import { QrCodeService } from "@/lib/services/qr-code-service";
 import { PatientService } from "@/lib/services/patient-service";
 import { patientSchema } from "@/lib/validations/patient.schema";
@@ -260,9 +261,7 @@ export async function submitRegistrationAction(
 
 export async function getMedicalConditionsAction(): Promise<ServiceResult<MedicalCondition[]>> {
   try {
-    const supabase = getPublicServiceClient();
-    const patientService = new PatientService(supabase);
-    const conditions = await patientService.getMedicalConditions();
+    const conditions = await getCachedMedicalConditions();
     return { success: true, data: conditions };
   } catch (error) {
     return {

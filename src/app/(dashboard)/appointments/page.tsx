@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getCachedDentists } from "@/lib/cache/reference-data";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
 import { AppointmentCalendar } from "@/components/appointments/appointment-calendar";
 
@@ -44,25 +45,18 @@ export default async function AppointmentsPage({
       .gte("scheduled_date", startDate)
       .lte("scheduled_date", endDate)
       .order("scheduled_time", { ascending: true }),
-    supabase
-      .from("dentists")
-      .select("id, specialization, users(first_name, last_name)")
-      .eq("is_active", true),
+    getCachedDentists(),
   ]);
 
   if (appointmentsRes.error) {
     throw new Error(`Failed to fetch appointments: ${appointmentsRes.error.message}`);
   }
 
-  const dentistsList = (dentistsRes.data ?? []).map((d: Record<string, unknown>) => {
-    const userObj = getSingleJoined<{ first_name: string; last_name: string }>(d.users);
-    const name = userObj ? `Dr. ${userObj.first_name} ${userObj.last_name}` : "Unknown Dentist";
-    return {
-      id: d.id as string,
-      name,
-      specialization: d.specialization as string | null,
-    };
-  });
+  const dentistsList = dentistsRes.map((d) => ({
+    id: d.id,
+    name: d.full_name ? `Dr. ${d.full_name}` : "Unknown Dentist",
+    specialization: d.specialization,
+  }));
 
   const calendarAppointments = (appointmentsRes.data ?? []).map((appt: Record<string, unknown>) => {
     const patient = getSingleJoined<{

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getCachedConsentClauses } from "@/lib/cache/reference-data";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
 import { DentalChartService } from "@/lib/services/dental-chart-service";
 import { ConsultationClient } from "./consultation-client";
@@ -52,11 +53,7 @@ export default async function ConsultationPage({
     .limit(1)
     .maybeSingle();
 
-  const { data: consentClauses } = await supabase
-    .from("consent_clauses")
-    .select("*")
-    .eq("is_active", true)
-    .order("sort_order");
+  const consentClauses = await getCachedConsentClauses();
 
   const dentalChartService = new DentalChartService(supabase);
   const { chart: dentalChart, presence: dentalChartPresence, findings: dentalChartFindings } = await dentalChartService.getFullChart(

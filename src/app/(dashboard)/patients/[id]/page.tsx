@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getCachedMedicalConditions } from "@/lib/cache/reference-data";
 import { PatientService } from "@/lib/services/patient-service";
 import { DentalChartService } from "@/lib/services/dental-chart-service";
 import { PatientDetailClient } from "./patient-detail-client";
@@ -20,7 +21,7 @@ export default async function PatientDetailPage({
 
   const [medicalRecord, conditions, conditionIds] = await Promise.all([
     service.getMedicalRecord(id),
-    service.getMedicalConditions(),
+    getCachedMedicalConditions(),
     service.getPatientConditionIds(id),
   ]);
 

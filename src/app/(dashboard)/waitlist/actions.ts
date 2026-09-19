@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getCachedActiveDentalServices } from "@/lib/cache/reference-data";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { WaitlistService } from "@/lib/services/waitlist-service";
 import { sendNotification } from "@/lib/services/notification-service";
@@ -171,18 +172,10 @@ export async function getPatientsAction(): Promise<ServiceResult<{ id: string; n
 
 export async function getServicesAction(): Promise<ServiceResult<{ id: string; name: string }[]>> {
   try {
-    const supabase = await createServerSupabaseClient();
-    const { data, error } = await supabase
-      .from("dental_services")
-      .select("id, name")
-      .eq("is_active", true)
-      .order("name");
-
-    if (error) return { success: false, error: error.message };
-
+    const services = await getCachedActiveDentalServices();
     return {
       success: true,
-      data: data ?? [],
+      data: services.map((s) => ({ id: s.id, name: s.name })),
     };
   } catch (error) {
     return {

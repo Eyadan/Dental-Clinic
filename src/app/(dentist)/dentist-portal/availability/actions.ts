@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache/reference-data";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { DentistService } from "@/lib/services/dentist-service";
 import { dentistScheduleSchema } from "@/lib/validations";
@@ -29,6 +30,7 @@ export async function createScheduleAction(
     const supabase = await createServerSupabaseClient();
     const service = new DentistService(supabase);
     const created = await service.createSchedule(parsed.data);
+    revalidateTag(CACHE_TAGS.dentistSchedules, { expire: 0 });
     revalidatePath("/dentist-portal/availability");
     return { success: true, data: { id: created.id } };
   } catch (error) {
@@ -46,6 +48,7 @@ export async function deleteScheduleAction(
     const supabase = await createServerSupabaseClient();
     const service = new DentistService(supabase);
     await service.deleteSchedule(scheduleId);
+    revalidateTag(CACHE_TAGS.dentistSchedules, { expire: 0 });
     revalidatePath("/dentist-portal/availability");
     return { success: true, data: undefined };
   } catch (error) {

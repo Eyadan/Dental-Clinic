@@ -276,8 +276,8 @@
 
 ## Implementation Phase 11 — Caching Strategy
 
-> **Status: PLAN ONLY — awaiting approval.**
-> Supabase JS does not use `fetch()`, so Next.js Data Cache does not apply automatically. Caching must be added explicitly via `unstable_cache()` (cross-request, shared) or `React.cache()` (per-request dedup), with `revalidateTag()` called from the mutation server actions.
+> **Status: IMPLEMENTED** (Layer 1, Layer 3 partially, Layer 3b already existing). See `docs/plan_done.md` for the completed checklist and measurements.
+> Supabase JS does not use `fetch()`, so Next.js Data Cache does not apply automatically. Caching is added explicitly via `unstable_cache()` (cross-request, shared) in `src/lib/cache/reference-data.ts`, with `revalidateTag()` called from the mutation server actions.
 
 ### Layer 1 — Cross-request cache (`unstable_cache` + `revalidateTag`)
 
@@ -285,37 +285,26 @@ Reference/lookup data that is identical for all users and changes rarely. Safe t
 
 | Data | Fetch sites | Mutated by | Cache tag | TTL |
 |---|---|---|---|---|
-| `medical_conditions` | `patient-service.ts:155` → patients list, patient detail, patient form | Seeded only (never in app) | `medical-conditions` | 24h |
-| `dental_services` (active) | `services/index.ts:62` → appointments/new, walk-in, **register/[token] (public QR)** | `services/actions.ts` | `dental-services` | on-demand |
-| `dental_services` (all) | `services/index.ts:74` → services admin page | `services/actions.ts` | `dental-services-all` | on-demand |
-| `clinic_settings` | `services/index.ts:126` → settings page, booking/queue logic | `settings/actions.ts` | `clinic-settings` | on-demand |
-| `clinic_holidays` | `dentists/unavailability/actions.ts` → availability checks | `settings/actions.ts` (holidays section) | `clinic-holidays` | on-demand |
-| `dentists` + schedules | `dentist-service.ts` → appointments/new, walk-in, schedule pages | `dentists/*` + `unavailability/actions.ts` | `dentists` | on-demand |
-| `consent_clauses` | `consultation/[appointmentId]/page.tsx:56`, consent generator | Seeded only | `consent-clauses` | 24h |
+| `medical_conditions` | patients list, patient detail, patient form, **register/[token] (public QR)** | Seeded only (never in app) | `medical-conditions` | 24h |
+| `consent_clauses` | `consultation/[appointmentId]/page.tsx` | Seeded only | `consent-clauses` | 24h |
+| `dental_services` (active) | appointments/new, walk-in, waitlist, **register/[token] (public QR)** | `services/actions.ts` | `dental-services` | 1h backstop + tag |
+| `dental_services` (all) | services admin page | `services/actions.ts` | `dental-services` | 1h backstop + tag |
+| `clinic_settings` | settings page | `settings/actions.ts` | `clinic-settings` | 1h backstop + tag |
+| `dentists` + schedules | appointments/new, walk-in, appointments calendar, unavailability, dentist schedule pages | `dentists/[id]/schedule/actions.ts`, `dentist-portal/availability/actions.ts`, `unavailability/actions.ts` (weekly schedule save) | `dentists`, `dentist-schedules` | 1h backstop + tag |
 
-**Implementation:** wrap each service method in `unstable_cache(fn, [key], { tags: [...], revalidate })`. Add `revalidateTag(tag)` inside the corresponding mutation server actions (they already call `revalidatePath`, so the pattern exists).
+**`clinic_holidays` was evaluated and intentionally NOT cached** — no mutation action exists for it (SQL-managed only), so there is no path to fire `revalidateTag`, and its reads drive same-day booking/availability correctness. Caching it would risk serving stale holiday data with no way to invalidate on edit.
+
+**Implementation:** `src/lib/cache/reference-data.ts` wraps each read in `unstable_cache(fn, [key], { tags: [...], revalidate })` using a cookie-free service-role client (required — `unstable_cache` cannot call `cookies()`/`headers()`). Tables that are exclusively SQL-managed (medical conditions, consent clauses) use a 24h TTL only. Tables with an in-app mutation path use `revalidateTag(tag, { expire: 0 })` in the mutation action plus a 1h TTL backstop for any out-of-band SQL edits.
 
 **Biggest win:** the public QR registration page (`register/[token]`) hits `dental_services` + `dentists` on every patient visit — caching removes 2 DB round-trips from unauthenticated traffic.
 
 ### Layer 2 — Per-request dedup (`React.cache`)
 
-Wraps functions that get called multiple times within a single render tree — no persistence, no staleness risk.
-
-| Function | Why |
-|---|---|
-| `createServerSupabaseClient` | Called by page + layout + multiple actions in one request — cookie parsing is repeated each time |
-| `getServerUserContext` fallback path | Only the fallback hits DB; headers path is already free |
-| `getDentistByUserId`-style lookups | dentist layout + dentist pages + actions all repeat `dentists.eq("user_id")` |
+Not implemented in this pass — deferred, low priority (marked 🟢 below). `getServerUserContext` already avoids most of the duplicate work via middleware headers (Phase 10).
 
 ### Layer 3 — Client-side caching (TanStack Query)
 
-Already installed. Components that re-fetch the same data on mount/filter changes can use `staleTime` to avoid refetches:
-
-| Component | Data | Suggested staleTime |
-|---|---|---|
-| `waitlist-client.tsx` | services + patients for the add-form | 60s |
-| `patients-client.tsx` | patient search results | 30s |
-| `billing-list-client.tsx` | billing list (already server-rendered; only for client refreshes) | 30s |
+`src/lib/hooks/use-clinic.ts` (`useDentalServices`, `useClinicSettings`) now sets `staleTime: 5 * 60 * 1000` — these hooks read the same reference tables as Layer 1, so avoiding refetch-on-mount is safe. Other client list views (waitlist/patients/billing) still fetch fresh on each mount — deferred as low priority.
 
 ### Layer 3b — Browser storage (localStorage / sessionStorage)
 
@@ -341,15 +330,17 @@ Already installed. Components that re-fetch the same data on mount/filter change
 
 ### Planned Tasks
 
-| # | Task | Priority | Depends on |
-|---|------|----------|------------|
-| CACHE-01 | Create `src/lib/cache/` wrapper: `cachedQuery()` helper using `unstable_cache` with tag registry | 🔴 Critical | — |
-| CACHE-02 | Cache `medical_conditions` + `consent_clauses` (seeded, 24h TTL — zero invalidation wiring needed) | 🟡 Medium | CACHE-01 |
-| CACHE-03 | Cache `dental_services` + `dentists` + `clinic_settings` + `clinic_holidays`; add `revalidateTag` to their mutation actions | 🟡 Medium | CACHE-01 |
-| CACHE-04 | Wrap `createServerSupabaseClient` and dentist-by-user lookups in `React.cache` | 🟢 Low | — |
-| CACHE-05 | Add `staleTime` to TanStack Query usage in waitlist/patients/billing clients | 🟢 Low | — |
-| CACHE-06 | Re-run `perf-check.mjs` on /patients, /appointments/new, /register/[token] to measure cache-hit latency | — | CACHE-02, CACHE-03 |
-| CACHE-07 | Update `docs/plan_done.md` | — | CACHE-06 |
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| CACHE-01 | Create `src/lib/cache/reference-data.ts` using `unstable_cache` with tag registry | 🔴 Critical | ✅ Done |
+| CACHE-02 | Cache `medical_conditions` + `consent_clauses` (seeded, 24h TTL — zero invalidation wiring needed) | 🟡 Medium | ✅ Done |
+| CACHE-03 | Cache `dental_services` + `dentists` + `dentist_schedules` + `clinic_settings`; add `revalidateTag` to their mutation actions | 🟡 Medium | ✅ Done |
+| CACHE-04 | Wrap `createServerSupabaseClient` and dentist-by-user lookups in `React.cache` | 🟢 Low | Deferred |
+| CACHE-05 | Add `staleTime` to TanStack Query usage — done for `use-clinic.ts`; waitlist/patients/billing clients still deferred | 🟢 Low | Partial |
+| CACHE-06 | Re-run `perf-check.mjs` to measure | — | ✅ Done (see plan_done.md) |
+| CACHE-07 | Update `docs/plan_done.md` | — | ✅ Done |
+
+`clinic_holidays` was scoped out of CACHE-03 — see rationale in the Layer 1 table above.
 
 ### Risks & rules
 

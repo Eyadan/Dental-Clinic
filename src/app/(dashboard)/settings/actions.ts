@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CACHE_TAGS, getCachedClinicSettings } from "@/lib/cache/reference-data";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import type { ServiceResult } from "@/lib/services/base-service";
 
@@ -14,22 +15,10 @@ export interface SettingItem {
 
 export async function getSettingsAction(category?: string): Promise<ServiceResult<SettingItem[]>> {
   try {
-    const supabase = await createServerSupabaseClient();
-    let query = supabase
-      .from("clinic_settings")
-      .select("*")
-      .order("category", { ascending: true })
-      .order("setting_key", { ascending: true });
+    const settings = await getCachedClinicSettings();
+    const data = category ? settings.filter((s) => s.category === category) : settings;
 
-    if (category) {
-      query = query.eq("category", category);
-    }
-
-    const { data, error } = await query;
-
-    if (error) return { success: false, error: error.message };
-
-    return { success: true, data: (data ?? []) as SettingItem[] };
+    return { success: true, data: data as SettingItem[] };
   } catch (error) {
     return {
       success: false,
@@ -66,6 +55,7 @@ export async function saveSettingsAction(
       metadata: { count: settings.length, keys: settings.map((s) => s.id) },
     });
 
+    revalidateTag(CACHE_TAGS.clinicSettings, { expire: 0 });
     revalidatePath("/settings");
     return { success: true, data: undefined };
   } catch (error) {

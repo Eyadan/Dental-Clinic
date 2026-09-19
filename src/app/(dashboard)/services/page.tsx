@@ -1,11 +1,8 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server-client";
-import { DentalServiceService } from "@/lib/services";
+import { getCachedAllDentalServices } from "@/lib/cache/reference-data";
 import { ServicesClient } from "./services-client";
 
 export default async function ServicesPage() {
-  const supabase = await createServerSupabaseClient();
-  const service = new DentalServiceService(supabase);
-  const services = await service.getAllServices();
+  const services = await getCachedAllDentalServices();
 
   return <ServicesClient services={services} />;
 }

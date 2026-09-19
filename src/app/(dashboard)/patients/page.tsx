@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getCachedMedicalConditions } from "@/lib/cache/reference-data";
 import { PatientService } from "@/lib/services/patient-service";
 import { PatientsClient } from "./patients-client";
 
@@ -17,7 +18,7 @@ export default async function PatientsPage({
       page: 1,
       pageSize: 50,
     }),
-    service.getMedicalConditions(),
+    getCachedMedicalConditions(),
   ]);
 
   return <PatientsClient initialPatients={result.data} totalCount={result.total} conditions={conditions} />;
