@@ -11,12 +11,14 @@ export default async function PatientsPage({
   const supabase = await createServerSupabaseClient();
   const service = new PatientService(supabase);
 
-  const result = await service.getPatients({
-    query: q ?? "",
-    page: 1,
-    pageSize: 50,
-  });
-  const conditions = await service.getMedicalConditions();
+  const [result, conditions] = await Promise.all([
+    service.getPatients({
+      query: q ?? "",
+      page: 1,
+      pageSize: 50,
+    }),
+    service.getMedicalConditions(),
+  ]);
 
   return <PatientsClient initialPatients={result.data} totalCount={result.total} conditions={conditions} />;
 }

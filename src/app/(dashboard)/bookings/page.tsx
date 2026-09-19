@@ -13,22 +13,25 @@ export default async function BookingDashboardPage({
   const validStatuses = ["all", "pending", "approved", "declined", "expired", "reschedule_required", "pending_cancellation", "rescheduled", "cancelled", "confirmed", "no_show"];
   const filterStatus = status && validStatuses.includes(status) ? status : "pending";
 
-  const { data: appointments, error } = await supabase
-    .from("appointments")
-    .select(`
-      id,
-      reference_no,
-      patient_id,
-      dentist_id,
-      booking_status,
-      scheduled_date,
-      scheduled_time,
-      total_duration,
-      created_at,
-      patients!inner(first_name, last_name, contact_no)
-    `)
-    .eq("is_archived", false)
-    .order("created_at", { ascending: false });
+  const [{ data: appointments, error }, { data: { user } }] = await Promise.all([
+    supabase
+      .from("appointments")
+      .select(`
+        id,
+        reference_no,
+        patient_id,
+        dentist_id,
+        booking_status,
+        scheduled_date,
+        scheduled_time,
+        total_duration,
+        created_at,
+        patients!inner(first_name, last_name, contact_no)
+      `)
+      .eq("is_archived", false)
+      .order("created_at", { ascending: false }),
+    supabase.auth.getUser(),
+  ]);
 
   if (error) {
     throw new Error(`Failed to fetch bookings: ${error.message}`);
@@ -53,7 +56,6 @@ export default async function BookingDashboardPage({
     };
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
   let userRole = "reception";
   if (user) {
     const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();

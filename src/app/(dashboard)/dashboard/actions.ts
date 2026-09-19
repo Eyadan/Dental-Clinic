@@ -72,30 +72,34 @@ export async function getDashboardStatsAction(): Promise<ServiceResult<{
     const supabase = await createServerSupabaseClient();
     const today = todayLocal();
 
-    const { count: pendingBookings } = await supabase
-      .from("appointments")
-      .select("*", { count: "exact", head: true })
-      .eq("booking_status", "pending")
-      .eq("is_archived", false);
-
-    const { count: todayAppointments } = await supabase
-      .from("appointments")
-      .select("*", { count: "exact", head: true })
-      .eq("scheduled_date", today)
-      .eq("is_archived", false)
-      .in("booking_status", ["approved", "confirmed"]);
-
-    const { count: inQueue } = await supabase
-      .from("appointments")
-      .select("*", { count: "exact", head: true })
-      .eq("scheduled_date", today)
-      .eq("is_archived", false)
-      .in("visit_status", ["checked_in", "waiting", "treatment_ongoing", "treatment_paused"]);
-
-    const { count: unreadMessages } = await supabase
-      .from("messenger_messages")
-      .select("*", { count: "exact", head: true })
-      .eq("direction", "inbound");
+    const [
+      { count: pendingBookings },
+      { count: todayAppointments },
+      { count: inQueue },
+      { count: unreadMessages },
+    ] = await Promise.all([
+      supabase
+        .from("appointments")
+        .select("*", { count: "exact", head: true })
+        .eq("booking_status", "pending")
+        .eq("is_archived", false),
+      supabase
+        .from("appointments")
+        .select("*", { count: "exact", head: true })
+        .eq("scheduled_date", today)
+        .eq("is_archived", false)
+        .in("booking_status", ["approved", "confirmed"]),
+      supabase
+        .from("appointments")
+        .select("*", { count: "exact", head: true })
+        .eq("scheduled_date", today)
+        .eq("is_archived", false)
+        .in("visit_status", ["checked_in", "waiting", "treatment_ongoing", "treatment_paused"]),
+      supabase
+        .from("messenger_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("direction", "inbound"),
+    ]);
 
     return {
       success: true,
