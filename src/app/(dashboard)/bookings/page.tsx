@@ -7,9 +7,6 @@ export default async function BookingDashboardPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  // Temporary 0.9s delay for skeleton loading state preview
-  await new Promise((resolve) => setTimeout(resolve, 900));
-
   const { status } = await searchParams;
   const supabase = await createServerSupabaseClient();
 

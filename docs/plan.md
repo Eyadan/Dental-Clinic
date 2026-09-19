@@ -233,6 +233,43 @@
 
 ---
 
+## Implementation Phase 10 — Performance Optimization
+
+> **Status: PLAN ONLY — awaiting approval before implementation.**
+> Investigated via static code review; will verify improvements with Playwright (navigation timing / trace) before and after each change.
+
+### Findings (root cause, not symptoms)
+
+| # | Issue | Impact | Evidence |
+|---|-------|--------|----------|
+| F-01 | Hardcoded `await new Promise(resolve => setTimeout(resolve, 900))` left in 4 server page components | **+900ms on every load**, unconditional, even in production | `dashboard/page.tsx:7`, `patients/page.tsx:11`, `billing/page.tsx:20`, `bookings/page.tsx:11` — comment says "Temporary... for skeleton loading state preview" but was never removed |
+| F-02 | `middleware.ts` calls Supabase **twice per request**: `updateSession()` calls `auth.getUser()`, then `getUserRole()` calls `auth.getUser()` again + a separate `users` table query | 2 extra network round-trips to Supabase on **every** protected-route navigation | `middleware.ts:68-70` |
+| F-03 | 60 occurrences of `.select("*")` / `.select()` across services/actions — several on list pages that only render a few columns | Over-fetching rows/columns increases payload size + DB work, especially on `patients`, `appointments` list joins | grep count across `src/` |
+| F-04 | Plain `<img>` tags for proof-of-payment and signature images (5 occurrences) instead of `next/image` | No automatic lazy-loading, resizing, or format optimization (these are mostly user-uploaded/base64 so gains are smaller, but lazy-loading still helps on billing page with many thumbnails) | `billing-client.tsx:578,625,761,811`, `consent-signing-client.tsx:177` |
+| F-05 | Queue page polls `/api/queue` via `setInterval` every 5s regardless of tab visibility | Wasted requests when tab is backgrounded/inactive | `queue-client.tsx:83` |
+| F-06 | No `React.cache()`/dedupe on repeated `createServerSupabaseClient()` + role lookups across server components in the same request tree | Potential duplicate auth/user lookups within one page render | general pattern across `page.tsx` files |
+
+### Planned Tasks
+
+| # | Task | Priority | Depends on |
+|---|------|----------|------------|
+| PERF-01 | Remove the 4 artificial 900ms `setTimeout` delays (dashboard, patients, billing, bookings) | 🔴 Critical | — |
+| PERF-02 | Collapse middleware's two Supabase calls into one — fetch user + role in a single pass inside `updateSession`, reuse result in route-guard check | 🔴 Critical | — |
+| PERF-03 | Audit `.select("*")` call sites on list/table pages (patients, appointments, bookings, billing); replace with explicit column lists | 🟡 Medium | — |
+| PERF-04 | Add `document.visibilityState` check to queue polling to pause when tab is hidden | 🟢 Low | — |
+| PERF-05 | Replace `<img>` with `next/image` where source is a stable URL (skip for base64 data URLs, which `next/image` can't optimize anyway) | 🟢 Low | — |
+| PERF-06 | Baseline + after-fix measurement using Playwright: capture navigation timing (`performance.timing` / trace) for `/dashboard`, `/patients`, `/billing`, `/bookings` before and after PERF-01/02 | 🔴 Critical | PERF-01, PERF-02 |
+| PERF-07 | Update `docs/plan_done.md` with before/after timing numbers | — | PERF-06 |
+
+### Explicitly out of scope for this pass
+
+- No changes to RLS policies, triggers, or database schema
+- No library upgrades/replacements
+- No visual/UI changes
+- No changes to Messenger bot or cron logic
+
+---
+
 ## Legend
 
 | Symbol | Meaning |

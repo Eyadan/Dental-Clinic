@@ -80,8 +80,19 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(refreshQueue, 5000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") refreshQueue();
+    }, 5000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshQueue();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [refreshQueue]);
 
   const handleCallNext = async () => {

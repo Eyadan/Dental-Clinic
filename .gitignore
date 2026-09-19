@@ -44,3 +44,4 @@ supabase/.temp
 # editor
 .vscode
 .idea
+perf-check.mjs

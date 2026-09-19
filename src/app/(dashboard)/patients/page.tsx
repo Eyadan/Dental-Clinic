@@ -7,9 +7,6 @@ export default async function PatientsPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  // Temporary 0.9s delay for skeleton loading state preview
-  await new Promise((resolve) => setTimeout(resolve, 900));
-
   const { q } = await searchParams;
   const supabase = await createServerSupabaseClient();
   const service = new PatientService(supabase);

@@ -3,9 +3,6 @@ import { DashboardClient } from "./dashboard-client";
 import type { UserRole } from "@/lib/types/enums";
 
 export default async function DashboardPage() {
-  // Temporary 0.9s delay for skeleton loading state preview
-  await new Promise((resolve) => setTimeout(resolve, 900));
-
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
 
