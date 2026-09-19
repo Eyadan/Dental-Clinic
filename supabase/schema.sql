@@ -1707,5 +1707,15 @@ INSERT INTO consent_clauses (clause_key, title, body_text, sort_order) VALUES
 ON CONFLICT (clause_key) DO NOTHING;
 
 -- ============================================================
+-- 9. REALTIME — enable postgres_changes for live chat
+-- Cloud Supabase does NOT enable Realtime per-table by default.
+-- These tables must be added to the supabase_realtime publication
+-- for the live chat (postgres_changes subscriptions) to work.
+-- ============================================================
+
+ALTER PUBLICATION supabase_realtime ADD TABLE messenger_conversations;
+ALTER PUBLICATION supabase_realtime ADD TABLE messenger_messages;
+
+-- ============================================================
 -- END OF SCHEMA
 -- ============================================================
