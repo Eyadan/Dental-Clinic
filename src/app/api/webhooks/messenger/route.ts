@@ -124,7 +124,7 @@ interface MessengerEvent {
   recipient?: { id?: string };
   timestamp?: number;
   message?: { mid?: string; text?: string; quick_reply?: { payload?: string } };
-  postback?: { payload?: string };
+  postback?: { payload?: string; title?: string };
 }
 
 async function processEntry(entry: unknown): Promise<void> {
@@ -159,6 +159,7 @@ async function processMessagingEvent(event: MessengerEvent): Promise<void> {
 
   const messageText = event.message?.text;
   const postbackPayload = event.postback?.payload;
+  const postbackTitle = event.postback?.title;
   const quickReplyPayload = event.message?.quick_reply?.payload;
 
   const content = quickReplyPayload ?? postbackPayload ?? messageText;
@@ -172,8 +173,13 @@ async function processMessagingEvent(event: MessengerEvent): Promise<void> {
     return;
   }
 
+  // For quick-reply taps Meta sets message.text to the button title; for
+  // postbacks it provides postback.title. Prefer these over the raw payload
+  // so the saved chat thread shows what the patient actually tapped.
+  const displayText = quickReplyPayload ? messageText : postbackTitle;
+
   try {
-    await processIncomingMessage(senderId, content);
+    await processIncomingMessage(senderId, content, displayText);
     console.log(`[Messenger Webhook] Processed inbound message from PSID ${senderId}: "${content}"`);
   } catch (error) {
     console.error("[Messenger Webhook] Failed to process message:", error);

@@ -262,6 +262,15 @@ function isPastDateTime(date: string, time: string): boolean {
   return dateTime < now;
 }
 
+async function recordOutboundMessage(psid: string, content: string): Promise<void> {
+  try {
+    const conversation = await findOrCreateConversation(psid);
+    await saveMessage(conversation.id, "outbound", content);
+  } catch (error) {
+    console.error("[Booking Parser] Failed to record outbound message:", error);
+  }
+}
+
 async function sendMessengerMessage(psid: string, text: string): Promise<void> {
   if (!PAGE_ACCESS_TOKEN) {
     console.warn("[Booking Parser] MESSENGER_PAGE_ACCESS_TOKEN not configured — skipping send");
@@ -284,7 +293,10 @@ async function sendMessengerMessage(psid: string, text: string): Promise<void> {
     if (!response.ok) {
       const errorBody = await response.text();
       console.error(`[Booking Parser] Send API error ${response.status}: ${errorBody}`);
+      return;
     }
+
+    await recordOutboundMessage(psid, text);
   } catch (error) {
     console.error("[Booking Parser] Failed to send message:", error);
   }
@@ -330,7 +342,13 @@ async function sendQuickReplies(
     if (!response.ok) {
       const errorBody = await response.text();
       console.error(`[Booking Parser] Quick replies send error ${response.status}: ${errorBody}`);
+      return;
     }
+
+    await recordOutboundMessage(
+      psid,
+      `${text}\n[Options: ${replies.map((r) => r.title).join(" | ")}]`,
+    );
   } catch (error) {
     console.error("[Booking Parser] Failed to send quick replies:", error);
   }
@@ -381,7 +399,15 @@ async function sendGenericTemplate(
     if (!response.ok) {
       const errorBody = await response.text();
       console.error(`[Booking Parser] Generic template send error ${response.status}: ${errorBody}`);
+      return;
     }
+
+    await recordOutboundMessage(
+      psid,
+      `[Cards]\n${elements
+        .map((el) => (el.subtitle ? `${el.title} — ${el.subtitle}` : el.title))
+        .join("\n")}`,
+    );
   } catch (error) {
     console.error("[Booking Parser] Failed to send generic template:", error);
   }
@@ -453,7 +479,15 @@ async function sendReceiptTemplate(
     if (!response.ok) {
       const errorBody = await response.text();
       console.error(`[Booking Parser] Receipt template send error ${response.status}: ${errorBody}`);
+      return;
     }
+
+    await recordOutboundMessage(
+      psid,
+      `[Receipt] Order ${params.orderNumber} — ${params.elements
+        .map((el) => el.title)
+        .join(", ")} — Total: ${params.summary.totalCost} ${params.currency}`,
+    );
   } catch (error) {
     console.error("[Booking Parser] Failed to send receipt template:", error);
   }
@@ -883,9 +917,10 @@ async function promptDentistOrTime(
 export async function processIncomingMessage(
   psid: string,
   text: string,
+  displayText?: string,
 ): Promise<void> {
   const conversation = await findOrCreateConversation(psid);
-  await saveMessage(conversation.id, "inbound", text);
+  await saveMessage(conversation.id, "inbound", displayText ?? text);
 
   if (conversation.status === "taken_over") {
     const lower = text.toLowerCase().trim();
