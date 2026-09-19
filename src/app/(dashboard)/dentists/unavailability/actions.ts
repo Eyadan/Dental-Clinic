@@ -3,36 +3,19 @@
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS, getCachedDentists, getCachedDentistSchedules } from "@/lib/cache/reference-data";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getServerUserContext } from "@/lib/supabase/user-context";
 import { ReassignmentService } from "@/lib/services/reassignment-service";
 import { DentistService } from "@/lib/services/dentist-service";
 import { sendNotification } from "@/lib/services/notification-service";
 import { notifyAffectedPatients } from "@/lib/services/booking-parser";
 import type { ServiceResult } from "@/lib/services/base-service";
 import type { AffectedAppointment, AlternateDentist } from "@/lib/services/reassignment-service";
+import type { DentistBlock, DentistSchedule } from "@/lib/types/database";
 
 export interface DentistOption {
   id: string;
   name: string;
   specialization: string | null;
-}
-
-export async function getDentistsAction(): Promise<ServiceResult<DentistOption[]>> {
-  try {
-    const dentists = await getCachedDentists();
-
-    const dentistOptions: DentistOption[] = dentists.map((dentist) => ({
-      id: dentist.id,
-      name: dentist.full_name || "Unknown",
-      specialization: dentist.specialization,
-    }));
-
-    return { success: true, data: dentistOptions };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch dentists",
-    };
-  }
 }
 
 export async function getAffectedAppointmentsAction(
@@ -210,66 +193,17 @@ export async function reassignAppointmentAction(
 
 export async function getCurrentStaffIdAction(): Promise<ServiceResult<string>> {
   try {
-    const supabase = await createServerSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { userId } = await getServerUserContext();
 
-    if (!user) {
+    if (!userId) {
       return { success: false, error: "Not authenticated" };
     }
 
-    return { success: true, data: user.id };
+    return { success: true, data: userId };
   } catch (error) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to get staff ID",
-    };
-  }
-}
-
-export async function getCurrentDentistInfoAction(): Promise<ServiceResult<{ role: string; currentDentistId?: string; currentDentistName?: string }>> {
-  try {
-    const supabase = await createServerSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { success: false, error: "Not authenticated" };
-    }
-
-    const { data: appUser } = await supabase
-      .from("users")
-      .select("role, first_name, last_name")
-      .eq("id", user.id)
-      .single();
-
-    const role = appUser?.role ?? "admin";
-    let currentDentistId: string | undefined;
-    let currentDentistName: string | undefined;
-
-    if (role === "dentist") {
-      const { data: dentist } = await supabase
-        .from("dentists")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (dentist) {
-        currentDentistId = dentist.id;
-        currentDentistName = appUser ? `${appUser.first_name} ${appUser.last_name}` : undefined;
-      }
-    }
-
-    return {
-      success: true,
-      data: {
-        role,
-        currentDentistId,
-        currentDentistName,
-      },
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to get dentist info",
     };
   }
 }
@@ -282,36 +216,102 @@ export interface WeeklyScheduleDay {
   is_active: boolean;
 }
 
+export interface UnavailabilityInitData {
+  dentists: DentistOption[];
+  staffId: string;
+  role: string;
+  activeDentistId: string;
+  isDentistRole: boolean;
+  weeklySchedule: WeeklyScheduleDay[];
+  blocks: DentistBlock[];
+}
+
+// Single round-trip for everything the page needs on mount — replaces the
+// previous 5 separate server-action POSTs (dentists + staff id + dentist
+// info + weekly schedule + blocks), each of which paid the middleware +
+// auth overhead independently.
+export async function getUnavailabilityInitAction(): Promise<ServiceResult<UnavailabilityInitData>> {
+  try {
+    const { userId, role } = await getServerUserContext();
+    if (!userId) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const dentists = await getCachedDentists();
+    const dentistOptions: DentistOption[] = dentists.map((dentist) => ({
+      id: dentist.id,
+      name: dentist.full_name || "Unknown",
+      specialization: dentist.specialization,
+    }));
+
+    const isDentistRole = role === "dentist";
+    const ownDentist = isDentistRole ? dentists.find((d) => d.user_id === userId) : undefined;
+    const activeDentistId = ownDentist?.id ?? dentistOptions[0]?.id ?? "";
+
+    let weeklySchedule: WeeklyScheduleDay[] = [];
+    let blocks: DentistBlock[] = [];
+    if (activeDentistId) {
+      const supabase = await createServerSupabaseClient();
+      const dentistService = new DentistService(supabase);
+      const [dbSchedules, dentistBlocks] = await Promise.all([
+        getCachedDentistSchedules(activeDentistId),
+        dentistService.getBlocks(activeDentistId),
+      ]);
+      weeklySchedule = buildWeeklySchedule(dbSchedules);
+      blocks = dentistBlocks;
+    }
+
+    return {
+      success: true,
+      data: {
+        dentists: dentistOptions,
+        staffId: userId,
+        role: role ?? "admin",
+        activeDentistId,
+        isDentistRole: isDentistRole && !!ownDentist,
+        weeklySchedule,
+        blocks,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to load page data",
+    };
+  }
+}
+
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function buildWeeklySchedule(dbSchedules: DentistSchedule[]): WeeklyScheduleDay[] {
+  const scheduleMap = new Map<number, { start_time: string; end_time: string; is_active: boolean }>();
+  for (const item of dbSchedules) {
+    scheduleMap.set(item.day_of_week, {
+      start_time: item.start_time ? item.start_time.slice(0, 5) : "08:00",
+      end_time: item.end_time ? item.end_time.slice(0, 5) : "17:00",
+      is_active: item.is_active ?? true,
+    });
+  }
+
+  const fullSchedule: WeeklyScheduleDay[] = [];
+  for (let day = 0; day <= 6; day++) {
+    const existing = scheduleMap.get(day);
+    fullSchedule.push({
+      day_of_week: day,
+      day_name: DAY_NAMES[day],
+      start_time: existing ? existing.start_time : "08:00",
+      end_time: existing ? existing.end_time : "17:00",
+      is_active: existing ? existing.is_active : day >= 1 && day <= 5,
+    });
+  }
+
+  return fullSchedule;
+}
 
 export async function getWeeklyScheduleAction(dentistId: string): Promise<ServiceResult<WeeklyScheduleDay[]>> {
   try {
     const dbSchedules = await getCachedDentistSchedules(dentistId);
-
-    const scheduleMap = new Map<number, { start_time: string; end_time: string; is_active: boolean }>();
-    if (dbSchedules) {
-      for (const item of dbSchedules) {
-        scheduleMap.set(item.day_of_week, {
-          start_time: item.start_time ? item.start_time.slice(0, 5) : "08:00",
-          end_time: item.end_time ? item.end_time.slice(0, 5) : "17:00",
-          is_active: item.is_active ?? true,
-        });
-      }
-    }
-
-    const fullSchedule: WeeklyScheduleDay[] = [];
-    for (let day = 0; day <= 6; day++) {
-      const existing = scheduleMap.get(day);
-      fullSchedule.push({
-        day_of_week: day,
-        day_name: DAY_NAMES[day],
-        start_time: existing ? existing.start_time : "08:00",
-        end_time: existing ? existing.end_time : "17:00",
-        is_active: existing ? existing.is_active : day >= 1 && day <= 5,
-      });
-    }
-
-    return { success: true, data: fullSchedule };
+    return { success: true, data: buildWeeklySchedule(dbSchedules) };
   } catch (error) {
     return {
       success: false,
@@ -368,7 +368,7 @@ export async function saveWeeklyScheduleAction(
   }
 }
 
-export async function getDentistBlocksAction(dentistId: string): Promise<ServiceResult<import("@/lib/types/database").DentistBlock[]>> {
+export async function getDentistBlocksAction(dentistId: string): Promise<ServiceResult<DentistBlock[]>> {
   try {
     const supabase = await createServerSupabaseClient();
     const dentistService = new DentistService(supabase);

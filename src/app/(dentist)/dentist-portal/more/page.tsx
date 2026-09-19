@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { getServerUserContext } from "@/lib/supabase/user-context";
+import { getCachedDentists } from "@/lib/cache/reference-data";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
 import { todayLocal } from "@/lib/utils/date-utils";
 import { MorePageClient } from "./more-client";
@@ -9,18 +10,15 @@ export default async function MorePage() {
   if (!userId) return null;
 
   const supabase = await createServerSupabaseClient();
-  const [{ data: dentist }, { data: userData }] = await Promise.all([
-    supabase
-      .from("dentists")
-      .select("id, specialization")
-      .eq("user_id", userId)
-      .single(),
+  const [dentists, { data: userData }] = await Promise.all([
+    getCachedDentists(),
     supabase
       .from("users")
       .select("first_name, last_name, email")
       .eq("id", userId)
       .single(),
   ]);
+  const dentist = dentists.find((d) => d.user_id === userId);
 
   if (!dentist) return null;
 

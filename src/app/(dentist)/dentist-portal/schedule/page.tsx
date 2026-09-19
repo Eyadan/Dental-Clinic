@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { getServerUserContext } from "@/lib/supabase/user-context";
+import { getCachedDentists } from "@/lib/cache/reference-data";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
 import { todayLocal } from "@/lib/utils/date-utils";
 import { DentistScheduleClient } from "./schedule-client";
@@ -8,14 +9,11 @@ export default async function DentistSchedulePage() {
   const { userId } = await getServerUserContext();
   if (!userId) return null;
 
-  const supabase = await createServerSupabaseClient();
-  const { data: dentist } = await supabase
-    .from("dentists")
-    .select("id")
-    .eq("user_id", userId)
-    .single();
-
+  const dentists = await getCachedDentists();
+  const dentist = dentists.find((d) => d.user_id === userId);
   if (!dentist) return null;
+
+  const supabase = await createServerSupabaseClient();
 
   const today = todayLocal();
 

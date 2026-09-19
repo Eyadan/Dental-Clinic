@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { getServerUserContext } from "@/lib/supabase/user-context";
+import { getCachedDentists } from "@/lib/cache/reference-data";
 import { DentistPortalShell } from "@/components/dentist-portal/dentist-portal-shell";
 
 export default async function DentistPortalLayout({
@@ -18,33 +18,17 @@ export default async function DentistPortalLayout({
     redirect("/unauthorized");
   }
 
-  const supabase = await createServerSupabaseClient();
-  const { data: appUser } = await supabase
-    .from("users")
-    .select("first_name, last_name")
-    .eq("id", userId)
-    .single();
-
-  if (!appUser) {
-    redirect("/login");
-  }
-
-  const { data: dentist } = await supabase
-    .from("dentists")
-    .select("id, specialization")
-    .eq("user_id", userId)
-    .single();
+  const dentists = await getCachedDentists();
+  const dentist = dentists.find((d) => d.user_id === userId);
 
   if (!dentist) {
     redirect("/unauthorized");
   }
 
-  const fullName = `${appUser.first_name} ${appUser.last_name}`;
-
   return (
     <DentistPortalShell
       dentistId={dentist.id}
-      dentistName={fullName}
+      dentistName={dentist.full_name || "Unknown"}
       specialization={dentist.specialization}
     >
       {children}

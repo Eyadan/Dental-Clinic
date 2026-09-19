@@ -25,13 +25,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  getDentistsAction,
+  getUnavailabilityInitAction,
   getAffectedAppointmentsAction,
   findAlternateDentistsAction,
   declareUnavailabilityAction,
   reassignAppointmentAction,
   getCurrentStaffIdAction,
-  getCurrentDentistInfoAction,
   getWeeklyScheduleAction,
   saveWeeklyScheduleAction,
   getDentistBlocksAction,
@@ -112,42 +111,21 @@ export default function UnavailabilityClient() {
 
   useEffect(() => {
     const loadInitialData = async () => {
-      const [dentistsResult, staffResult, infoResult] = await Promise.all([
-        getDentistsAction(),
-        getCurrentStaffIdAction(),
-        getCurrentDentistInfoAction(),
-      ]);
+      const result = await getUnavailabilityInitAction();
 
-      if (dentistsResult.success && dentistsResult.data) {
-        setDentists(dentistsResult.data);
-      }
-      if (staffResult.success && staffResult.data) {
-        setStaffId(staffResult.data);
-      }
-
-      let activeDentistId = "";
-      if (infoResult.success && infoResult.data) {
-        if (infoResult.data.role === "dentist" && infoResult.data.currentDentistId) {
-          setIsDentistRole(true);
-          activeDentistId = infoResult.data.currentDentistId;
-          setSelectedDentistId(activeDentistId);
-        } else if (dentistsResult.data && dentistsResult.data.length > 0) {
-          activeDentistId = dentistsResult.data[0].id;
-          setSelectedDentistId(activeDentistId);
-        }
-      }
-
-      if (activeDentistId) {
-        await Promise.all([
-          loadWeeklySchedule(activeDentistId),
-          loadDeclaredBlocks(activeDentistId),
-        ]);
+      if (result.success && result.data) {
+        setDentists(result.data.dentists);
+        setStaffId(result.data.staffId);
+        setIsDentistRole(result.data.isDentistRole);
+        setSelectedDentistId(result.data.activeDentistId);
+        setWeeklySchedule(result.data.weeklySchedule);
+        setDeclaredBlocks(result.data.blocks);
       }
 
       setIsLoadingDentists(false);
     };
     loadInitialData();
-  }, [loadWeeklySchedule, loadDeclaredBlocks]);
+  }, []);
 
   const handleDentistChange = async (dentistId: string) => {
     setSelectedDentistId(dentistId);
