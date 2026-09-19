@@ -261,6 +261,7 @@
 | PERF-06 | Playwright baseline + after-fix measurement | 🔴 Critical | ✅ Done |
 | PERF-07 | Update `docs/plan_done.md` with results | — | ✅ Done |
 | PERF-08 | Middleware header-based auth dedup (x-user-id/x-user-role) | 🔴 Critical | ✅ Done |
+| PERF-09 | Schedule & Leave: collapse 5 mount-time action POSTs into 1 (`getUnavailabilityInitAction`); replace per-user `dentists` lookups with `getCachedDentists().find()` across dentist-portal pages | 🟡 Medium | ✅ Done |
 
 ### Results (Playwright, cloud Supabase, authenticated)
 
@@ -335,7 +336,7 @@ Not implemented in this pass — deferred, low priority (marked 🟢 below). `ge
 | CACHE-01 | Create `src/lib/cache/reference-data.ts` using `unstable_cache` with tag registry | 🔴 Critical | ✅ Done |
 | CACHE-02 | Cache `medical_conditions` + `consent_clauses` (seeded, 24h TTL — zero invalidation wiring needed) | 🟡 Medium | ✅ Done |
 | CACHE-03 | Cache `dental_services` + `dentists` + `dentist_schedules` + `clinic_settings`; add `revalidateTag` to their mutation actions | 🟡 Medium | ✅ Done |
-| CACHE-04 | Wrap `createServerSupabaseClient` and dentist-by-user lookups in `React.cache` | 🟢 Low | Deferred |
+| CACHE-04 | Wrap `createServerSupabaseClient` and dentist-by-user lookups in `React.cache` | 🟢 Low | ⏭ Superseded — dentist-by-user lookups now use `getCachedDentists().find()` (PERF-09); `createServerSupabaseClient` React.cache still deferred |
 | CACHE-05 | Add `staleTime` to TanStack Query usage — done for `use-clinic.ts`; waitlist/patients/billing clients still deferred | 🟢 Low | Partial |
 | CACHE-06 | Re-run `perf-check.mjs` to measure | — | ✅ Done (see plan_done.md) |
 | CACHE-07 | Update `docs/plan_done.md` | — | ✅ Done |
