@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getServerUserContext } from "@/lib/supabase/user-context";
 import { DentistPortalShell } from "@/components/dentist-portal/dentist-portal-shell";
 
 export default async function DentistPortalLayout({
@@ -7,32 +8,31 @@ export default async function DentistPortalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createServerSupabaseClient();
+  const { userId, role } = await getServerUserContext();
 
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 
+  if (role !== "dentist") {
+    redirect("/unauthorized");
+  }
+
+  const supabase = await createServerSupabaseClient();
   const { data: appUser } = await supabase
     .from("users")
-    .select("*")
-    .eq("id", user.id)
+    .select("first_name, last_name")
+    .eq("id", userId)
     .single();
 
   if (!appUser) {
     redirect("/login");
   }
 
-  if (appUser.role !== "dentist") {
-    redirect("/unauthorized");
-  }
-
   const { data: dentist } = await supabase
     .from("dentists")
     .select("id, specialization")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .single();
 
   if (!dentist) {

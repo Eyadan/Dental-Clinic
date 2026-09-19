@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getServerUserContext } from "@/lib/supabase/user-context";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 
 export default async function DashboardLayout({
@@ -7,18 +8,17 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createServerSupabaseClient();
+  const { userId } = await getServerUserContext();
 
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 
+  const supabase = await createServerSupabaseClient();
   const { data: appUser } = await supabase
     .from("users")
     .select("*")
-    .eq("id", user.id)
+    .eq("id", userId)
     .single();
 
   if (!appUser) {

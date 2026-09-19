@@ -1,27 +1,28 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getServerUserContext } from "@/lib/supabase/user-context";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
 import { todayLocal } from "@/lib/utils/date-utils";
 import { MorePageClient } from "./more-client";
 
 export default async function MorePage() {
+  const { userId } = await getServerUserContext();
+  if (!userId) return null;
+
   const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const { data: dentist } = await supabase
-    .from("dentists")
-    .select("id, specialization")
-    .eq("user_id", user.id)
-    .single();
+  const [{ data: dentist }, { data: userData }] = await Promise.all([
+    supabase
+      .from("dentists")
+      .select("id, specialization")
+      .eq("user_id", userId)
+      .single(),
+    supabase
+      .from("users")
+      .select("first_name, last_name, email")
+      .eq("id", userId)
+      .single(),
+  ]);
 
   if (!dentist) return null;
-
-  const { data: userData } = await supabase
-    .from("users")
-    .select("first_name, last_name, email")
-    .eq("id", user.id)
-    .single();
 
   const today = todayLocal();
 

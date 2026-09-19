@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getServerUserContext } from "@/lib/supabase/user-context";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
 import { BookingDashboardClient } from "./booking-dashboard-client";
 
@@ -13,7 +14,7 @@ export default async function BookingDashboardPage({
   const validStatuses = ["all", "pending", "approved", "declined", "expired", "reschedule_required", "pending_cancellation", "rescheduled", "cancelled", "confirmed", "no_show"];
   const filterStatus = status && validStatuses.includes(status) ? status : "pending";
 
-  const [{ data: appointments, error }, { data: { user } }] = await Promise.all([
+  const [{ data: appointments, error }, { role: ctxRole }] = await Promise.all([
     supabase
       .from("appointments")
       .select(`
@@ -30,7 +31,7 @@ export default async function BookingDashboardPage({
       `)
       .eq("is_archived", false)
       .order("created_at", { ascending: false }),
-    supabase.auth.getUser(),
+    getServerUserContext(),
   ]);
 
   if (error) {
@@ -56,11 +57,7 @@ export default async function BookingDashboardPage({
     };
   });
 
-  let userRole = "reception";
-  if (user) {
-    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
-    if (profile) userRole = profile.role;
-  }
+  const userRole = ctxRole ?? "reception";
 
   return <BookingDashboardClient bookings={bookings} activeFilter={filterStatus} userRole={userRole} />;
 }

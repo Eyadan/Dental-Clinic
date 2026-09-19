@@ -1,11 +1,9 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getServerUserContext } from "@/lib/supabase/user-context";
 import { ChatClient } from "./chat-client";
 
 export default async function ChatPage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  const staffId = user?.id ?? "";
+  const { userId } = await getServerUserContext();
+  const staffId = userId ?? "";
 
   return (
     <div className="space-y-4">

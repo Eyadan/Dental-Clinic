@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getServerUserContext } from "@/lib/supabase/user-context";
 import { PatientService } from "@/lib/services/patient-service";
 import { DentistService } from "@/lib/services/dentist-service";
 import { DentalServiceService } from "@/lib/services";
@@ -11,18 +12,12 @@ export default async function WalkInPage() {
   const dentistService = new DentistService(supabase);
   const dentalServiceService = new DentalServiceService(supabase);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  let userRole: string | null = null;
+  const { userId, role: userRole } = await getServerUserContext();
   let currentDentistId: string | null = null;
 
-  if (user) {
-    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
-    userRole = profile?.role ?? null;
-
-    if (userRole === "dentist") {
-      const { data: dentist } = await supabase.from("dentists").select("id").eq("user_id", user.id).single();
-      currentDentistId = dentist?.id ?? null;
-    }
+  if (userRole === "dentist" && userId) {
+    const { data: dentist } = await supabase.from("dentists").select("id").eq("user_id", userId).single();
+    currentDentistId = dentist?.id ?? null;
   }
 
   const [patientsResult, dentists, services] = await Promise.all([

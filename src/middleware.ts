@@ -38,23 +38,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const { supabaseResponse, supabase, user } = await updateSession(request);
+  const { supabaseResponse, user, role } = await updateSession(request);
 
-  if (!user) {
-    const redirectUrl = new URL("/login", request.url);
-    redirectUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  const { data: appUser } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  const role = (appUser?.role ?? null) as UserRole | null;
-
-  if (!role) {
+  if (!user || !role) {
     const redirectUrl = new URL("/login", request.url);
     redirectUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(redirectUrl);

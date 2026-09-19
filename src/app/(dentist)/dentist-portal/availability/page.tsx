@@ -1,26 +1,27 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getServerUserContext } from "@/lib/supabase/user-context";
 import { AvailabilityClient } from "./availability-client";
 import type { DentistSchedule, DentistBlock } from "@/lib/types/database";
 
 export default async function AvailabilityPage() {
+  const { userId } = await getServerUserContext();
+  if (!userId) return null;
+
   const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const { data: dentist } = await supabase
-    .from("dentists")
-    .select("id, specialization")
-    .eq("user_id", user.id)
-    .single();
+  const [{ data: dentist }, { data: userData }] = await Promise.all([
+    supabase
+      .from("dentists")
+      .select("id, specialization")
+      .eq("user_id", userId)
+      .single(),
+    supabase
+      .from("users")
+      .select("first_name, last_name")
+      .eq("id", userId)
+      .single(),
+  ]);
 
   if (!dentist) return null;
-
-  const { data: userData } = await supabase
-    .from("users")
-    .select("first_name, last_name")
-    .eq("id", user.id)
-    .single();
 
   const { data: schedules } = await supabase
     .from("dentist_schedules")

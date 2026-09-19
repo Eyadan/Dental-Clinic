@@ -251,15 +251,26 @@
 
 ### Planned Tasks
 
-| # | Task | Priority | Depends on |
-|---|------|----------|------------|
-| PERF-01 | Remove the 4 artificial 900ms `setTimeout` delays (dashboard, patients, billing, bookings) | 🔴 Critical | — |
-| PERF-02 | Collapse middleware's two Supabase calls into one — fetch user + role in a single pass inside `updateSession`, reuse result in route-guard check | 🔴 Critical | — |
-| PERF-03 | Audit `.select("*")` call sites on list/table pages (patients, appointments, bookings, billing); replace with explicit column lists | 🟡 Medium | — |
-| PERF-04 | Add `document.visibilityState` check to queue polling to pause when tab is hidden | 🟢 Low | — |
-| PERF-05 | Replace `<img>` with `next/image` where source is a stable URL (skip for base64 data URLs, which `next/image` can't optimize anyway) | 🟢 Low | — |
-| PERF-06 | Baseline + after-fix measurement using Playwright: capture navigation timing (`performance.timing` / trace) for `/dashboard`, `/patients`, `/billing`, `/bookings` before and after PERF-01/02 | 🔴 Critical | PERF-01, PERF-02 |
-| PERF-07 | Update `docs/plan_done.md` with before/after timing numbers | — | PERF-06 |
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| PERF-01 | Remove the 4 artificial 900ms `setTimeout` delays | 🔴 Critical | ✅ Done |
+| PERF-02 | Collapse middleware's two Supabase calls into one | 🔴 Critical | ✅ Done |
+| PERF-03 | Parallelize independent DB queries; audit `.select("*")` | 🟡 Medium | ✅ Done |
+| PERF-04 | Visibility-aware queue polling | 🟢 Low | ✅ Done |
+| PERF-05 | `next/image` for proof-of-payment images | 🟢 Low | ⏭ Skipped — mostly base64, negligible gain |
+| PERF-06 | Playwright baseline + after-fix measurement | 🔴 Critical | ✅ Done |
+| PERF-07 | Update `docs/plan_done.md` with results | — | ✅ Done |
+| PERF-08 | Middleware header-based auth dedup (x-user-id/x-user-role) | 🔴 Critical | ✅ Done |
+
+### Results (Playwright, cloud Supabase, authenticated)
+
+| Page | Before | After | Change |
+|------|--------|-------|--------|
+| /dashboard | 994ms | 799ms | -20% |
+| /patients | 2147ms | 887ms | -59% |
+| /billing | 1167ms | 1060ms | -9% |
+| /bookings | 1256ms | 939ms | -25% |
+| **Average** | **1391ms** | **921ms** | **-34%** |
 
 ### Explicitly out of scope for this pass
 

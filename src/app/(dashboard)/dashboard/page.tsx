@@ -1,22 +1,10 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getServerUserContext } from "@/lib/supabase/user-context";
 import { DashboardClient } from "./dashboard-client";
 import type { UserRole } from "@/lib/types/enums";
 
 export default async function DashboardPage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  let role: UserRole = "admin";
-  if (user) {
-    const { data: appUser } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-    if (appUser?.role) {
-      role = appUser.role as UserRole;
-    }
-  }
+  const { role: ctxRole } = await getServerUserContext();
+  const role: UserRole = ctxRole ?? "admin";
 
   return (
     <div className="space-y-6">
