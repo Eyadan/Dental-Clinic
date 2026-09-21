@@ -699,11 +699,17 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Prevent audit_logs modification (immutable)
+-- Prevent audit_logs modification (immutable, with exception for temporary notification alerts)
 CREATE OR REPLACE FUNCTION prevent_audit_log_modification()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- Allow staff to dismiss temporary messenger notification failure alerts
+  IF TG_OP = 'DELETE' AND OLD.action = 'messenger_notification_failed' THEN
+    RETURN OLD;
+  END IF;
+
   RAISE EXCEPTION 'audit_logs is immutable — modification not allowed' USING ERRCODE = 'raise_exception';
+  RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 

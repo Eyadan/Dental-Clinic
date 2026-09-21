@@ -28,6 +28,25 @@ export async function createScheduleAction(
 
   try {
     const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const { data: dentistProfile } = await supabase
+      .from("dentists")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("id", dentistId)
+      .single();
+
+    if (!dentistProfile) {
+      return {
+        success: false,
+        error: "Admins and staff cannot modify doctor working schedules. Only the doctor can configure their own schedule.",
+      };
+    }
+
     const service = new DentistService(supabase);
     const created = await service.createSchedule(parsed.data);
     revalidateTag(CACHE_TAGS.dentistSchedules, { expire: 0 });
@@ -47,6 +66,25 @@ export async function deleteScheduleAction(
 ): Promise<ServiceResult<void>> {
   try {
     const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const { data: dentistProfile } = await supabase
+      .from("dentists")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("id", dentistId)
+      .single();
+
+    if (!dentistProfile) {
+      return {
+        success: false,
+        error: "Admins and staff cannot modify doctor working schedules. Only the doctor can configure their own schedule.",
+      };
+    }
+
     const service = new DentistService(supabase);
     await service.deleteSchedule(scheduleId);
     revalidateTag(CACHE_TAGS.dentistSchedules, { expire: 0 });

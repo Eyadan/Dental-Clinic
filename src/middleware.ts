@@ -7,15 +7,21 @@ const PUBLIC_ROUTES = ["/login", "/unauthorized", "/register", "/api/webhooks", 
 const ROLE_ROUTES: Record<string, UserRole[]> = {
   "/settings": ["admin"],
   "/services": ["admin"],
+  "/reports": ["admin"],
   "/audit": ["admin"],
   "/patients/archived": ["admin"],
-  "/consultation": ["admin", "dentist"],
-  "/consent": ["admin", "dentist"],
+  "/consultation": ["dentist"],
+  "/consent": ["dentist"],
   "/dentist-portal": ["dentist"],
-  "/check-in": ["admin", "reception", "dentist"],
-  "/chat": ["admin", "reception"],
-  "/dentists/unavailability": ["admin", "reception", "dentist"],
-  "/waitlist": ["admin", "reception", "dentist"],
+  "/check-in": ["reception"],
+  "/chat": ["reception"],
+  "/bookings": ["reception"],
+  "/appointments/new": ["reception"],
+  "/patients/new": ["reception"],
+  "/dentists/unavailability": ["reception", "dentist"],
+  "/dentists": ["admin"],
+  "/waitlist": ["reception"],
+  "/queue": ["reception", "dentist"],
 };
 
 function isPublicRoute(pathname: string): boolean {
@@ -47,6 +53,16 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = new URL("/login", request.url);
     redirectUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(redirectUrl);
+  }
+
+  // Gracefully redirect admins from deprecated schedule/leave URLs to the integrated Doctors Directory
+  if (
+    role === "admin" &&
+    (pathname === "/dentists/unavailability" ||
+      pathname.startsWith("/dentists/unavailability/") ||
+      /^\/dentists\/[^/]+\/schedule/.test(pathname))
+  ) {
+    return NextResponse.redirect(new URL("/dentists", request.url));
   }
 
   const allowedRoles = getAllowedRoles(pathname);

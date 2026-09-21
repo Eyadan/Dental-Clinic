@@ -43,14 +43,21 @@ interface ScheduleClientProps {
   dentist: Dentist;
   schedules: DentistSchedule[];
   blocks: DentistBlock[];
+  isOwnDentist?: boolean;
 }
 
-export function ScheduleClient({ dentist, schedules, blocks }: ScheduleClientProps) {
+export function ScheduleClient({
+  dentist,
+  schedules,
+  blocks,
+  isOwnDentist = false,
+}: ScheduleClientProps) {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [, startTransition] = useTransition();
 
   const handleDeleteSchedule = (scheduleId: string) => {
+    if (!isOwnDentist) return;
     startTransition(async () => {
       await deleteScheduleAction(scheduleId, dentist.id);
     });
@@ -63,6 +70,12 @@ export function ScheduleClient({ dentist, schedules, blocks }: ScheduleClientPro
   };
 
   const handleCreateSchedule = async (formData: FormData) => {
+    if (!isOwnDentist) {
+      return {
+        success: false,
+        error: "Admins cannot modify doctor schedules. Doctors manage their own schedules.",
+      };
+    }
     return createScheduleAction(dentist.id, formData);
   };
 
@@ -83,19 +96,34 @@ export function ScheduleClient({ dentist, schedules, blocks }: ScheduleClientPro
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Clock className="h-5 w-5" />
-            Working Schedules
-          </CardTitle>
-          <Button size="sm" onClick={() => setScheduleDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Schedule
-          </Button>
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Clock className="h-5 w-5 text-cyan-600" />
+              Working Schedules
+            </CardTitle>
+            {!isOwnDentist && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Admins have view-only access. Working schedules are configured directly by the attending doctor.
+              </p>
+            )}
+          </div>
+          {isOwnDentist ? (
+            <Button size="sm" onClick={() => setScheduleDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Schedule
+            </Button>
+          ) : (
+            <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold text-xs py-1 px-2.5">
+              Doctor-Managed Schedule (Read-Only)
+            </Badge>
+          )}
         </CardHeader>
         <CardContent>
           {schedules.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
-              No working schedules set. Click &quot;Add Schedule&quot; to configure.
+            <p className="py-8 text-center text-muted-foreground text-sm">
+              {isOwnDentist
+                ? 'No working schedules set. Click "Add Schedule" to configure.'
+                : "No working schedules set for this doctor."}
             </p>
           ) : (
             <div className="rounded-lg border">
@@ -106,7 +134,7 @@ export function ScheduleClient({ dentist, schedules, blocks }: ScheduleClientPro
                     <TableHead>Start</TableHead>
                     <TableHead>End</TableHead>
                     <TableHead className="w-[80px]">Status</TableHead>
-                    <TableHead className="w-[50px]" />
+                    {isOwnDentist && <TableHead className="w-[50px]" />}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -122,15 +150,17 @@ export function ScheduleClient({ dentist, schedules, blocks }: ScheduleClientPro
                           {schedule.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => handleDeleteSchedule(schedule.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
+                      {isOwnDentist && (
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleDeleteSchedule(schedule.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

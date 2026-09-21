@@ -273,4 +273,25 @@
   .table-row-premium {
     @apply transition-colors duration-150 hover:bg-slate-100/60 dark:hover:bg-slate-800/50;
   }
+
+  /* Print Optimization Rules for Clean Document Export / Save as PDF */
+  @media print {
+    aside,
+    header,
+    nav,
+    .no-print {
+      display: none !important;
+    }
+    body {
+      background: #ffffff !important;
+      color: #000000 !important;
+    }
+    .card-premium,
+    .stat-card-glow,
+    .card {
+      box-shadow: none !important;
+      border: 1px solid #e2e8f0 !important;
+      break-inside: avoid;
+    }
+  }
 }
