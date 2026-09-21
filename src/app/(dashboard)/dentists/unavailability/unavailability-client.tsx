@@ -137,12 +137,14 @@ export default function UnavailabilityClient() {
   };
 
   const handleDayToggle = (dayOfWeek: number, isActive: boolean) => {
+    if (!isDentistRole) return;
     setWeeklySchedule((prev) =>
       prev.map((d) => (d.day_of_week === dayOfWeek ? { ...d, is_active: isActive } : d))
     );
   };
 
   const handleTimeChange = (dayOfWeek: number, field: "start_time" | "end_time", value: string) => {
+    if (!isDentistRole) return;
     setWeeklySchedule((prev) =>
       prev.map((d) => (d.day_of_week === dayOfWeek ? { ...d, [field]: value } : d))
     );
@@ -357,18 +359,26 @@ export default function UnavailabilityClient() {
               Weekly Work Shift Hours
             </CardTitle>
             <CardDescription className="text-xs mt-0.5">
-              Set active work days and start/end operating times for each day of the week.
+              {isDentistRole
+                ? "Set active work days and start/end operating times for each day of the week."
+                : "Doctors configure their own working hours. Admins have read-only view access."}
             </CardDescription>
           </div>
-          <Button
-            size="sm"
-            onClick={handleSaveWeeklySchedule}
-            disabled={isSavingSchedule || isLoadingSchedule || !selectedDentistId}
-            className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs"
-          >
-            {isSavingSchedule ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
-            Save Work Hours
-          </Button>
+          {isDentistRole ? (
+            <Button
+              size="sm"
+              onClick={handleSaveWeeklySchedule}
+              disabled={isSavingSchedule || isLoadingSchedule || !selectedDentistId}
+              className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer"
+            >
+              {isSavingSchedule ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+              Save Work Hours
+            </Button>
+          ) : (
+            <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold text-xs py-1 px-2.5">
+              Doctor-Managed (Read-Only)
+            </Badge>
+          )}
         </CardHeader>
         <CardContent className="p-6">
           {isLoadingSchedule ? (
@@ -390,12 +400,13 @@ export default function UnavailabilityClient() {
                     <span className="font-bold text-xs text-foreground">{day.day_name}</span>
                     <button
                       type="button"
+                      disabled={!isDentistRole}
                       onClick={() => handleDayToggle(day.day_of_week, !day.is_active)}
                       className={`h-5 w-5 rounded-md flex items-center justify-center transition-colors ${
                         day.is_active
                           ? "bg-cyan-600 text-white shadow-xs"
                           : "border border-border/80 bg-background text-transparent"
-                      }`}
+                      } ${!isDentistRole ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
                     >
                       <Check className="h-3.5 w-3.5 stroke-[3]" />
                     </button>
@@ -407,6 +418,7 @@ export default function UnavailabilityClient() {
                         <Label className="text-[10px] text-muted-foreground font-semibold">Start Time</Label>
                         <TimePicker
                           value={day.start_time}
+                          disabled={!isDentistRole}
                           onChange={(val) => handleTimeChange(day.day_of_week, "start_time", val)}
                           placeholder="Start time"
                         />
@@ -415,6 +427,7 @@ export default function UnavailabilityClient() {
                         <Label className="text-[10px] text-muted-foreground font-semibold">End Time</Label>
                         <TimePicker
                           value={day.end_time}
+                          disabled={!isDentistRole}
                           onChange={(val) => handleTimeChange(day.day_of_week, "end_time", val)}
                           placeholder="End time"
                         />

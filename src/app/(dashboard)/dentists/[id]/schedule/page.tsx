@@ -18,10 +18,20 @@ export default async function DentistSchedulePage({
     notFound();
   }
 
-  const [schedules, blocks] = await Promise.all([
+  const [{ data: { user } }, schedules, blocks] = await Promise.all([
+    supabase.auth.getUser(),
     getCachedDentistSchedules(id),
     service.getBlocks(id),
   ]);
 
-  return <ScheduleClient dentist={dentist} schedules={schedules} blocks={blocks} />;
+  const isOwnDentist = dentist.user_id === user?.id;
+
+  return (
+    <ScheduleClient
+      dentist={dentist}
+      schedules={schedules}
+      blocks={blocks}
+      isOwnDentist={isOwnDentist}
+    />
+  );
 }

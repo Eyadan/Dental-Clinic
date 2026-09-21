@@ -15,6 +15,7 @@ import {
   ListPlus,
   Shield,
   Archive,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@/lib/types/enums";
@@ -34,10 +35,16 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "reception", "dentist"],
   },
   {
+    label: "Analytics",
+    href: "/reports",
+    icon: TrendingUp,
+    roles: ["admin"],
+  },
+  {
     label: "Bookings",
     href: "/bookings",
     icon: CalendarPlus,
-    roles: ["admin", "reception", "dentist"],
+    roles: ["reception"],
   },
   {
     label: "Patients",
@@ -55,13 +62,19 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Check-In",
     href: "/check-in",
     icon: UserCheck,
-    roles: ["admin", "reception", "dentist"],
+    roles: ["reception"],
   },
   {
     label: "Queue",
     href: "/queue",
     icon: ListOrdered,
-    roles: ["admin", "reception", "dentist"],
+    roles: ["reception", "dentist"],
+  },
+  {
+    label: "Doctors",
+    href: "/dentists",
+    icon: Stethoscope,
+    roles: ["admin"],
   },
   {
     label: "Services",
@@ -73,13 +86,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Consultation",
     href: "/consultation",
     icon: Stethoscope,
-    roles: ["admin", "dentist"],
+    roles: ["dentist"],
   },
   {
     label: "Consent",
     href: "/consent",
     icon: FileCheck,
-    roles: ["admin", "dentist"],
+    roles: ["dentist"],
   },
   {
     label: "Billing",
@@ -91,19 +104,19 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Live Chat",
     href: "/chat",
     icon: MessageSquare,
-    roles: ["admin", "reception"],
+    roles: ["reception"],
   },
   {
     label: "Schedule & Leave",
     href: "/dentists/unavailability",
     icon: CalendarX,
-    roles: ["admin", "reception", "dentist"],
+    roles: ["reception", "dentist"],
   },
   {
     label: "Waitlist",
     href: "/waitlist",
     icon: ListPlus,
-    roles: ["admin", "reception", "dentist"],
+    roles: ["reception"],
   },
   {
     label: "Settings",

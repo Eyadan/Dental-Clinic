@@ -326,6 +326,31 @@ export async function saveWeeklyScheduleAction(
 ): Promise<ServiceResult<void>> {
   try {
     const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const { data: dentistProfile } = await supabase
+      .from("dentists")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("id", dentistId)
+      .single();
+
+    if (!dentistProfile) {
+      return {
+        success: false,
+        error: "Admins cannot modify the schedule of doctors. Doctors manage their own working shifts.",
+      };
+    }
+
+    const formatTimeForPg = (timeStr: string) => {
+      const parts = timeStr.split(":");
+      const hh = parts[0]?.padStart(2, "0") || "00";
+      const mm = parts[1]?.padStart(2, "0") || "00";
+      return `${hh}:${mm}:00`;
+    };
 
     for (const day of days) {
       const { data: existing } = await supabase
@@ -335,12 +360,15 @@ export async function saveWeeklyScheduleAction(
         .eq("day_of_week", day.day_of_week)
         .single();
 
+      const startTimePg = formatTimeForPg(day.start_time);
+      const endTimePg = formatTimeForPg(day.end_time);
+
       if (existing) {
         await supabase
           .from("dentist_schedules")
           .update({
-            start_time: `${day.start_time}:00`,
-            end_time: `${day.end_time}:00`,
+            start_time: startTimePg,
+            end_time: endTimePg,
             is_active: day.is_active,
             updated_at: new Date().toISOString(),
           })
@@ -351,8 +379,8 @@ export async function saveWeeklyScheduleAction(
           .insert({
             dentist_id: dentistId,
             day_of_week: day.day_of_week,
-            start_time: `${day.start_time}:00`,
-            end_time: `${day.end_time}:00`,
+            start_time: startTimePg,
+            end_time: endTimePg,
             is_active: day.is_active,
           });
       }

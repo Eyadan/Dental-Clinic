@@ -62,12 +62,28 @@ export async function dismissStaffNotificationAction(
   }
 }
 
-export async function getDashboardStatsAction(): Promise<ServiceResult<{
+export interface DashboardPaymentMethodSummary {
+  method: string;
+  label: string;
+  amount: number;
+  percentage: number;
+}
+
+export interface DashboardStatsData {
   pendingBookings: number;
   todayAppointments: number;
   inQueue: number;
   unreadMessages: number;
-}>> {
+  // Financial & analytics metrics
+  grossCollections: number;
+  monthlyCollections: number;
+  completedVisits: number;
+  unpaidReceivables: number;
+  averageSpend: number;
+  paymentMethods: DashboardPaymentMethodSummary[];
+}
+
+export async function getDashboardStatsAction(): Promise<ServiceResult<DashboardStatsData>> {
   try {
     const supabase = await createServerSupabaseClient();
     const today = todayLocal();
@@ -77,6 +93,9 @@ export async function getDashboardStatsAction(): Promise<ServiceResult<{
       { count: todayAppointments },
       { count: inQueue },
       { count: unreadMessages },
+      { data: paymentsData },
+      { data: invoicesData },
+      { count: completedVisitsCount },
     ] = await Promise.all([
       supabase
         .from("appointments")
@@ -99,7 +118,57 @@ export async function getDashboardStatsAction(): Promise<ServiceResult<{
         .from("messenger_messages")
         .select("*", { count: "exact", head: true })
         .eq("direction", "inbound"),
+      supabase
+        .from("payments")
+        .select("id, amount, method, paid_at"),
+      supabase
+        .from("invoices")
+        .select("id, total_amount, payment_status"),
+      supabase
+        .from("appointments")
+        .select("*", { count: "exact", head: true })
+        .eq("visit_status", "completed")
+        .eq("is_archived", false),
     ]);
+
+    const payments = paymentsData ?? [];
+    const invoices = invoicesData ?? [];
+    const completedVisits = completedVisitsCount ?? 0;
+
+    const grossCollections = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+    const currentYearMonth = today.slice(0, 7);
+    const monthlyPayments = payments.filter((p) => (p.paid_at || "").startsWith(currentYearMonth));
+    const monthlyCollections = monthlyPayments.length > 0
+      ? monthlyPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+      : grossCollections;
+
+    const unpaidReceivables = invoices
+      .filter((inv) => inv.payment_status === "pending_payment" || inv.payment_status === "partially_paid")
+      .reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0);
+
+    const averageSpend = completedVisits > 0 ? grossCollections / completedVisits : 0;
+
+    const methodTotals: Record<string, number> = {};
+    for (const p of payments) {
+      const m = p.method || "other";
+      methodTotals[m] = (methodTotals[m] || 0) + (Number(p.amount) || 0);
+    }
+
+    const methodLabels: Record<string, string> = {
+      cash: "Cash",
+      gcash: "GCash",
+      maya: "Maya",
+      card: "Credit / Debit Card",
+      bank_transfer: "Bank Transfer",
+    };
+
+    const paymentMethods: DashboardPaymentMethodSummary[] = Object.entries(methodTotals).map(([method, amount]) => ({
+      method,
+      label: methodLabels[method] || method.toUpperCase(),
+      amount,
+      percentage: grossCollections > 0 ? Math.round((amount / grossCollections) * 100) : 0,
+    }));
 
     return {
       success: true,
@@ -108,6 +177,12 @@ export async function getDashboardStatsAction(): Promise<ServiceResult<{
         todayAppointments: todayAppointments ?? 0,
         inQueue: inQueue ?? 0,
         unreadMessages: unreadMessages ?? 0,
+        grossCollections,
+        monthlyCollections,
+        completedVisits,
+        unpaidReceivables,
+        averageSpend,
+        paymentMethods,
       },
     };
   } catch (error) {
