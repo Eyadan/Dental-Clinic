@@ -614,11 +614,12 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
                 <p className="py-6 text-center text-xs text-muted-foreground italic">No payments recorded yet.</p>
               ) : (
                 invoice.payments.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-muted/20 font-mono text-xs">
-                    <div className="flex items-center gap-3">
+                  <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 rounded-xl border border-border/60 bg-muted/20 font-mono text-xs">
+                    <div className="flex items-center gap-3 min-w-0">
                       {p.proofImageUrl && (
                         <button
                           type="button"
+                          title="View proof photo"
                           onClick={() => setSelectedProofModalUrl(p.proofImageUrl)}
                           className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-cyan-500/40 group cursor-pointer"
                         >
@@ -628,19 +629,19 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
                           </div>
                         </button>
                       )}
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-bold text-foreground">{formatPeso(p.amount)}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase">{p.method} · {new Date(p.paidAt).toLocaleString("en-PH")}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase truncate">{p.method} · {new Date(p.paidAt).toLocaleString("en-PH")}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5 justify-start sm:justify-end shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleOpenReceiptHistory(p.id)}
                         className="h-7 text-[10px] border-border/80 text-foreground bg-card hover:bg-muted rounded-lg px-2 shadow-2xs"
                       >
-                        <History className="mr-1 h-3 w-3 text-cyan-600" /> View History
+                        <History className="mr-1 h-3 w-3 text-cyan-600" /> History
                       </Button>
 
                       {p.proofImageUrl && (
@@ -655,7 +656,7 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
                             }}
                             className="h-7 text-[10px] border-amber-500/30 text-amber-600 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg px-2 shadow-2xs"
                           >
-                            <Upload className="mr-1 h-3 w-3" /> Replace Photo
+                            <Upload className="mr-1 h-3 w-3" /> Replace
                           </Button>
 
                           <Button
@@ -664,7 +665,7 @@ export function BillingClient({ appointmentId, invoice: initialInvoice }: Billin
                             onClick={() => setSelectedProofModalUrl(p.proofImageUrl)}
                             className="h-7 text-[10px] border-cyan-500/30 text-cyan-600 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-lg px-2 shadow-2xs"
                           >
-                            <Eye className="mr-1 h-3 w-3" /> View Proof
+                            <Eye className="mr-1 h-3 w-3" /> Photo
                           </Button>
                         </>
                       )}

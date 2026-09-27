@@ -156,7 +156,7 @@ export function BillingListClient({ items }: BillingListClientProps) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filteredItems.map((item) => {
             const hasInvoice = !!item.invoiceId;
             const statusKey = item.paymentStatus ?? "pending_payment";
@@ -168,17 +168,17 @@ export function BillingListClient({ items }: BillingListClientProps) {
                 key={item.appointmentId}
                 className="border border-border/80 bg-card rounded-2xl shadow-xs hover:border-cyan-500/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between overflow-hidden"
               >
-                <CardHeader className="pb-3 pt-4 px-4 bg-muted/20 border-b border-border/40 flex flex-row items-center justify-between space-y-0">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-9 w-9 rounded-xl bg-cyan-600/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold text-xs">
+                <CardHeader className="pb-3 pt-4 px-4 bg-muted/20 border-b border-border/40 flex flex-row items-center justify-between space-y-0 gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="h-9 w-9 rounded-xl bg-cyan-600/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold text-xs shrink-0">
                       {getInitials(item.patientName)}
                     </div>
-                    <div>
-                      <h3 className="font-bold text-sm text-foreground leading-tight truncate max-w-[150px]">{item.patientName}</h3>
-                      <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Ref: {item.referenceNo}</p>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-sm text-foreground leading-tight truncate">{item.patientName}</h3>
+                      <p className="text-[10px] font-mono text-muted-foreground mt-0.5 truncate">Ref: {item.referenceNo}</p>
                     </div>
                   </div>
-                  <Badge variant="outline" className={`text-[10px] font-bold uppercase border ${statusStyle}`}>
+                  <Badge variant="outline" className={`text-[10px] font-bold uppercase border ${statusStyle} shrink-0 whitespace-nowrap`}>
                     {statusLabel}
                   </Badge>
                 </CardHeader>

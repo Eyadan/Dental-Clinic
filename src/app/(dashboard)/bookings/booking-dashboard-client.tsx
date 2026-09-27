@@ -248,7 +248,7 @@ export function BookingDashboardClient({ bookings: initialBookings, activeFilter
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filteredBookings.map((b) => {
             const headerStyle =
               b.booking_status === "pending" ? {

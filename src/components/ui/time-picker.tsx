@@ -83,13 +83,13 @@ export function TimePicker({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full h-10 px-3 flex items-center justify-between rounded-xl border text-xs font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/40 ${
+        className={`w-full h-10 px-2.5 sm:px-3 flex items-center justify-between rounded-xl border text-xs font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/40 ${
           isOpen
             ? "border-cyan-500 ring-2 ring-cyan-500/20 bg-background shadow-xs"
             : "border-border/80 bg-background hover:border-cyan-500/50 hover:bg-muted/20"
         } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${
             value ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400" : "text-muted-foreground"
           }`}>
