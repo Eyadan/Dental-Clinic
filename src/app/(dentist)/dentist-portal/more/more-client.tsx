@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { User, Phone, Mail, Calendar, AlertCircle, FileText, LogOut, Siren, Clock, Users, ArrowUpRight } from "lucide-react";
+import { User, Phone, Mail, Calendar, AlertCircle, FileText, LogOut, Siren, Clock, Users, ArrowUpRight, MessageSquare } from "lucide-react";
 
 interface PatientQuickView {
   id: string;
@@ -147,6 +147,12 @@ export function MorePageClient({
           <Button variant="outline" className="w-full" style={{ minHeight: "44px" }}>
             <FileText className="mr-2 h-4 w-4" />
             View Queue
+          </Button>
+        </Link>
+        <Link href="/chat" className="block">
+          <Button variant="outline" className="w-full" style={{ minHeight: "44px" }}>
+            <MessageSquare className="mr-2 h-4 w-4" />
+            Live Chat
           </Button>
         </Link>
       </div>

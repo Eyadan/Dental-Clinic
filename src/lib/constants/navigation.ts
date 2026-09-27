@@ -98,7 +98,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Live Chat",
     href: "/chat",
     icon: MessageSquare,
-    roles: ["reception"],
+    roles: ["admin", "reception", "dentist"],
   },
   {
     label: "Schedule & Leave",

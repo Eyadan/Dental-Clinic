@@ -41,11 +41,11 @@ function getDominantColor(findings: ToothFinding[], surface: ToothSurface): stri
 }
 
 export function ToothIcon({ number, findings, presence, selectedSurfaces, onSurfaceClick, small }: ToothIconProps) {
-  const size = small ? 28 : 42;
+  const size = small ? 28 : 44;
   const cx = size / 2;
   const cy = size / 2;
-  const outerR = small ? 11 : 17;
-  const innerR = small ? 5 : 7.5;
+  const outerR = small ? 11 : 18;
+  const innerR = small ? 5 : 8.5;
 
   const top = { x: cx, y: cy - outerR };
   const right = { x: cx + outerR, y: cy };
@@ -79,22 +79,26 @@ export function ToothIcon({ number, findings, presence, selectedSurfaces, onSurf
   const ringStroke = presenceColor ? hexFromBorder(presenceColor) : "#cbd5e1";
   const ringFill = presenceColor ? hexFromBg(presenceColor) : "white";
 
+  const isOcclusalSelected = selectedSurfaces.has("occlusal");
+  const occlusalFill = isOcclusalSelected ? "#38bdf8" : hexFromBg(getDominantColor(findings, "occlusal"));
+  const occlusalStroke = isOcclusalSelected ? "#0284c7" : hexFromBorder(getDominantColor(findings, "occlusal"));
+
   return (
     <svg
       width={size}
       height={size}
       viewBox={`0 0 ${size} ${size}`}
-      className="overflow-visible"
+      className="overflow-visible select-none"
+      style={{ touchAction: "manipulation" }}
       role="img"
       aria-label={`Tooth ${number} diagram with 5 tappable surfaces`}
     >
       <circle cx={cx} cy={cy} r={outerR} fill={ringFill} stroke={ringStroke} strokeWidth={presence && presence !== "present" ? 2 : 1} />
       {segments.map(({ surface, d }) => {
         const colorClass = getDominantColor(findings, surface);
-        const fillHex = hexFromBg(colorClass);
-        const strokeHex = hexFromBorder(colorClass);
         const isSelected = selectedSurfaces.has(surface);
-        const surfaceFindings = getSurfaceFindings(findings, surface);
+        const fillHex = isSelected ? "#38bdf8" : hexFromBg(colorClass);
+        const strokeHex = isSelected ? "#0284c7" : hexFromBorder(colorClass);
 
         return (
           <path
@@ -102,14 +106,19 @@ export function ToothIcon({ number, findings, presence, selectedSurfaces, onSurf
             d={d}
             fill={fillHex}
             stroke={strokeHex}
-            strokeWidth={1.2}
-            className="cursor-pointer transition-all hover:opacity-80"
+            strokeWidth={isSelected ? 2.2 : 1.2}
+            className="cursor-pointer transition-colors hover:opacity-80 active:opacity-70"
+            style={{
+              touchAction: "manipulation",
+              filter: isSelected ? "drop-shadow(0 0 3px rgba(6, 182, 212, 0.9))" : undefined,
+            }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+            }}
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               onSurfaceClick(surface);
-            }}
-            style={{
-              filter: isSelected ? "drop-shadow(0 0 2px #06b6d4)" : undefined,
             }}
           />
         );
@@ -118,16 +127,21 @@ export function ToothIcon({ number, findings, presence, selectedSurfaces, onSurf
         cx={cx}
         cy={cy}
         r={innerR}
-        fill={hexFromBg(getDominantColor(findings, "occlusal"))}
-        stroke={hexFromBorder(getDominantColor(findings, "occlusal"))}
-        strokeWidth={1.2}
-        className="cursor-pointer transition-all hover:opacity-80"
+        fill={occlusalFill}
+        stroke={occlusalStroke}
+        strokeWidth={isOcclusalSelected ? 2.4 : 1.2}
+        className="cursor-pointer transition-colors hover:opacity-80 active:opacity-70"
+        style={{
+          touchAction: "manipulation",
+          filter: isOcclusalSelected ? "drop-shadow(0 0 3px rgba(6, 182, 212, 0.9))" : undefined,
+        }}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+        }}
         onClick={(e) => {
+          e.preventDefault();
           e.stopPropagation();
           onSurfaceClick("occlusal");
-        }}
-        style={{
-          filter: selectedSurfaces.has("occlusal") ? "drop-shadow(0 0 2px #06b6d4)" : undefined,
         }}
       />
       {segments.map(({ surface }) => {

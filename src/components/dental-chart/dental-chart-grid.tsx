@@ -54,15 +54,24 @@ function ToothCell({
   const hasRestoration = toothFindings.some((f) => f.category === "restoration");
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       id={`tooth-cell-${number}`}
-      onClick={onClick}
+      onClick={() => {
+        onClick();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       title={`Tooth ${number}${tooltipParts.length ? " — " + tooltipParts.join("; ") : ""}`}
       aria-label={`Tooth ${number}${tooltipParts.length ? " — " + tooltipParts.join("; ") : ""}`}
       className={cn(
-        "relative flex items-center justify-center rounded-full transition-transform hover:scale-105 hover:z-10 focus-visible:outline-none shrink-0",
-        small ? "h-7 w-7" : "h-10 w-10 sm:h-11 sm:w-11",
+        "relative flex items-center justify-center rounded-full transition-transform hover:scale-105 hover:z-10 focus-visible:outline-none shrink-0 cursor-pointer select-none",
+        small ? "h-7 w-7" : "h-11 w-11 sm:h-12 sm:w-12",
         isSelected && "ring-2 ring-cyan-500 ring-offset-2 z-10 rounded-full",
       )}
     >
@@ -79,7 +88,7 @@ function ToothCell({
           R
         </span>
       )}
-    </button>
+    </div>
   );
 }
 

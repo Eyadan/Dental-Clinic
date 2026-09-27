@@ -22,8 +22,9 @@ export async function GET() {
       total_duration,
       visit_status,
       booking_status,
-      patients(first_name, last_name),
-      dentists(users(first_name, last_name))
+      patients(first_name, last_name, contact_no),
+      dentists(users(first_name, last_name)),
+      appointment_services(dental_services(name))
     `)
     .eq("scheduled_date", today)
     .eq("is_archived", false)
@@ -35,18 +36,26 @@ export async function GET() {
   }
 
   const items = (appointments ?? []).map((appt: Record<string, unknown>) => {
-    const patient = getSingleJoined<{ first_name: string; last_name: string }>(appt.patients);
+    const patient = getSingleJoined<{ first_name: string; last_name: string; contact_no?: string | null }>(appt.patients);
     const dentist = getSingleJoined<{ users: unknown }>(appt.dentists);
     const dentistUser = dentist ? getSingleJoined<{ first_name: string; last_name: string }>(dentist.users) : null;
+    
+    const rawServices = appt.appointment_services as unknown as Array<{ dental_services: { name: string } | null }> | null;
+    const services: string[] = (rawServices ?? [])
+      .map((s) => s.dental_services?.name)
+      .filter((name): name is string => Boolean(name));
+
     return {
       id: appt.id as string,
       reference_no: appt.reference_no as string,
       scheduled_time: (appt.scheduled_time as string).slice(0, 5),
-      total_duration: appt.total_duration as number,
+      total_duration: (appt.total_duration as number) || 30,
       visit_status: appt.visit_status as string,
       booking_status: appt.booking_status as string,
       patient_name: patient ? `${patient.first_name} ${patient.last_name}` : "Unknown Patient",
+      contact_no: patient?.contact_no ?? null,
       dentist_name: dentistUser ? `${dentistUser.first_name} ${dentistUser.last_name}` : "Unknown Dentist",
+      services,
     };
   });
 
