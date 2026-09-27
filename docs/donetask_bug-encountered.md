@@ -187,6 +187,7 @@
 | BUG-110 | 2026-09-27 16:15 | 10 | DEV-01 | Medium | Fixed | Raw `<script>` tag in `src/app/layout.tsx` triggered React 19 / Turbopack client overlay modal on iPad/mobile | Open app in mobile Safari / iPad on LAN dev server | Clean page load without intrusive runtime error modal | Turbopack dev runtime modal popped up citing raw script insertion in React 19 tree | Migrated extension error suppression script to Next.js `<Script id="extension-error-guard" strategy="beforeInteractive">` | 2026-09-27 16:18 |
 | FEAT-111 | 2026-09-27 16:20 | 10 | NAV-02 | Medium | Fixed | Attending dentists lacked access to Live Chat (`/chat`) to message patients or staff directly from the clinic system | Log in as Dentist and attempt to navigate to `/chat` or access Live Chat | Dentist accesses Live Chat conversation list and messaging workspace | Redirected to `/unauthorized` ("Access Restricted") because middleware and navigation omitted `'dentist'` role | Added `'dentist'` to `/chat` in `middleware.ts` ROLE_ROUTES, updated `navigation.ts`, and added Live Chat quick link in `dentist-portal/more/more-client.tsx` | 2026-09-27 16:25 |
 | UI-112 | 2026-09-27 16:25 | 10 | QUE-01 | Low | Fixed | Queue action buttons (`Call`, `Delay`, `Move`, `No-Show`) on `/queue` had inconsistent sizing, basic styling, and lacked visual hierarchy | View `/queue` desk with active checked-in or waiting patients | Action buttons are visually cohesive, distinct, and compact while preserving single-row horizontal patient layout | Inconsistent button heights, borders, and icon alignments | Polished queue action buttons with unified heights, semantic color tokens, subtle hover transitions, and clean icons while strictly preserving single-row horizontal card layout | 2026-09-27 16:30 |
+| BUG-113 | 2026-09-27 17:15 | 10 | CHAT-01 | High | Fixed | Dentist Live Chat displayed "No active conversations" and omitted all chats while Reception saw full conversation threads | Log in as Dentist (`dentist@clinic.local`) and navigate to `/chat` | Dentist sees all active patient Messenger conversations, message history, and unread counts matching Reception desk | Empty conversation list with 0 messages displayed | PostgreSQL Row-Level Security (RLS) on `messenger_conversations` and `messenger_messages` explicitly restricted SELECT, INSERT, and UPDATE to `get_user_role() IN ('reception', 'admin')`, silently filtering out all rows for dentists. Created migration `20260927171500_fix_messenger_rls_for_dentist.sql` and updated `supabase/schema.sql` to include `'dentist'` across all 6 policies. Applied migration via `npx supabase migration up`. | 2026-09-27 17:18 |
 
 ---
 
@@ -195,9 +196,10 @@
 | Severity | Open | In Progress | Fixed | Won't Fix | Total |
 |---|---|---|---|---|---|
 | Critical | 1 | 0 | 6 | 0 | 7 |
-| High | 0 | 0 | 23 | 0 | 23 |
+| High | 0 | 0 | 24 | 0 | 24 |
 | Medium | 0 | 0 | 24 | 0 | 24 |
 | Low | 0 | 0 | 9 | 0 | 9 |
-| **Total** | **1** | **0** | **62** | **0** | **63** |
+| **Total** | **1** | **0** | **63** | **0** | **64** |
+
 
 

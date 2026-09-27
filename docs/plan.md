@@ -394,6 +394,7 @@ Verified against `schema.sql` RLS policies and the codebase:
 | IOS-01 | Prevent iOS Safari Viewport Rubber-Banding Blank Screen Overscroll | ✅ Done | 🟠 High | Anchored `DashboardShell` layout with `overscroll-behavior: none` and `overscroll-contain` to stop canvas shift. |
 | DEV-01 | Next.js Script Migration for React 19 Overlay Prevention | ✅ Done | 🟡 Medium | Migrated raw script tag in `layout.tsx` to `<Script strategy="beforeInteractive">` to prevent dev runtime overlay errors. |
 | QUE-01 | Queue Action Buttons Visual & Layout Alignment | ✅ Done | 🟢 Low | Polished `Call`, `Delay`, `Move`, and `No-Show` action buttons on `/queue` while strictly preserving single-row layout and 3-card KPI row. |
+| CHAT-01 | Enable Dentist Access to Live Chat in PostgreSQL RLS Policies | ✅ Done | 🟠 High | Updated RLS policies on `messenger_conversations` and `messenger_messages` to allow `get_user_role() IN ('reception', 'admin', 'dentist')`. |
 
 ---
 

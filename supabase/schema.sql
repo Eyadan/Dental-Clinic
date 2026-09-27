@@ -1657,29 +1657,29 @@ DROP POLICY IF EXISTS booking_sessions_service_role_all ON booking_sessions;
 CREATE POLICY booking_sessions_service_role_all ON booking_sessions FOR ALL TO service_role
   USING (true) WITH CHECK (true);
 
--- MESSENGER_CONVERSATIONS (reception + admin)
+-- MESSENGER_CONVERSATIONS (reception + admin + dentist)
 DROP POLICY IF EXISTS messenger_conversations_select ON messenger_conversations;
 CREATE POLICY messenger_conversations_select ON messenger_conversations FOR SELECT TO authenticated
-  USING (get_user_role() IN ('reception', 'admin'));
+  USING (get_user_role() IN ('reception', 'admin', 'dentist'));
 DROP POLICY IF EXISTS messenger_conversations_insert ON messenger_conversations;
 CREATE POLICY messenger_conversations_insert ON messenger_conversations FOR INSERT TO authenticated
-  WITH CHECK (get_user_role() IN ('reception', 'admin'));
+  WITH CHECK (get_user_role() IN ('reception', 'admin', 'dentist'));
 DROP POLICY IF EXISTS messenger_conversations_update ON messenger_conversations;
 CREATE POLICY messenger_conversations_update ON messenger_conversations FOR UPDATE TO authenticated
-  USING (get_user_role() IN ('reception', 'admin'))
-  WITH CHECK (get_user_role() IN ('reception', 'admin'));
+  USING (get_user_role() IN ('reception', 'admin', 'dentist'))
+  WITH CHECK (get_user_role() IN ('reception', 'admin', 'dentist'));
 
 -- MESSENGER_MESSAGES (INSERT only — immutable; UPDATE for is_read)
 DROP POLICY IF EXISTS messenger_messages_select ON messenger_messages;
 CREATE POLICY messenger_messages_select ON messenger_messages FOR SELECT TO authenticated
-  USING (get_user_role() IN ('reception', 'admin'));
+  USING (get_user_role() IN ('reception', 'admin', 'dentist'));
 DROP POLICY IF EXISTS messenger_messages_insert ON messenger_messages;
 CREATE POLICY messenger_messages_insert ON messenger_messages FOR INSERT TO authenticated
-  WITH CHECK (get_user_role() IN ('reception', 'admin'));
+  WITH CHECK (get_user_role() IN ('reception', 'admin', 'dentist'));
 DROP POLICY IF EXISTS messenger_messages_update_is_read ON messenger_messages;
 CREATE POLICY messenger_messages_update_is_read ON messenger_messages FOR UPDATE TO authenticated
-  USING (get_user_role() IN ('reception', 'admin'))
-  WITH CHECK (get_user_role() IN ('reception', 'admin'));
+  USING (get_user_role() IN ('reception', 'admin', 'dentist'))
+  WITH CHECK (get_user_role() IN ('reception', 'admin', 'dentist'));
 
 -- REASSIGNMENT_LOGS (INSERT only — immutable)
 DROP POLICY IF EXISTS reassignment_logs_select ON reassignment_logs;
