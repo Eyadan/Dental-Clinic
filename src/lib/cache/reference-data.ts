@@ -9,6 +9,7 @@ import type {
   Dentist,
   DentistSchedule,
 } from "@/lib/types/database";
+import { DEFAULT_PDA_CONSENT_CLAUSES } from "@/lib/constants/consent-clauses";
 
 /**
  * Cross-request cache for reference data.
@@ -35,11 +36,16 @@ export const CACHE_TAGS = {
 
 // unstable_cache cannot call cookies()/headers(), so cached functions build
 // their own cookie-free client. Service role is safe here ONLY because every
+// unstable_cache cannot call cookies()/headers(), so cached functions build
+// their own cookie-free client. Service role is safe here ONLY because every
 // table above returns identical rows for all users.
 function getCacheClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key =
-    process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_SECRET_KEY ??
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
     throw new Error("Missing Supabase env vars for cached reference data");
   }
@@ -65,13 +71,19 @@ export const getCachedMedicalConditions = unstable_cache(
 
 export const getCachedConsentClauses = unstable_cache(
   async (): Promise<ConsentClause[]> => {
-    const { data, error } = await getCacheClient()
-      .from("consent_clauses")
-      .select("*")
-      .eq("is_active", true)
-      .order("sort_order");
-    if (error) throw new Error(error.message);
-    return data ?? [];
+    try {
+      const { data, error } = await getCacheClient()
+        .from("consent_clauses")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (!error && data && data.length > 0) {
+        return data;
+      }
+    } catch {
+      // ignore and return default
+    }
+    return DEFAULT_PDA_CONSENT_CLAUSES;
   },
   ["consent-clauses"],
   { tags: [CACHE_TAGS.consentClauses], revalidate: DAY },

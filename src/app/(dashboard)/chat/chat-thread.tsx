@@ -33,7 +33,16 @@ export function ChatThread({ conversation, staffId, onConversationChange }: Chat
   const loadMessages = useCallback(async () => {
     const result = await getMessagesAction(conversation.id);
     if (result.success && result.data) {
-      setMessages(result.data);
+      const freshMessages = result.data;
+      setMessages((prev) => {
+        if (
+          prev.length === freshMessages.length &&
+          prev[prev.length - 1]?.id === freshMessages[freshMessages.length - 1]?.id
+        ) {
+          return prev;
+        }
+        return freshMessages;
+      });
     } else {
       setError(result.error ?? "Failed to load messages");
     }
@@ -53,6 +62,20 @@ export function ChatThread({ conversation, staffId, onConversationChange }: Chat
   }, [messages]);
 
   useEffect(() => {
+    // 2.5-second polling fallback so messages update even if WebSockets are interrupted
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadMessages();
+      }
+    }, 2500);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        loadMessages();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     const supabase = createBrowserSupabaseClient();
     const channel = supabase
       .channel(`messages-${conversation.id}`)
@@ -68,6 +91,8 @@ export function ChatThread({ conversation, staffId, onConversationChange }: Chat
       .subscribe();
 
     return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       supabase.removeChannel(channel);
     };
   }, [conversation.id, loadMessages]);

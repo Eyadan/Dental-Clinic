@@ -394,6 +394,11 @@ Verified against `schema.sql` RLS policies and the codebase:
 | IOS-01 | Prevent iOS Safari Viewport Rubber-Banding Blank Screen Overscroll | ✅ Done | 🟠 High | Anchored `DashboardShell` layout with `overscroll-behavior: none` and `overscroll-contain` to stop canvas shift. |
 | DEV-01 | Next.js Script Migration for React 19 Overlay Prevention | ✅ Done | 🟡 Medium | Migrated raw script tag in `layout.tsx` to `<Script strategy="beforeInteractive">` to prevent dev runtime overlay errors. |
 | QUE-01 | Queue Action Buttons Visual & Layout Alignment | ✅ Done | 🟢 Low | Polished `Call`, `Delay`, `Move`, and `No-Show` action buttons on `/queue` while strictly preserving single-row layout and 3-card KPI row. |
+| CHAT-01 | Enable Dentist Access to Live Chat in PostgreSQL RLS Policies | ✅ Done | 🟠 High | Updated RLS policies on `messenger_conversations` and `messenger_messages` to allow `get_user_role() IN ('reception', 'admin', 'dentist')`. |
+| CHAT-02 | Supabase Realtime Publication Registration & Live Chat Polling Fallback | ✅ Done | 🟠 High | Registered `messenger_conversations` and `messenger_messages` in `supabase_realtime` publication (`REPLICA IDENTITY FULL`), added 2.5s polling in `ChatThread` and 3.5s in `ChatClient`. |
+| NAV-03 | Patient Check-In & Arrival Desk Sidebar Navigation Enablement for Dentists | ✅ Done | 🟡 Medium | Added `'dentist'` to `roles` for `Check-In` in `src/lib/constants/navigation.ts`. |
+| CONS-01 | PDA Consent Clauses Restoration & Mobile/Web View Signing Enablement | ✅ Done | 🟠 High | Fixed empty consent checklist on `/consultation/[appointmentId]`, added canonical PDA clauses fallback, Select All helper, direct mobile/tablet signing button, and reception consent access. |
+
 
 ---
 

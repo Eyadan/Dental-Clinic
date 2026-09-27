@@ -11,7 +11,7 @@ const ROLE_ROUTES: Record<string, UserRole[]> = {
   "/audit": ["admin"],
   "/patients/archived": ["admin"],
   "/consultation": ["admin", "dentist"],
-  "/consent": ["admin", "dentist"],
+  "/consent": ["admin", "reception", "dentist"],
   "/check-in": ["admin", "reception", "dentist"],
   "/chat": ["admin", "reception", "dentist"],
   "/bookings": ["admin", "reception", "dentist"],
