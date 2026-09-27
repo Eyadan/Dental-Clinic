@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import type { ToothPresence, ToothFinding } from "@/lib/types/database";
 import type { ToothSurface } from "@/lib/types/enums";
@@ -55,13 +56,14 @@ function ToothCell({
   return (
     <button
       type="button"
+      id={`tooth-cell-${number}`}
       onClick={onClick}
       title={`Tooth ${number}${tooltipParts.length ? " — " + tooltipParts.join("; ") : ""}`}
       aria-label={`Tooth ${number}${tooltipParts.length ? " — " + tooltipParts.join("; ") : ""}`}
       className={cn(
-        "relative flex items-center justify-center rounded-full transition-all hover:scale-110 hover:z-10 focus-visible:outline-none shrink-0",
-        small ? "h-6 w-6" : "h-8 w-8 sm:h-8 sm:w-8 md:h-9 md:w-9 lg:h-11 lg:w-11",
-        isSelected && "ring-2 ring-cyan-500 ring-offset-1 z-10 rounded-full",
+        "relative flex items-center justify-center rounded-full transition-transform hover:scale-105 hover:z-10 focus-visible:outline-none shrink-0",
+        small ? "h-7 w-7" : "h-10 w-10 sm:h-11 sm:w-11",
+        isSelected && "ring-2 ring-cyan-500 ring-offset-2 z-10 rounded-full",
       )}
     >
       <ToothIcon
@@ -73,7 +75,7 @@ function ToothCell({
         small={small}
       />
       {hasRestoration && (
-        <span className="absolute -bottom-1 -right-1 rounded bg-blue-600 px-1 text-[9px] font-bold text-white leading-tight shadow-sm">
+        <span className="absolute -bottom-1 -right-1 rounded bg-blue-600 px-1 text-[9px] font-bold text-white leading-tight shadow-sm pointer-events-none">
           R
         </span>
       )}
@@ -103,15 +105,15 @@ function ArchRow({
   numberPosition?: "above" | "below";
 }) {
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-1 sm:gap-1.5 shrink-0">
       {numbers.map((n) => {
         const numberLabel = (
-          <span key={`label-${n}`} className="text-[10px] font-bold text-muted-foreground tabular-nums">
+          <span key={`label-${n}`} className="text-[10px] sm:text-xs font-bold text-muted-foreground tabular-nums select-none">
             {n}
           </span>
         );
         return (
-          <div key={n} className="flex flex-col items-center gap-0.5">
+          <div key={n} className="flex flex-col items-center gap-0.5 shrink-0">
             {numberPosition === "above" && numberLabel}
             <ToothCell
               number={n}
@@ -131,7 +133,15 @@ function ArchRow({
   );
 }
 
-export function DentalChartGrid({ presence, findings, selectedTooth, selectedSurfaces, onToothClick, onSurfaceClick, showTemporary }: DentalChartGridProps) {
+export function DentalChartGrid({
+  presence,
+  findings,
+  selectedTooth,
+  selectedSurfaces,
+  onToothClick,
+  onSurfaceClick,
+  showTemporary,
+}: DentalChartGridProps) {
   const presenceMap = new Map(presence.map((p) => [p.tooth_number, p.presence]));
   const findingsMap = new Map<number, ToothFinding[]>();
   for (const f of findings) {
@@ -140,47 +150,301 @@ export function DentalChartGrid({ presence, findings, selectedTooth, selectedSur
     findingsMap.set(f.tooth_number, existing);
   }
 
+  const upperScrollRef = useRef<HTMLDivElement>(null);
+  const lowerScrollRef = useRef<HTMLDivElement>(null);
+  const isSyncingUpper = useRef(false);
+  const isSyncingLower = useRef(false);
+  const [activeSide, setActiveSide] = useState<"right" | "center" | "left">("right");
+
+  const updateActiveSide = (scrollLeft: number, maxScroll: number) => {
+    if (maxScroll <= 10) {
+      setActiveSide("right");
+      return;
+    }
+    const ratio = scrollLeft / maxScroll;
+    if (ratio < 0.3) {
+      setActiveSide("right");
+    } else if (ratio > 0.7) {
+      setActiveSide("left");
+    } else {
+      setActiveSide("center");
+    }
+  };
+
+  const handleUpperScroll = () => {
+    if (isSyncingUpper.current) {
+      isSyncingUpper.current = false;
+      return;
+    }
+    const upperEl = upperScrollRef.current;
+    const lowerEl = lowerScrollRef.current;
+    if (upperEl) {
+      if (lowerEl) {
+        isSyncingLower.current = true;
+        lowerEl.scrollLeft = upperEl.scrollLeft;
+      }
+      updateActiveSide(upperEl.scrollLeft, upperEl.scrollWidth - upperEl.clientWidth);
+    }
+  };
+
+  const handleLowerScroll = () => {
+    if (isSyncingLower.current) {
+      isSyncingLower.current = false;
+      return;
+    }
+    const upperEl = upperScrollRef.current;
+    const lowerEl = lowerScrollRef.current;
+    if (lowerEl) {
+      if (upperEl) {
+        isSyncingUpper.current = true;
+        upperEl.scrollLeft = lowerEl.scrollLeft;
+      }
+      updateActiveSide(lowerEl.scrollLeft, lowerEl.scrollWidth - lowerEl.clientWidth);
+    }
+  };
+
+  const scrollToSide = (target: "right" | "center" | "left") => {
+    const upperEl = upperScrollRef.current;
+    const lowerEl = lowerScrollRef.current;
+    if (!upperEl) return;
+
+    const maxScroll = upperEl.scrollWidth - upperEl.clientWidth;
+    let targetLeft = 0;
+    if (target === "left") {
+      targetLeft = maxScroll;
+    } else if (target === "center") {
+      targetLeft = maxScroll / 2;
+    }
+
+    upperEl.scrollTo({ left: targetLeft, behavior: "smooth" });
+    lowerEl?.scrollTo({ left: targetLeft, behavior: "smooth" });
+    setActiveSide(target);
+  };
+
+  // Auto-scroll to selected tooth if outside current view on mobile
+  useEffect(() => {
+    if (!selectedTooth) return;
+    const toothEl = document.getElementById(`tooth-cell-${selectedTooth}`);
+    if (toothEl) {
+      toothEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [selectedTooth]);
+
   return (
     <div className="space-y-3">
-      {/* Mobile Swipe Hint */}
-      <div className="flex sm:hidden items-center justify-between px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-[11px] text-cyan-700 dark:text-cyan-300 font-medium">
-        <span>Scroll horizontally to inspect full arch</span>
-        <span className="font-mono text-[10px] font-bold">FDI Chart</span>
+      {/* Mobile Swipe Navigation and Quadrant Switcher */}
+      <div className="flex sm:hidden flex-col gap-2">
+        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-[11px] text-cyan-700 dark:text-cyan-300 font-medium">
+          <span>Swipe horizontally to inspect full arches</span>
+          <span className="font-mono text-[10px] font-bold">FDI Chart</span>
+        </div>
+
+        {/* Quick jump pills for mobile */}
+        <div className="grid grid-cols-3 gap-1 bg-muted/60 p-1 rounded-xl text-center">
+          <button
+            type="button"
+            onClick={() => scrollToSide("right")}
+            className={cn(
+              "py-1.5 px-2 text-xs font-semibold rounded-lg transition-all",
+              activeSide === "right"
+                ? "bg-white dark:bg-card text-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Right (Q1 / Q4)
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSide("center")}
+            className={cn(
+              "py-1.5 px-2 text-xs font-semibold rounded-lg transition-all",
+              activeSide === "center"
+                ? "bg-white dark:bg-card text-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Midline
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSide("left")}
+            className={cn(
+              "py-1.5 px-2 text-xs font-semibold rounded-lg transition-all",
+              activeSide === "left"
+                ? "bg-white dark:bg-card text-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Left (Q2 / Q3)
+          </button>
+        </div>
       </div>
 
+      {/* Upper Arch (Maxillary) */}
       <div className="rounded-xl border bg-card p-3 sm:p-4 space-y-2.5">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Right (Q1)</span>
           <p className="text-xs font-bold text-foreground uppercase tracking-wide">Upper Arch (Maxillary)</p>
           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Left (Q2)</span>
         </div>
+
         {showTemporary && (
-          <div className="flex justify-center gap-1.5 pb-2 border-b border-dashed border-border/60 overflow-x-auto touch-pan-x no-scrollbar max-w-full">
-            <ArchRow numbers={TEMPORARY_UPPER_RIGHT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} small numberPosition="above" />
-            <div className="w-px self-stretch bg-border mx-1" />
-            <ArchRow numbers={TEMPORARY_UPPER_LEFT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} small numberPosition="above" />
+          <div className="overflow-x-auto touch-pan-x overscroll-x-contain pb-2 border-b border-dashed border-border/60 max-w-full scrollbar-thin">
+            <div className="inline-flex min-w-full items-center justify-start lg:justify-center gap-1.5 px-3">
+              <ArchRow
+                numbers={TEMPORARY_UPPER_RIGHT}
+                presenceMap={presenceMap}
+                findingsMap={findingsMap}
+                selectedTooth={selectedTooth}
+                selectedSurfaces={selectedSurfaces}
+                onToothClick={onToothClick}
+                onSurfaceClick={onSurfaceClick}
+                small
+                numberPosition="above"
+              />
+              <div className="w-px self-stretch bg-border mx-2 shrink-0" />
+              <ArchRow
+                numbers={TEMPORARY_UPPER_LEFT}
+                presenceMap={presenceMap}
+                findingsMap={findingsMap}
+                selectedTooth={selectedTooth}
+                selectedSurfaces={selectedSurfaces}
+                onToothClick={onToothClick}
+                onSurfaceClick={onSurfaceClick}
+                small
+                numberPosition="above"
+              />
+            </div>
           </div>
         )}
-        <div className="flex justify-center gap-1.5 overflow-x-auto touch-pan-x no-scrollbar max-w-full pb-2 pt-1">
-          <ArchRow numbers={PERMANENT_UPPER_RIGHT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} numberPosition="above" />
-          <div className="w-px self-stretch bg-border mx-1" />
-          <ArchRow numbers={PERMANENT_UPPER_LEFT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} numberPosition="above" />
+
+        <div
+          ref={upperScrollRef}
+          onScroll={handleUpperScroll}
+          className="overflow-x-auto touch-pan-x overscroll-x-contain pb-2 pt-1 max-w-full scrollbar-thin scrollbar-thumb-muted-foreground/20"
+        >
+          <div className="inline-flex min-w-full items-center justify-start lg:justify-center gap-1.5 px-3">
+            {/* Q1 Upper Right (18 to 11) */}
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/50 px-1.5 py-0.5 rounded mb-1 lg:hidden">
+                Q1 (Right)
+              </span>
+              <ArchRow
+                numbers={PERMANENT_UPPER_RIGHT}
+                presenceMap={presenceMap}
+                findingsMap={findingsMap}
+                selectedTooth={selectedTooth}
+                selectedSurfaces={selectedSurfaces}
+                onToothClick={onToothClick}
+                onSurfaceClick={onSurfaceClick}
+                numberPosition="above"
+              />
+            </div>
+
+            {/* Midline Divider */}
+            <div className="w-px self-stretch bg-border/80 mx-2 shrink-0 flex flex-col justify-center items-center">
+              <span className="text-[8px] font-mono text-muted-foreground/60 select-none">|</span>
+            </div>
+
+            {/* Q2 Upper Left (21 to 28) */}
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/50 px-1.5 py-0.5 rounded mb-1 lg:hidden">
+                Q2 (Left)
+              </span>
+              <ArchRow
+                numbers={PERMANENT_UPPER_LEFT}
+                presenceMap={presenceMap}
+                findingsMap={findingsMap}
+                selectedTooth={selectedTooth}
+                selectedSurfaces={selectedSurfaces}
+                onToothClick={onToothClick}
+                onSurfaceClick={onSurfaceClick}
+                numberPosition="above"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Lower Arch (Mandibular) */}
       <div className="rounded-xl border bg-card p-3 sm:p-4 space-y-2.5">
-        <div className="flex justify-center gap-1.5 overflow-x-auto touch-pan-x no-scrollbar max-w-full pb-2 pt-1">
-          <ArchRow numbers={PERMANENT_LOWER_RIGHT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} numberPosition="below" />
-          <div className="w-px self-stretch bg-border mx-1" />
-          <ArchRow numbers={PERMANENT_LOWER_LEFT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} numberPosition="below" />
+        <div
+          ref={lowerScrollRef}
+          onScroll={handleLowerScroll}
+          className="overflow-x-auto touch-pan-x overscroll-x-contain pb-2 pt-1 max-w-full scrollbar-thin scrollbar-thumb-muted-foreground/20"
+        >
+          <div className="inline-flex min-w-full items-center justify-start lg:justify-center gap-1.5 px-3">
+            {/* Q4 Lower Right (48 to 41) */}
+            <div className="flex flex-col items-center">
+              <ArchRow
+                numbers={PERMANENT_LOWER_RIGHT}
+                presenceMap={presenceMap}
+                findingsMap={findingsMap}
+                selectedTooth={selectedTooth}
+                selectedSurfaces={selectedSurfaces}
+                onToothClick={onToothClick}
+                onSurfaceClick={onSurfaceClick}
+                numberPosition="below"
+              />
+              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/50 px-1.5 py-0.5 rounded mt-1 lg:hidden">
+                Q4 (Right)
+              </span>
+            </div>
+
+            {/* Midline Divider */}
+            <div className="w-px self-stretch bg-border/80 mx-2 shrink-0 flex flex-col justify-center items-center">
+              <span className="text-[8px] font-mono text-muted-foreground/60 select-none">|</span>
+            </div>
+
+            {/* Q3 Lower Left (31 to 38) */}
+            <div className="flex flex-col items-center">
+              <ArchRow
+                numbers={PERMANENT_LOWER_LEFT}
+                presenceMap={presenceMap}
+                findingsMap={findingsMap}
+                selectedTooth={selectedTooth}
+                selectedSurfaces={selectedSurfaces}
+                onToothClick={onToothClick}
+                onSurfaceClick={onSurfaceClick}
+                numberPosition="below"
+              />
+              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/50 px-1.5 py-0.5 rounded mt-1 lg:hidden">
+                Q3 (Left)
+              </span>
+            </div>
+          </div>
         </div>
+
         {showTemporary && (
-          <div className="flex justify-center gap-1.5 pt-2 border-t border-dashed border-border/60 overflow-x-auto touch-pan-x no-scrollbar max-w-full">
-            <ArchRow numbers={TEMPORARY_LOWER_RIGHT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} small numberPosition="below" />
-            <div className="w-px self-stretch bg-border mx-1" />
-            <ArchRow numbers={TEMPORARY_LOWER_LEFT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} small numberPosition="below" />
+          <div className="overflow-x-auto touch-pan-x overscroll-x-contain pt-2 border-t border-dashed border-border/60 max-w-full scrollbar-thin">
+            <div className="inline-flex min-w-full items-center justify-start lg:justify-center gap-1.5 px-3">
+              <ArchRow
+                numbers={TEMPORARY_LOWER_RIGHT}
+                presenceMap={presenceMap}
+                findingsMap={findingsMap}
+                selectedTooth={selectedTooth}
+                selectedSurfaces={selectedSurfaces}
+                onToothClick={onToothClick}
+                onSurfaceClick={onSurfaceClick}
+                small
+                numberPosition="below"
+              />
+              <div className="w-px self-stretch bg-border mx-2 shrink-0" />
+              <ArchRow
+                numbers={TEMPORARY_LOWER_LEFT}
+                presenceMap={presenceMap}
+                findingsMap={findingsMap}
+                selectedTooth={selectedTooth}
+                selectedSurfaces={selectedSurfaces}
+                onToothClick={onToothClick}
+                onSurfaceClick={onSurfaceClick}
+                small
+                numberPosition="below"
+              />
+            </div>
           </div>
         )}
+
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Right (Q4)</span>
           <p className="text-xs font-bold text-foreground uppercase tracking-wide">Lower Arch (Mandibular)</p>

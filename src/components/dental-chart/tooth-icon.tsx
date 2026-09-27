@@ -1,6 +1,6 @@
 import type { ToothSurface } from "@/lib/types/enums";
 import type { ToothFinding } from "@/lib/types/database";
-import { getFindingCode, getFindingColor, SURFACE_LABELS, getPresenceColor } from "./tooth-legend";
+import { getFindingCode, getFindingColor, SURFACE_LABELS, getPresenceColor, getPresenceCode } from "./tooth-legend";
 import { hexFromBg, hexFromBorder } from "./tooth-color-map";
 
 const DEFAULT_COLOR = "bg-white border-slate-200 text-slate-400";
@@ -21,9 +21,13 @@ interface SegmentPath {
 }
 
 function getSurfaceFindings(findings: ToothFinding[], surface: ToothSurface): ToothFinding[] {
-  return findings.filter((f) =>
-    f.finding_surfaces?.some((fs) => fs.surface === surface),
-  );
+  return findings.filter((f) => {
+    if (f.finding_surfaces && f.finding_surfaces.length > 0) {
+      return f.finding_surfaces.some((fs) => fs.surface === surface);
+    }
+    // Finding without specific surfaces applies to the whole tooth
+    return true;
+  });
 }
 
 function getDominantColor(findings: ToothFinding[], surface: ToothSurface): string {
@@ -37,11 +41,11 @@ function getDominantColor(findings: ToothFinding[], surface: ToothSurface): stri
 }
 
 export function ToothIcon({ number, findings, presence, selectedSurfaces, onSurfaceClick, small }: ToothIconProps) {
-  const size = small ? 30 : 44;
+  const size = small ? 28 : 42;
   const cx = size / 2;
   const cy = size / 2;
-  const outerR = small ? 12 : 18;
-  const innerR = small ? 5 : 8;
+  const outerR = small ? 11 : 17;
+  const innerR = small ? 5 : 7.5;
 
   const top = { x: cx, y: cy - outerR };
   const right = { x: cx + outerR, y: cy };
@@ -129,8 +133,12 @@ export function ToothIcon({ number, findings, presence, selectedSurfaces, onSurf
       {segments.map(({ surface }) => {
         const surfaceFindings = getSurfaceFindings(findings, surface);
         if (surfaceFindings.length === 0) return null;
-        const codes = surfaceFindings.map((f) => getFindingCode(f.category, f.code)).filter(Boolean);
-        if (codes.length === 0) return null;
+        // Only show text label on peripheral segment if finding was specifically targeted to this surface
+        const specificCodes = surfaceFindings
+          .filter((f) => f.finding_surfaces && f.finding_surfaces.length > 0)
+          .map((f) => getFindingCode(f.category, f.code))
+          .filter(Boolean);
+        if (specificCodes.length === 0) return null;
         const angle =
           surface === "buccal" ? -90 : surface === "distal" ? 0 : surface === "lingual" ? 90 : 180;
         const rad = (angle * Math.PI) / 180;
@@ -148,15 +156,25 @@ export function ToothIcon({ number, findings, presence, selectedSurfaces, onSurf
             fill={hexFromBorder(getDominantColor(findings, surface))}
             className="pointer-events-none select-none"
           >
-            {codes.join("/")}
+            {specificCodes.join("/")}
           </text>
         );
       })}
       {(() => {
         const occlusalFindings = getSurfaceFindings(findings, "occlusal");
-        if (occlusalFindings.length === 0) return null;
         const codes = occlusalFindings.map((f) => getFindingCode(f.category, f.code)).filter(Boolean);
-        if (codes.length === 0) return null;
+        const presenceCode =
+          codes.length === 0 && presence && presence !== "present"
+            ? getPresenceCode(presence as never)
+            : null;
+
+        if (codes.length === 0 && !presenceCode) return null;
+
+        const text = codes.length > 0 ? codes.slice(0, 2).join("/") : presenceCode;
+        const fill = codes.length > 0
+          ? hexFromBorder(getDominantColor(findings, "occlusal"))
+          : hexFromBorder(presenceColor ?? "border-slate-500");
+
         return (
           <text
             x={cx}
@@ -164,10 +182,10 @@ export function ToothIcon({ number, findings, presence, selectedSurfaces, onSurf
             textAnchor="middle"
             fontSize={small ? 5 : 7}
             fontWeight="bold"
-            fill={hexFromBorder(getDominantColor(findings, "occlusal"))}
+            fill={fill}
             className="pointer-events-none select-none"
           >
-            {codes.join("/")}
+            {text}
           </text>
         );
       })()}
