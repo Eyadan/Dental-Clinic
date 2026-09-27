@@ -86,7 +86,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Consent",
     href: "/consent",
     icon: FileCheck,
-    roles: ["admin", "dentist"],
+    roles: ["admin", "reception", "dentist"],
   },
   {
     label: "Billing",

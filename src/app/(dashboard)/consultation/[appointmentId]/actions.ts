@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { ensureConsentClauses } from "@/lib/constants/consent-clauses";
 import { DentalChartService } from "@/lib/services/dental-chart-service";
 import type { ServiceResult } from "@/lib/services/base-service";
 
@@ -98,6 +99,9 @@ export async function generateConsentAction(
     if (error) {
       return { success: false, error: error.message };
     }
+
+    // Ensure consent clauses exist in DB to prevent foreign key errors
+    await ensureConsentClauses(supabase);
 
     const { error: clauseError } = await supabase
       .from("consent_form_clauses")

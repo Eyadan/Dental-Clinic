@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
-import { getCachedConsentClauses } from "@/lib/cache/reference-data";
+import { ensureConsentClauses } from "@/lib/constants/consent-clauses";
 import { getSingleJoined } from "@/lib/utils/supabase-join";
 import { DentalChartService } from "@/lib/services/dental-chart-service";
 import { ConsultationClient } from "./consultation-client";
@@ -53,7 +53,24 @@ export default async function ConsultationPage({
     .limit(1)
     .maybeSingle();
 
-  const consentClauses = await getCachedConsentClauses();
+  // Fetch consent clauses directly using authenticated Supabase client with PDA fallback
+  let consentClauses = [];
+  try {
+    const { data: dbClauses, error: clausesErr } = await supabase
+      .from("consent_clauses")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order");
+
+    if (!clausesErr && dbClauses && dbClauses.length > 0) {
+      consentClauses = dbClauses;
+    } else {
+      consentClauses = await ensureConsentClauses(supabase);
+    }
+  } catch (err) {
+    console.error("Failed to load consent clauses from DB:", err);
+    consentClauses = await ensureConsentClauses(supabase);
+  }
 
   const dentalChartService = new DentalChartService(supabase);
   const { chart: dentalChart, presence: dentalChartPresence, findings: dentalChartFindings } = await dentalChartService.getFullChart(

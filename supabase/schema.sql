@@ -1445,7 +1445,7 @@ DROP POLICY IF EXISTS consent_forms_select ON consent_forms;
 CREATE POLICY consent_forms_select ON consent_forms FOR SELECT TO authenticated
   USING (
     CASE
-      WHEN get_user_role() = 'admin' THEN true
+      WHEN get_user_role() IN ('admin', 'reception') THEN true
       WHEN get_user_role() = 'dentist' THEN
         appointment_id IN (SELECT id FROM appointments WHERE dentist_id = get_current_dentist_id())
       ELSE false
