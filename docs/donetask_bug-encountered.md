@@ -188,6 +188,7 @@
 | FEAT-111 | 2026-09-27 16:20 | 10 | NAV-02 | Medium | Fixed | Attending dentists lacked access to Live Chat (`/chat`) to message patients or staff directly from the clinic system | Log in as Dentist and attempt to navigate to `/chat` or access Live Chat | Dentist accesses Live Chat conversation list and messaging workspace | Redirected to `/unauthorized` ("Access Restricted") because middleware and navigation omitted `'dentist'` role | Added `'dentist'` to `/chat` in `middleware.ts` ROLE_ROUTES, updated `navigation.ts`, and added Live Chat quick link in `dentist-portal/more/more-client.tsx` | 2026-09-27 16:25 |
 | UI-112 | 2026-09-27 16:25 | 10 | QUE-01 | Low | Fixed | Queue action buttons (`Call`, `Delay`, `Move`, `No-Show`) on `/queue` had inconsistent sizing, basic styling, and lacked visual hierarchy | View `/queue` desk with active checked-in or waiting patients | Action buttons are visually cohesive, distinct, and compact while preserving single-row horizontal patient layout | Inconsistent button heights, borders, and icon alignments | Polished queue action buttons with unified heights, semantic color tokens, subtle hover transitions, and clean icons while strictly preserving single-row horizontal card layout | 2026-09-27 16:30 |
 | BUG-113 | 2026-09-27 17:15 | 10 | CHAT-01 | High | Fixed | Dentist Live Chat displayed "No active conversations" and omitted all chats while Reception saw full conversation threads | Log in as Dentist (`dentist@clinic.local`) and navigate to `/chat` | Dentist sees all active patient Messenger conversations, message history, and unread counts matching Reception desk | Empty conversation list with 0 messages displayed | PostgreSQL Row-Level Security (RLS) on `messenger_conversations` and `messenger_messages` explicitly restricted SELECT, INSERT, and UPDATE to `get_user_role() IN ('reception', 'admin')`, silently filtering out all rows for dentists. Created migration `20260927171500_fix_messenger_rls_for_dentist.sql` and updated `supabase/schema.sql` to include `'dentist'` across all 6 policies. Applied migration via `npx supabase migration up`. | 2026-09-27 17:18 |
+| BUG-114 | 2026-09-27 17:25 | 10 | CHAT-02 | High | Fixed | Live chat message thread & conversation list did not update in real-time when new messages arrived unless the user manually refreshed the page | Receive inbound patient message or send staff message in Live Chat | New messages render immediately in thread and conversation list updates unread count and latest message snippet | Thread and conversation list remained frozen with old messages until browser page reload | Dual root cause: (1) PostgreSQL `supabase_realtime` publication was empty in the database (neither `messenger_conversations` nor `messenger_messages` were registered), so the database never broadcast WAL changes to WebSocket clients; (2) `ChatThread` and `ChatClient` lacked polling fallbacks after earlier refactors, causing the UI to freeze if WebSockets dropped or missed an event. Created migration `20260927172000_enable_realtime_for_messenger.sql` adding both tables to `supabase_realtime` with `REPLICA IDENTITY FULL`. Added visibility-aware 2.5s polling fallback in `ChatThread` with scroll-stability check and 3.5s polling in `ChatClient`. | 2026-09-27 18:25 |
 
 ---
 
@@ -196,10 +197,11 @@
 | Severity | Open | In Progress | Fixed | Won't Fix | Total |
 |---|---|---|---|---|---|
 | Critical | 1 | 0 | 6 | 0 | 7 |
-| High | 0 | 0 | 24 | 0 | 24 |
+| High | 0 | 0 | 25 | 0 | 25 |
 | Medium | 0 | 0 | 24 | 0 | 24 |
 | Low | 0 | 0 | 9 | 0 | 9 |
-| **Total** | **1** | **0** | **63** | **0** | **64** |
+| **Total** | **1** | **0** | **64** | **0** | **65** |
+
 
 
 

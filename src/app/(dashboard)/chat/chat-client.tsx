@@ -35,6 +35,20 @@ export function ChatClient({ staffId }: ChatClientProps) {
   useEffect(() => {
     loadConversations();
 
+    // 3.5-second polling fallback so conversation list and unread badges stay in sync
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadConversations();
+      }
+    }, 3500);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        loadConversations();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     const supabase = createBrowserSupabaseClient();
     const channel = supabase
       .channel("conversations-realtime")
@@ -49,6 +63,8 @@ export function ChatClient({ staffId }: ChatClientProps) {
       .subscribe();
 
     return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       supabase.removeChannel(channel);
     };
   }, [loadConversations]);
