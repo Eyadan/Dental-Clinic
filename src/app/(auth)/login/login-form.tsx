@@ -32,10 +32,18 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
   });
+
+  const emailValue = watch("email");
+  const passwordValue = watch("password");
 
   const onSubmit = async (data: LoginFormData) => {
     setAuthError(null);
@@ -62,8 +70,9 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
   };
 
   const handleQuickLogin = (email: string, pass: string) => {
-    setValue("email", email, { shouldValidate: true });
-    setValue("password", pass, { shouldValidate: true });
+    setAuthError(null);
+    setValue("email", email, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+    setValue("password", pass, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
   };
 
   return (
@@ -104,6 +113,7 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
                 autoComplete="email"
                 className="h-10 border-slate-700 bg-slate-950/80 text-white focus-visible:ring-cyan-500 rounded-xl text-xs"
                 {...register("email")}
+                value={emailValue ?? ""}
               />
               {errors.email && (
                 <p className="text-xs font-medium text-rose-400">{errors.email.message}</p>
@@ -122,6 +132,7 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
                   autoComplete="current-password"
                   className="h-10 pr-10 border-slate-700 bg-slate-950/80 text-white focus-visible:ring-cyan-500 rounded-xl text-xs"
                   {...register("password")}
+                  value={passwordValue ?? ""}
                 />
                 <button
                   type="button"
