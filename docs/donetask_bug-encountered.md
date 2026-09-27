@@ -181,6 +181,7 @@
 | BUG-104 | 2026-09-27 15:15 | 10 | TAB-02 | Medium | Fixed | Weekly Work Shift Hours on /dentists/unavailability forced 7 day columns into ~85px on tablet screens, truncating TimePicker triggers to single characters like "1 v" | View /dentists/unavailability on tablet (1024px) | Operating shift times display clearly for all work days | Time inputs squished to ~57px with text completely clipped | Changed weekly schedule grid to sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 and adjusted TimePicker button padding and gaps for responsive containers | 2026-09-27 15:18 |
 | BUG-105 | 2026-09-27 15:15 | 10 | TAB-03 | Medium | Fixed | Recorded payments item row on /billing/[appointmentId] overflowed horizontally outside the card on tablet, clipping the View Proof button | Record GCash/digital payment and view invoice on tablet | Payment item details and action buttons fit cleanly within card | Action buttons spilled over right card boundary, clipping the View Proof button | Wrapped payment row in responsive flex-col sm:flex-row, added flex-wrap gap-1.5 to action buttons, and streamlined button labels | 2026-09-27 15:19 |
 | BUG-106 | 2026-09-27 15:15 | 10 | TAB-04 | Medium | Fixed | 3-column card grids on /billing, /consent, /bookings were cramped on tablet viewports (1024px-1279px with 256px sidebar), truncating "PENDING PAYMENT" badges to "PENDING PA...", awkwardly wrapping dates, and colliding hero header title with stat badges | View /billing or /consent on tablet | Cards display in a comfortable 2-column layout with ample breathing room for badges and timestamps | 3-column layout forced ~220px cards with clipped badges and overlapping header elements | Shifted 3-column breakpoint from lg to xl (rendering 2 columns on tablet), and added min-w-0 and shrink-0 to PageHeroBanner | 2026-09-27 15:20 |
+| BUG-107 | 2026-09-27 15:25 | 10 | NAV-01 | High | Fixed | Dentist was blocked from Bookings (/bookings) with "Access Restricted" screen, and a separate "Dentist Portal" link cluttered the navigation | Log in as Dentist and click Bookings or navigate to /bookings | Dentist accesses main Bookings desk to review/approve appointments | Redirected to /unauthorized ("Access Restricted") and saw unwanted separate Dentist Portal item | Removed Dentist Portal navigation item, restored Bookings for Dentist in NAV_ITEMS and middleware ROLE_ROUTES, and redirected /dentist-portal to main dashboard | 2026-09-27 15:30 |
 
 ---
 
@@ -189,8 +190,8 @@
 | Severity | Open | In Progress | Fixed | Won't Fix | Total |
 |---|---|---|---|---|---|
 | Critical | 1 | 0 | 6 | 0 | 7 |
-| High | 0 | 0 | 20 | 0 | 20 |
+| High | 0 | 0 | 21 | 0 | 21 |
 | Medium | 0 | 0 | 22 | 0 | 22 |
 | Low | 0 | 0 | 8 | 0 | 8 |
-| **Total** | **1** | **0** | **56** | **0** | **57** |
+| **Total** | **1** | **0** | **57** | **0** | **58** |
 

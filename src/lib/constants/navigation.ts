@@ -35,22 +35,10 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "reception", "dentist"],
   },
   {
-    label: "Dentist Portal",
-    href: "/dentist-portal",
-    icon: Stethoscope,
-    roles: ["dentist"],
-  },
-  {
-    label: "Analytics",
-    href: "/reports",
-    icon: TrendingUp,
-    roles: ["admin"],
-  },
-  {
     label: "Bookings",
     href: "/bookings",
     icon: CalendarPlus,
-    roles: ["reception"],
+    roles: ["admin", "reception", "dentist"],
   },
   {
     label: "Patients",
@@ -74,7 +62,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Queue",
     href: "/queue",
     icon: ListOrdered,
-    roles: ["reception", "dentist"],
+    roles: ["admin", "reception", "dentist"],
   },
   {
     label: "Doctors",
@@ -92,13 +80,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Consultation",
     href: "/consultation",
     icon: Stethoscope,
-    roles: ["dentist"],
+    roles: ["admin", "dentist"],
   },
   {
     label: "Consent",
     href: "/consent",
     icon: FileCheck,
-    roles: ["dentist"],
+    roles: ["admin", "dentist"],
   },
   {
     label: "Billing",
@@ -116,13 +104,19 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Schedule & Leave",
     href: "/dentists/unavailability",
     icon: CalendarX,
-    roles: ["reception", "dentist"],
+    roles: ["admin", "reception", "dentist"],
   },
   {
     label: "Waitlist",
     href: "/waitlist",
     icon: ListPlus,
     roles: ["reception"],
+  },
+  {
+    label: "Analytics",
+    href: "/reports",
+    icon: TrendingUp,
+    roles: ["admin"],
   },
   {
     label: "Settings",

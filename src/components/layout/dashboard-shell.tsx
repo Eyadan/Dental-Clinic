@@ -30,7 +30,7 @@ export function DashboardShell({ role, userName, userEmail, children }: Dashboar
       case "reception":
         return { label: "Reception Desk", icon: UserCheck };
       case "dentist":
-        return { label: "Dentist Portal", icon: Stethoscope };
+        return { label: "Attending Dentist", icon: Stethoscope };
       default:
         return { label: r, icon: Activity };
     }

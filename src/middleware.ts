@@ -10,18 +10,17 @@ const ROLE_ROUTES: Record<string, UserRole[]> = {
   "/reports": ["admin"],
   "/audit": ["admin"],
   "/patients/archived": ["admin"],
-  "/consultation": ["dentist"],
-  "/consent": ["dentist"],
-  "/dentist-portal": ["dentist"],
-  "/check-in": ["reception"],
-  "/chat": ["reception"],
-  "/bookings": ["reception"],
-  "/appointments/new": ["reception"],
-  "/patients/new": ["reception"],
-  "/dentists/unavailability": ["reception", "dentist"],
+  "/consultation": ["admin", "dentist"],
+  "/consent": ["admin", "dentist"],
+  "/check-in": ["admin", "reception", "dentist"],
+  "/chat": ["admin", "reception"],
+  "/bookings": ["admin", "reception", "dentist"],
+  "/appointments/new": ["admin", "reception", "dentist"],
+  "/patients/new": ["admin", "reception", "dentist"],
+  "/dentists/unavailability": ["admin", "reception", "dentist"],
   "/dentists": ["admin"],
-  "/waitlist": ["reception"],
-  "/queue": ["reception", "dentist"],
+  "/waitlist": ["admin", "reception"],
+  "/queue": ["admin", "reception", "dentist"],
 };
 
 function isPublicRoute(pathname: string): boolean {
@@ -53,6 +52,11 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = new URL("/login", request.url);
     redirectUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(redirectUrl);
+  }
+
+  // Redirect dentist-portal URLs back into the main unified system
+  if (pathname === "/dentist-portal" || pathname.startsWith("/dentist-portal/")) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   // Gracefully redirect admins from deprecated schedule/leave URLs to the integrated Doctors Directory
