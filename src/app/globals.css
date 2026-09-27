@@ -230,11 +230,17 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    height: 100%;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
   }
   body {
-    @apply bg-slate-50/50 dark:bg-[#0b0f19] text-foreground min-h-screen;
+    @apply bg-slate-50/50 dark:bg-[#0b0f19] text-foreground;
     font-feature-settings: "cv11", "tnum";
+    height: 100%;
     overflow-x: hidden;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
   }
 
   /* Smooth GPU-Accelerated hardware layer helper */

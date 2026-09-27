@@ -182,6 +182,7 @@
 | BUG-105 | 2026-09-27 15:15 | 10 | TAB-03 | Medium | Fixed | Recorded payments item row on /billing/[appointmentId] overflowed horizontally outside the card on tablet, clipping the View Proof button | Record GCash/digital payment and view invoice on tablet | Payment item details and action buttons fit cleanly within card | Action buttons spilled over right card boundary, clipping the View Proof button | Wrapped payment row in responsive flex-col sm:flex-row, added flex-wrap gap-1.5 to action buttons, and streamlined button labels | 2026-09-27 15:19 |
 | BUG-106 | 2026-09-27 15:15 | 10 | TAB-04 | Medium | Fixed | 3-column card grids on /billing, /consent, /bookings were cramped on tablet viewports (1024px-1279px with 256px sidebar), truncating "PENDING PAYMENT" badges to "PENDING PA...", awkwardly wrapping dates, and colliding hero header title with stat badges | View /billing or /consent on tablet | Cards display in a comfortable 2-column layout with ample breathing room for badges and timestamps | 3-column layout forced ~220px cards with clipped badges and overlapping header elements | Shifted 3-column breakpoint from lg to xl (rendering 2 columns on tablet), and added min-w-0 and shrink-0 to PageHeroBanner | 2026-09-27 15:20 |
 | BUG-107 | 2026-09-27 15:25 | 10 | NAV-01 | High | Fixed | Dentist was blocked from Bookings (/bookings) with "Access Restricted" screen, and a separate "Dentist Portal" link cluttered the navigation | Log in as Dentist and click Bookings or navigate to /bookings | Dentist accesses main Bookings desk to review/approve appointments | Redirected to /unauthorized ("Access Restricted") and saw unwanted separate Dentist Portal item | Removed Dentist Portal navigation item, restored Bookings for Dentist in NAV_ITEMS and middleware ROLE_ROUTES, and redirected /dentist-portal to main dashboard | 2026-09-27 15:30 |
+| BUG-108 | 2026-09-27 15:30 | 10 | IOS-01 | High | Fixed | On iOS Safari / iPad, scrolling down to the bottom of long pages (e.g. dental chart audit timeline) dragged the entire application upwards, revealing a huge blank white canvas at the bottom of the screen | Scroll to bottom of /patients/[id] dental chart audit timeline on iPad | Content scrolls smoothly and halts at bottom without moving the page shell | Window overscrolled upwards, pushing sidebar and topbar off-screen and leaving bottom half blank white | Anchored DashboardShell with fixed inset-0 h-full h-[100dvh] w-full overflow-hidden, set overscroll-behavior: none on html and body, and added overscroll-contain to main and timeline scroll containers | 2026-09-27 15:35 |
 
 ---
 
@@ -190,8 +191,8 @@
 | Severity | Open | In Progress | Fixed | Won't Fix | Total |
 |---|---|---|---|---|---|
 | Critical | 1 | 0 | 6 | 0 | 7 |
-| High | 0 | 0 | 21 | 0 | 21 |
+| High | 0 | 0 | 22 | 0 | 22 |
 | Medium | 0 | 0 | 22 | 0 | 22 |
 | Low | 0 | 0 | 8 | 0 | 8 |
-| **Total** | **1** | **0** | **57** | **0** | **58** |
+| **Total** | **1** | **0** | **58** | **0** | **59** |
 

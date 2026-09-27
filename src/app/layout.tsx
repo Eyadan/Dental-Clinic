@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${inter.variable} h-full antialiased`}
+      className={`${inter.variable} h-full antialiased overscroll-none`}
     >
       <head>
         <script
@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="h-full min-h-full flex flex-col overscroll-none">
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

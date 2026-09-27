@@ -40,7 +40,7 @@ export function DashboardShell({ role, userName, userEmail, children }: Dashboar
   const RoleIcon = roleInfo.icon;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50/60 dark:bg-[#090d16]">
+    <div className="fixed inset-0 flex h-full h-[100dvh] w-full overflow-hidden bg-slate-50/60 dark:bg-[#090d16]">
       <aside
         className={`hidden shrink-0 border-r border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl lg:flex lg:flex-col transition-[width] duration-200 ease-in-out ${
           sidebarCollapsed ? "w-16" : "w-64"
@@ -62,11 +62,11 @@ export function DashboardShell({ role, userName, userEmail, children }: Dashboar
             </div>
           )}
         </div>
-        <div className="flex-1 overflow-y-auto py-3">
+        <div className="flex-1 overflow-y-auto overscroll-contain py-3">
           <SidebarNav role={role} collapsed={sidebarCollapsed} />
         </div>
       </aside>
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Topbar
           role={role}
           userName={userName}
@@ -75,7 +75,7 @@ export function DashboardShell({ role, userName, userEmail, children }: Dashboar
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((prev) => !prev)}
         />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-slate-50/40 dark:bg-[#090d16] animate-in fade-in-50 duration-200">
+        <main className="flex-1 overflow-y-auto overscroll-contain p-4 lg:p-6 bg-slate-50/40 dark:bg-[#090d16] animate-in fade-in-50 duration-200">
           {children}
         </main>
       </div>
