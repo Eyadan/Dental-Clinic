@@ -56,7 +56,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Check-In",
     href: "/check-in",
     icon: UserCheck,
-    roles: ["reception"],
+    roles: ["admin", "reception", "dentist"],
   },
   {
     label: "Queue",

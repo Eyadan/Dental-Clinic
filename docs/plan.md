@@ -396,6 +396,7 @@ Verified against `schema.sql` RLS policies and the codebase:
 | QUE-01 | Queue Action Buttons Visual & Layout Alignment | ✅ Done | 🟢 Low | Polished `Call`, `Delay`, `Move`, and `No-Show` action buttons on `/queue` while strictly preserving single-row layout and 3-card KPI row. |
 | CHAT-01 | Enable Dentist Access to Live Chat in PostgreSQL RLS Policies | ✅ Done | 🟠 High | Updated RLS policies on `messenger_conversations` and `messenger_messages` to allow `get_user_role() IN ('reception', 'admin', 'dentist')`. |
 | CHAT-02 | Supabase Realtime Publication Registration & Live Chat Polling Fallback | ✅ Done | 🟠 High | Registered `messenger_conversations` and `messenger_messages` in `supabase_realtime` publication (`REPLICA IDENTITY FULL`), added 2.5s polling in `ChatThread` and 3.5s in `ChatClient`. |
+| NAV-03 | Patient Check-In & Arrival Desk Sidebar Navigation Enablement for Dentists | ✅ Done | 🟡 Medium | Added `'dentist'` to `roles` for `Check-In` in `src/lib/constants/navigation.ts`. |
 
 ---
 
