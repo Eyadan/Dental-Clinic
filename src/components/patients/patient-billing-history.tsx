@@ -119,12 +119,12 @@ export const PatientBillingHistory = memo(function PatientBillingHistory({
 
           return (
             <Card key={item.appointmentId} className="border border-border/80 bg-card rounded-2xl shadow-xs">
-              <CardHeader className="border-b border-border/40 pb-3 flex-row items-center justify-between">
+              <CardHeader className="border-b border-border/40 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <CardTitle className="text-xs font-bold flex items-center gap-2">
                   <Receipt className="h-4 w-4 text-cyan-600" />
                   {item.referenceNo}
                 </CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {statusCfg && (
                     <Badge variant="outline" className={`text-[10px] font-bold ${statusCfg.className}`}>
                       {statusCfg.label}
@@ -132,9 +132,10 @@ export const PatientBillingHistory = memo(function PatientBillingHistory({
                   )}
                   <a
                     href={`/billing/${item.appointmentId}`}
-                    className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-cyan-600 hover:text-cyan-700 transition-colors"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-600 hover:text-cyan-700 transition-colors py-1 px-2 rounded-lg hover:bg-cyan-500/10"
+                    style={{ minHeight: "36px" }}
                   >
-                    View <ArrowUpRight className="h-3 w-3" />
+                    View Invoice <ArrowUpRight className="h-3 w-3" />
                   </a>
                 </div>
               </CardHeader>

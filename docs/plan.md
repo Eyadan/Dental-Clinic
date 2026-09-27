@@ -374,6 +374,29 @@ Verified against `schema.sql` RLS policies and the codebase:
 
 ---
 
+## Implementation Phase 12 — Mobile, Tablet & Clinical Workflow Enhancements
+
+| # | Task | Status | Priority | Notes |
+|---|------|--------|----------|-------|
+| MOB-01 | Dedicated Mobile Patient Files Hub for Dentists | ✅ Done | 🟠 High | Added `/dentist-portal/patients` with responsive patient directory, mobile card views, and quick search. |
+| MOB-02 | Mobile Authentication & Network Setup for Local IP Testing | ✅ Done | 🟠 High | Migrated login to server action (`loginUserAction`), added LAN origins to `next.config.ts`, handled Web3 wallet errors. |
+| MOB-03 | Mobile Dental Chart SVG Color Rendering & Overflow Alignment | ✅ Done | 🟠 High | Aligned arch flexbox to prevent negative coordinate clipping; fixed whole-tooth status rendering (`Im`, `JC`, `M`, `Un`). |
+| MOB-04 | Dental Chart Arch Synchronization & Smooth Scroll Fix | ✅ Done | 🟡 Medium | Unified Upper and Lower arches in single scroll container to prevent scroll event deadlocks. |
+| MOB-05 | Mobile/Tablet FDI Dental Chart Specific Tooth Surface Selection Fix | ✅ Done | 🟠 High | Converted tooth container from `<button>` to `<div role="button">`, isolated surface `onTouchEnd`, added `#38bdf8` surface fill, and added 96px interactive surface diagram in `ToothEditor`. |
+| REG-01 | DatePicker Month & Year Dropdown Enhancement | ✅ Done | 🟡 Medium | Replaced chevron spam with native month/year dropdown select controls in `date-picker.tsx`. |
+| TAB-01 | Tablet Horizontal Scroll Elimination on Patient List | ✅ Done | 🟡 Medium | Fixed patient table layout with percentage column widths, string truncation, and responsive action buttons. |
+| BIL-01 | Fix Patient & Attending Dentist Unknown on Invoice Detail | ✅ Done | 🟠 High | Removed non-existent `ptr_no` and `s2_license_no` from invoice dentists query in `getInvoiceAction`. |
+| TAB-02 | Tablet Responsive Schedule Grid & TimePicker Layout | ✅ Done | 🟡 Medium | Optimized weekly schedule grid on `/dentists/unavailability` for 1024px tablet viewports. |
+| TAB-03 | Recorded Payments Action Buttons Responsive Wrap | ✅ Done | 🟡 Medium | Prevented action button overflow on invoice details by wrapping payment rows with responsive flex containers. |
+| TAB-04 | Tablet Card Grid 2-Column Responsive Optimization across Desks | ✅ Done | 🟡 Medium | Shifted 3-column card desks (`/billing`, `/consent`, `/bookings`) to 2 columns on tablet (`xl` breakpoint). |
+| NAV-01 | Unify Dentist Experience: Remove Dentist Portal & Restore Bookings | ✅ Done | 🟠 High | Restored direct `/bookings` access for dentists and redirected legacy `/dentist-portal` routes to main dashboard. |
+| NAV-02 | Dentist Live Chat Access Enablement | ✅ Done | 🟡 Medium | Enabled `/chat` role access for dentists in `middleware.ts`, `navigation.ts`, and added quick link in dentist portal. |
+| IOS-01 | Prevent iOS Safari Viewport Rubber-Banding Blank Screen Overscroll | ✅ Done | 🟠 High | Anchored `DashboardShell` layout with `overscroll-behavior: none` and `overscroll-contain` to stop canvas shift. |
+| DEV-01 | Next.js Script Migration for React 19 Overlay Prevention | ✅ Done | 🟡 Medium | Migrated raw script tag in `layout.tsx` to `<Script strategy="beforeInteractive">` to prevent dev runtime overlay errors. |
+| QUE-01 | Queue Action Buttons Visual & Layout Alignment | ✅ Done | 🟢 Low | Polished `Call`, `Delay`, `Move`, and `No-Show` action buttons on `/queue` while strictly preserving single-row layout and 3-card KPI row. |
+
+---
+
 ## Legend
 
 | Symbol | Meaning |

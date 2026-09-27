@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, ListOrdered, MoreHorizontal, Stethoscope } from "lucide-react";
+import { CalendarDays, ListOrdered, MoreHorizontal, Stethoscope, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DentistPortalShellProps {
@@ -16,6 +16,7 @@ interface DentistPortalShellProps {
 const TABS = [
   { href: "/dentist-portal", label: "Schedule", icon: CalendarDays },
   { href: "/dentist-portal/queue", label: "Queue", icon: ListOrdered },
+  { href: "/dentist-portal/patients", label: "Patients", icon: Users },
   { href: "/dentist-portal/more", label: "More", icon: MoreHorizontal },
 ];
 

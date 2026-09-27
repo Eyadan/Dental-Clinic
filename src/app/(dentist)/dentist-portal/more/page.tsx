@@ -28,6 +28,7 @@ export default async function MorePage() {
     .from("appointments")
     .select(`
       id,
+      patient_id,
       reference_no,
       scheduled_time,
       total_duration,
@@ -53,6 +54,7 @@ export default async function MorePage() {
     }>(appt.patients);
     return {
       id: appt.id as string,
+      patient_id: (appt.patient_id as string) || "",
       reference_no: appt.reference_no as string,
       scheduled_time: appt.scheduled_time as string,
       booking_status: appt.booking_status as string,

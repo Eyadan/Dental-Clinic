@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Calendar, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { format, parseISO, isValid, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,24 @@ interface DatePickerProps {
   id?: string;
   showPresets?: boolean;
   align?: "left" | "right";
+  fromYear?: number;
+  toYear?: number;
 }
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 export function DatePicker({
   value,
@@ -29,6 +46,8 @@ export function DatePicker({
   id,
   showPresets = true,
   align = "left",
+  fromYear,
+  toYear,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -68,6 +87,32 @@ export function DatePicker({
   const handleApplyPreset = (daysToAdd: number) => {
     const targetDate = addDays(new Date(), daysToAdd);
     handleSelectDate(targetDate);
+  };
+
+  const currentYear = new Date().getFullYear();
+  const effectiveFromYear = fromYear ?? (minDate ? parseInt(minDate.slice(0, 4), 10) : currentYear - 110);
+  const effectiveToYear = toYear ?? (maxDate ? parseInt(maxDate.slice(0, 4), 10) : currentYear + 10);
+
+  const years = useMemo(() => {
+    const list: number[] = [];
+    for (let y = effectiveToYear; y >= effectiveFromYear; y--) {
+      list.push(y);
+    }
+    // Ensure current active year is present even if out of default bounds
+    const activeYear = currentMonth.getFullYear();
+    if (!list.includes(activeYear)) {
+      list.push(activeYear);
+      list.sort((a, b) => b - a);
+    }
+    return list;
+  }, [effectiveFromYear, effectiveToYear, currentMonth]);
+
+  const handleMonthChange = (monthIdx: number) => {
+    setCurrentMonth((prev) => new Date(prev.getFullYear(), monthIdx, 1));
+  };
+
+  const handleYearChange = (year: number) => {
+    setCurrentMonth((prev) => new Date(year, prev.getMonth(), 1));
   };
 
   // Calendar calculations
@@ -126,32 +171,60 @@ export function DatePicker({
 
       {/* POPOVER CALENDAR DROPDOWN */}
       {isOpen && (
-        <div className={`absolute ${alignClass} top-full mt-2 z-50 w-72 rounded-2xl border border-border/80 bg-popover p-4 shadow-2xl backdrop-blur-xl animate-in fade-in-50 zoom-in-95`}>
-          {/* MONTH HEADER NAVIGATION */}
-          <div className="flex items-center justify-between pb-3 border-b border-border/40">
-            <span className="font-bold text-xs text-foreground font-mono uppercase tracking-wider">
-              {format(currentMonth, "MMMM yyyy")}
-            </span>
-            <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 rounded-lg hover:bg-muted"
-                onClick={() => setCurrentMonth(addDays(monthStart, -1))}
+        <div className={`absolute ${alignClass} top-full mt-2 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-border/80 bg-popover p-3.5 shadow-2xl backdrop-blur-xl animate-in fade-in-50 zoom-in-95`}>
+          {/* MONTH & YEAR HEADER WITH QUICK SELECTORS */}
+          <div className="flex items-center justify-between pb-3 border-b border-border/40 gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 rounded-lg hover:bg-muted shrink-0"
+              onClick={() => setCurrentMonth(addDays(monthStart, -1))}
+              aria-label="Previous month"
+            >
+              <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+            </Button>
+
+            <div className="flex items-center gap-1.5 min-w-0">
+              {/* Month Dropdown */}
+              <select
+                aria-label="Select month"
+                value={currentMonth.getMonth()}
+                onChange={(e) => handleMonthChange(Number(e.target.value))}
+                className="h-8 rounded-lg border border-border/80 bg-background px-2 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer shadow-2xs"
               >
-                <ChevronLeft className="h-4 w-4 text-muted-foreground" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 rounded-lg hover:bg-muted"
-                onClick={() => setCurrentMonth(addDays(monthEnd, 1))}
+                {MONTH_NAMES.map((name, idx) => (
+                  <option key={name} value={idx}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Year Dropdown */}
+              <select
+                aria-label="Select year"
+                value={currentMonth.getFullYear()}
+                onChange={(e) => handleYearChange(Number(e.target.value))}
+                className="h-8 rounded-lg border border-border/80 bg-background px-2 text-xs font-bold text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer shadow-2xs"
               >
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </Button>
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 rounded-lg hover:bg-muted shrink-0"
+              onClick={() => setCurrentMonth(addDays(monthEnd, 1))}
+              aria-label="Next month"
+            >
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Button>
           </div>
 
           {/* DAY NAMES HEADER */}
@@ -183,7 +256,7 @@ export function DatePicker({
                   onClick={() => handleSelectDate(day)}
                   className={`h-7 rounded-lg text-xs font-semibold transition-all flex items-center justify-center relative ${
                     isSelected
-                      ? "bg-cyan-600 text-white shadow-xs"
+                      ? "bg-cyan-600 text-white shadow-xs font-bold"
                       : isCurrentDay
                       ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-bold border border-cyan-500/30"
                       : "text-foreground hover:bg-muted/60"
@@ -195,7 +268,7 @@ export function DatePicker({
             })}
           </div>
 
-          {/* QUICK PRESETS */}
+          {/* QUICK PRESETS (Optional) */}
           {showPresets && (
             <div className="mt-3 pt-3 border-t border-border/40 space-y-1.5">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Quick Presets</span>

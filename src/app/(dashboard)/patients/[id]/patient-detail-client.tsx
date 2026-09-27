@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { parseAllergies } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,7 @@ import { DentalChartSnapshotViewer } from "@/components/dental-chart/dental-char
 import { PatientBillingHistory } from "@/components/patients/patient-billing-history";
 import { PatientVisitHistory } from "@/components/patients/patient-visit-history";
 import { updatePatientAction } from "../actions";
-import { Pencil, Phone, Mail, Calendar, AlertTriangle, User, HeartPulse, CheckCircle2, FileText, ArrowUpRight } from "lucide-react";
+import { Pencil, Phone, Mail, Calendar, AlertTriangle, User, HeartPulse, CheckCircle2, FileText, ArrowUpRight, ArrowLeft } from "lucide-react";
 import type { Patient, PatientMedicalRecord, MedicalCondition, DentalChart, ToothPresence, ToothFinding } from "@/lib/types/database";
 
 interface PatientDetailClientProps {
@@ -61,17 +62,32 @@ export function PatientDetailClient({ patient, medicalRecord, conditions, condit
   const hasAllergies = patient.allergies && patient.allergies.trim().toLowerCase() !== "none" && patient.allergies.trim().toLowerCase() !== "";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Mobile Back Link */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/patients"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-cyan-600 transition-colors py-1.5 px-3 rounded-xl hover:bg-muted"
+          style={{ minHeight: "44px" }}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Patient Records
+        </Link>
+        <span className="text-[11px] font-mono text-muted-foreground hidden sm:inline-block">
+          Record #{patient.id.slice(0, 8).toUpperCase()}
+        </span>
+      </div>
+
       {/* LIGHT SaaS HERO HEADER */}
-      <div className="relative overflow-hidden rounded-2xl bg-card border border-border/80 p-5 shadow-xs transition-all">
+      <div className="relative overflow-hidden rounded-2xl bg-card border border-border/80 p-4 sm:p-5 shadow-xs transition-all">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-bold text-base tracking-wider shadow-2xs">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 sm:h-13 sm:w-13 shrink-0 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-bold text-sm sm:text-base tracking-wider shadow-2xs">
               {getInitials(patient.first_name, patient.last_name)}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold tracking-tight text-foreground">{fullName}</h1>
+                <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground truncate">{fullName}</h1>
                 <Badge variant="outline" className={`text-[10px] uppercase font-mono px-2.5 py-0.5 font-bold ${patient.is_archived ? "border-amber-500/30 text-amber-600 bg-amber-500/10" : "border-emerald-500/30 text-emerald-600 bg-emerald-500/10"}`}>
                   {patient.is_archived ? "Archived Record" : "Active Patient"}
                 </Badge>
@@ -87,25 +103,31 @@ export function PatientDetailClient({ patient, medicalRecord, conditions, condit
             </div>
           </div>
 
-          <Button onClick={() => setEditOpen(true)} size="sm" className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs">
+          <Button
+            onClick={() => setEditOpen(true)}
+            size="sm"
+            className="w-full sm:w-auto bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-xs"
+            style={{ minHeight: "44px" }}
+          >
             <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit Demographics
           </Button>
         </div>
       </div>
 
-      {/* COMPACT SEGMENTED TABS */}
-      <div className="inline-flex items-center gap-1.5 p-1.5 bg-card/80 backdrop-blur-md rounded-xl border border-border/60 text-xs max-w-full overflow-x-auto shadow-xs">
+      {/* COMPACT SEGMENTED TABS (TOUCH SCROLLABLE) */}
+      <div className="w-full overflow-x-auto no-scrollbar scroll-smooth flex shrink-0 items-center gap-1.5 p-1.5 bg-card/80 backdrop-blur-md rounded-xl border border-border/60 text-xs shadow-xs">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-lg font-bold text-xs transition-all whitespace-nowrap ${
+              className={`px-3.5 sm:px-4 py-2 rounded-lg font-bold text-xs transition-all whitespace-nowrap shrink-0 ${
                 isActive
                   ? "bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 shadow-md font-extrabold"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               }`}
+              style={{ minHeight: "40px" }}
             >
               {tab.label}
             </button>
@@ -114,7 +136,7 @@ export function PatientDetailClient({ patient, medicalRecord, conditions, condit
       </div>
 
       {activeTab === "profile" && (
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <Card className="card-premium">
             <CardHeader className="border-b border-border/40 pb-3">
               <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
@@ -124,11 +146,27 @@ export function PatientDetailClient({ patient, medicalRecord, conditions, condit
             <CardContent className="p-4 space-y-3 text-xs">
               <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/30">
                 <span className="text-muted-foreground flex items-center gap-2"><Phone className="h-3.5 w-3.5 text-cyan-500" /> Phone Number</span>
-                <span className="font-semibold text-foreground font-mono">{patient.contact_no}</span>
+                <a
+                  href={`tel:${patient.contact_no}`}
+                  className="font-semibold text-cyan-600 dark:text-cyan-400 hover:underline font-mono"
+                  style={{ minHeight: "28px", display: "inline-flex", alignItems: "center" }}
+                >
+                  {patient.contact_no}
+                </a>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/30">
                 <span className="text-muted-foreground flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-cyan-500" /> Email Address</span>
-                <span className="font-semibold text-foreground">{patient.email || "Not provided"}</span>
+                {patient.email ? (
+                  <a
+                    href={`mailto:${patient.email}`}
+                    className="font-semibold text-cyan-600 dark:text-cyan-400 hover:underline truncate max-w-[200px]"
+                    style={{ minHeight: "28px", display: "inline-flex", alignItems: "center" }}
+                  >
+                    {patient.email}
+                  </a>
+                ) : (
+                  <span className="font-semibold text-muted-foreground">Not provided</span>
+                )}
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/30">
                 <span className="text-muted-foreground flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-cyan-500" /> Birth Date</span>

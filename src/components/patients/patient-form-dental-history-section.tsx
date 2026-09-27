@@ -35,6 +35,8 @@ export function PatientFormDentalHistorySection({ register, setValue, watch }: P
               onChange={(val) => setValue?.("last_dental_visit", val)}
               placeholder="Pick last visit date..."
               align="right"
+              showPresets={false}
+              maxDate={new Date().toISOString().split("T")[0]}
             />
             <input type="hidden" {...register("last_dental_visit")} />
           </div>

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -16,12 +15,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { callNextAction, callSpecificAction, markDelayedAction, markNoShowAction, moveToLaterSlotAction } from "./actions";
-import { Loader2, UserCheck, Users, Clock, ChevronRight, ClockAlert, UserX, CalendarClock } from "lucide-react";
+import {
+  callNextAction,
+  callSpecificAction,
+  markDelayedAction,
+  markNoShowAction,
+  moveToLaterSlotAction,
+} from "./actions";
+import {
+  Loader2,
+  UserCheck,
+  Users,
+  Clock,
+  ChevronRight,
+  ClockAlert,
+  UserX,
+  CalendarClock,
+} from "lucide-react";
 import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 import { TimePicker } from "@/components/ui/time-picker";
 
-interface QueueItem {
+export interface QueueItem {
   id: string;
   reference_no: string;
   scheduled_time: string;
@@ -30,6 +44,8 @@ interface QueueItem {
   booking_status: string;
   patient_name: string;
   dentist_name: string;
+  contact_no?: string | null;
+  services?: string[];
 }
 
 interface QueueClientProps {
@@ -37,12 +53,12 @@ interface QueueClientProps {
 }
 
 const VISIT_STATUS_COLORS: Record<string, string> = {
-  checked_in: "bg-blue-100 text-blue-700 border-blue-200",
-  waiting: "bg-amber-100 text-amber-700 border-amber-200",
-  delayed: "bg-orange-100 text-orange-700 border-orange-200",
-  in_consultation: "bg-purple-100 text-purple-700 border-purple-200",
-  treatment_ongoing: "bg-teal-100 text-teal-700 border-teal-200",
-  treatment_paused: "bg-orange-100 text-orange-700 border-orange-200",
+  checked_in: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800",
+  waiting: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
+  delayed: "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800",
+  in_consultation: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800",
+  treatment_ongoing: "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800",
+  treatment_paused: "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800",
 };
 
 const VISIT_STATUS_LABELS: Record<string, string> = {
@@ -56,7 +72,7 @@ const VISIT_STATUS_LABELS: Record<string, string> = {
 
 export function QueueClient({ items: initialItems }: QueueClientProps) {
   const router = useRouter();
-  const [items, setItems] = useState(initialItems);
+  const [items, setItems] = useState<QueueItem[]>(initialItems);
   const [isCallingNext, setIsCallingNext] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +82,10 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
   const [moveAppointmentId, setMoveAppointmentId] = useState<string | null>(null);
   const [newSlotTime, setNewSlotTime] = useState<string>("");
   const [isMoving, setIsMoving] = useState(false);
+
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
 
   const refreshQueue = useCallback(async () => {
     try {
@@ -246,7 +266,7 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
       </PageHeroBanner>
 
       {error && (
-        <Alert variant="destructive" className="rounded-2xl border-rose-500/30 bg-rose-500/10 text-rose-300">
+        <Alert variant="destructive" className="rounded-2xl border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300">
           <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
         </Alert>
       )}
@@ -257,8 +277,8 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
         </Alert>
       )}
 
-      {/* KPI METRIC CARDS */}
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* KPI METRIC CARDS - Always 3 in one row */}
+      <div className="grid grid-cols-3 gap-4">
         <Card className="stat-card-glow p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
@@ -294,6 +314,7 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
         </Card>
       </div>
 
+      {/* QUEUE LIST */}
       <div className="space-y-3" role="region" aria-label="Patient queue" aria-live="polite">
         {items.length === 0 ? (
           <div className="card-premium py-16 text-center">
@@ -304,13 +325,14 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
           items.map((item, index) => (
             <Card key={item.id} className="card-premium">
               <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4">
-                <div className="flex items-center gap-4">
+                {/* Patient Information */}
+                <div className="flex items-center gap-4 min-w-0">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-mono font-bold text-sm">
                     #{index + 1}
                   </div>
-                  <div className="space-y-1">
-                    <div className="font-bold text-sm text-foreground">{item.patient_name}</div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
+                  <div className="space-y-1 min-w-0">
+                    <div className="font-bold text-sm text-foreground truncate">{item.patient_name}</div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono flex-wrap">
                       <span>Ref: {item.reference_no}</span>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5 text-cyan-500" />
@@ -321,7 +343,8 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
+                {/* Status Badge & Cohesive Action Buttons */}
+                <div className="flex items-center gap-2 flex-wrap shrink-0">
                   <Badge
                     variant="outline"
                     className={`font-semibold text-xs px-2.5 py-1 ${VISIT_STATUS_COLORS[item.visit_status] ?? ""}`}
@@ -329,98 +352,112 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
                     {VISIT_STATUS_LABELS[item.visit_status] ?? item.visit_status}
                   </Badge>
 
+                  {/* Actions for Checked In */}
                   {item.visit_status === "checked_in" && (
                     <>
+                      {/* CALL BUTTON - Sleek Primary Action */}
                       <Button
                         size="sm"
                         onClick={() => handleCallSpecific(item.id)}
                         disabled={pendingId === item.id}
-                        className="h-8 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs"
+                        className="h-8 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-xs px-3 shadow-xs transition-all active:scale-95"
                       >
                         {pendingId === item.id ? (
-                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                         ) : (
                           <ChevronRight className="mr-1 h-3.5 w-3.5" />
                         )}
                         Call
                       </Button>
+
+                      {/* DELAY BUTTON - Cohesive Amber Badge Button */}
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleMarkDelayed(item.id)}
                         disabled={pendingId === item.id}
-                        className="h-8 rounded-lg border-border/60 text-xs"
+                        className="h-8 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 text-xs font-semibold px-3 transition-colors active:scale-95"
                       >
-                        <ClockAlert className="mr-1 h-3.5 w-3.5 text-amber-500" />
+                        <ClockAlert className="mr-1.5 h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                         Delay
                       </Button>
+
+                      {/* MOVE BUTTON - Cohesive Blue Badge Button */}
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleOpenMoveDialog(item.id)}
                         disabled={pendingId === item.id}
-                        className="h-8 rounded-lg border-border/60 text-xs"
+                        className="h-8 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30 text-xs font-semibold px-3 transition-colors active:scale-95"
                       >
-                        <CalendarClock className="mr-1 h-3.5 w-3.5 text-cyan-500" />
+                        <CalendarClock className="mr-1.5 h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                         Move
                       </Button>
+
+                      {/* NO-SHOW BUTTON - Cohesive Rose Badge Button */}
                       <Button
                         size="sm"
-                        variant="ghost"
-                        className="h-8 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 text-xs"
+                        variant="outline"
                         onClick={() => handleMarkNoShow(item.id)}
                         disabled={pendingId === item.id}
+                        className="h-8 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30 text-xs font-semibold px-3 transition-colors active:scale-95"
                       >
                         {pendingId === item.id ? (
-                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <UserX className="mr-1 h-3.5 w-3" />
+                          <UserX className="mr-1.5 h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
                         )}
                         No-Show
                       </Button>
                     </>
                   )}
+
+                  {/* Actions for Delayed */}
                   {item.visit_status === "delayed" && (
                     <>
                       <Button
                         size="sm"
                         onClick={() => handleCallSpecific(item.id)}
                         disabled={pendingId === item.id}
-                        className="h-8 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs"
+                        className="h-8 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-xs px-3 shadow-xs transition-all active:scale-95"
                       >
                         {pendingId === item.id ? (
-                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                         ) : (
                           <ChevronRight className="mr-1 h-3.5 w-3.5" />
                         )}
                         Call
                       </Button>
+
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleOpenMoveDialog(item.id)}
                         disabled={pendingId === item.id}
-                        className="h-8 rounded-lg border-border/60 text-xs"
+                        className="h-8 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30 text-xs font-semibold px-3 transition-colors active:scale-95"
                       >
-                        <CalendarClock className="mr-1 h-3.5 w-3.5 text-cyan-500" />
+                        <CalendarClock className="mr-1.5 h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                         Move
                       </Button>
+
                       <Button
                         size="sm"
-                        variant="ghost"
-                        className="h-8 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 text-xs"
+                        variant="outline"
                         onClick={() => handleMarkNoShow(item.id)}
                         disabled={pendingId === item.id}
+                        className="h-8 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30 text-xs font-semibold px-3 transition-colors active:scale-95"
                       >
                         {pendingId === item.id ? (
-                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <UserX className="mr-1 h-3.5 w-3" />
+                          <UserX className="mr-1.5 h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
                         )}
                         No-Show
                       </Button>
                     </>
                   )}
+
+                  {/* Actions for Called/Waiting */}
                   {item.visit_status === "waiting" && (
                     <>
                       <Button
@@ -428,22 +465,23 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
                         variant="outline"
                         onClick={() => handleMarkDelayed(item.id)}
                         disabled={pendingId === item.id}
-                        className="h-8 rounded-lg border-border/60 text-xs"
+                        className="h-8 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 text-xs font-semibold px-3 transition-colors active:scale-95"
                       >
-                        <ClockAlert className="mr-1 h-3.5 w-3.5 text-amber-500" />
+                        <ClockAlert className="mr-1.5 h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                         Delay
                       </Button>
+
                       <Button
                         size="sm"
-                        variant="ghost"
-                        className="h-8 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 text-xs"
+                        variant="outline"
                         onClick={() => handleMarkNoShow(item.id)}
                         disabled={pendingId === item.id}
+                        className="h-8 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30 text-xs font-semibold px-3 transition-colors active:scale-95"
                       >
                         {pendingId === item.id ? (
-                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <UserX className="mr-1 h-3.5 w-3" />
+                          <UserX className="mr-1.5 h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
                         )}
                         No-Show
                       </Button>
@@ -456,6 +494,7 @@ export function QueueClient({ items: initialItems }: QueueClientProps) {
         )}
       </div>
 
+      {/* MOVE TO LATER SLOT DIALOG */}
       <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
         <DialogContent className="rounded-2xl border-border/80 bg-card">
           <DialogHeader>

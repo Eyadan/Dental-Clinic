@@ -110,7 +110,7 @@ export const DentalChartHistoryTimeline = memo(function DentalChartHistoryTimeli
             <p className="text-sm text-muted-foreground">No changes recorded yet</p>
           </div>
         ) : (
-          <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
+          <div className="space-y-2.5 max-h-[500px] overflow-y-auto overscroll-contain pr-1">
             {entries.map((entry, index) => {
               const actionCfg = ACTION_CONFIG[entry.action] ?? ACTION_CONFIG.update;
               const ActionIcon = actionCfg.icon;

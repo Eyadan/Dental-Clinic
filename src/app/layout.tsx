@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast";
 
+import Script from "next/script";
+
 const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
@@ -17,9 +19,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${inter.variable} h-full antialiased`}
+      className={`${inter.variable} h-full antialiased overscroll-none`}
     >
-      <body className="min-h-full flex flex-col">
+      <body>
+        <Script
+          id="extension-error-guard"
+          strategy="beforeInteractive"
+        >
+          {`
+            try {
+              if (typeof window !== 'undefined') {
+                window.ethereum = window.ethereum || {};
+                window.addEventListener('error', function(e) {
+                  if (e && e.message && (e.message.indexOf('ethereum') !== -1 || e.message.indexOf('selectedAddress') !== -1)) {
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
+                    return true;
+                  }
+                }, true);
+              }
+            } catch (err) {}
+          `}
+        </Script>
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

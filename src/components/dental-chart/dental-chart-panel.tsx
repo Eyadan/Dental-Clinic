@@ -79,6 +79,10 @@ export function DentalChartPanel({ patientId, chart, presence, findings, readOnl
 
   const handleToothClick = (toothNumber: number) => {
     if (readOnly) return;
+    if (selectedTooth === toothNumber) {
+      // Don't wipe selected surfaces if tooth is already selected
+      return;
+    }
     setSelectedTooth(toothNumber);
     setSelectedSurfaces(new Set());
   };

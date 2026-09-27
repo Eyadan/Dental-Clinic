@@ -1,12 +1,15 @@
 "use client";
 
 import { memo } from "react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ListOrdered, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ListOrdered, Clock, FileText, ArrowUpRight } from "lucide-react";
 
 interface QueueItem {
   id: string;
+  patient_id?: string;
   reference_no: string;
   scheduled_time: string;
   total_duration: number;
@@ -45,11 +48,11 @@ export const DentistQueueClient = memo(function DentistQueueClient({ items }: De
           {inConsultation.map((item) => {
             const badge = VISIT_COLORS[item.visit_status] ?? { label: item.visit_status, variant: "outline" as const };
             return (
-              <Card key={item.id} className="border-primary">
-                <CardContent className="p-3">
+              <Card key={item.id} className="border-cyan-500 shadow-xs">
+                <CardContent className="p-3.5 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{item.patient_name}</p>
+                      <p className="font-semibold text-sm">{item.patient_name}</p>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
                         {item.scheduled_time}
@@ -57,6 +60,19 @@ export const DentistQueueClient = memo(function DentistQueueClient({ items }: De
                     </div>
                     <Badge variant={badge.variant}>{badge.label}</Badge>
                   </div>
+                  {item.patient_id && (
+                    <Link href={`/patients/${item.patient_id}`} className="block pt-1">
+                      <Button
+                        size="sm"
+                        className="w-full bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-bold"
+                        style={{ minHeight: "40px" }}
+                      >
+                        <FileText className="mr-1.5 h-3.5 w-3.5" />
+                        Open Patient File & Chart
+                        <ArrowUpRight className="ml-auto h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -75,15 +91,15 @@ export const DentistQueueClient = memo(function DentistQueueClient({ items }: De
           waiting.map((item, index) => {
             const badge = VISIT_COLORS[item.visit_status] ?? { label: item.visit_status, variant: "outline" as const };
             return (
-              <Card key={item.id}>
-                <CardContent className="p-3">
+              <Card key={item.id} className="hover:border-cyan-500/50 transition-colors">
+                <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground">
                         {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium">{item.patient_name}</p>
+                        <p className="font-semibold text-sm">{item.patient_name}</p>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Clock className="h-3 w-3" />
                           {item.scheduled_time}
@@ -92,6 +108,19 @@ export const DentistQueueClient = memo(function DentistQueueClient({ items }: De
                     </div>
                     <Badge variant={badge.variant}>{badge.label}</Badge>
                   </div>
+                  {item.patient_id && (
+                    <div className="flex justify-end pt-1">
+                      <Link
+                        href={`/patients/${item.patient_id}`}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-600 hover:text-cyan-700 py-1"
+                        style={{ minHeight: "36px" }}
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        View File & Chart
+                        <ArrowUpRight className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );

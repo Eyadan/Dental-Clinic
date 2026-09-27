@@ -386,7 +386,7 @@ export default function UnavailabilityClient() {
               <Loader2 className="h-6 w-6 animate-spin text-cyan-600" />
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7">
               {weeklySchedule.map((day) => (
                 <div
                   key={day.day_of_week}

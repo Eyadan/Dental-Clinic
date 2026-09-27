@@ -4,13 +4,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginFormData } from "@/lib/validations";
-import { createBrowserSupabaseClient } from "@/lib/supabase/browser-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Activity, Eye, EyeOff, ShieldCheck, UserCheck, Stethoscope } from "lucide-react";
+import { loginAction } from "./actions";
 
 interface LoginFormProps {
   redirectUrl: string;
@@ -32,24 +32,31 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
   });
+
+  const emailValue = watch("email");
+  const passwordValue = watch("password");
 
   const onSubmit = async (data: LoginFormData) => {
     setAuthError(null);
     setIsSubmitting(true);
 
     try {
-      const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const result = await loginAction({
         email: data.email,
         password: data.password,
       });
 
-      if (error) {
-        setAuthError(error.message);
+      if (!result.success) {
+        setAuthError(result.error ?? "Invalid email or password");
         setIsSubmitting(false);
         return;
       }
@@ -62,8 +69,9 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
   };
 
   const handleQuickLogin = (email: string, pass: string) => {
-    setValue("email", email, { shouldValidate: true });
-    setValue("password", pass, { shouldValidate: true });
+    setAuthError(null);
+    setValue("email", email, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+    setValue("password", pass, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
   };
 
   return (
@@ -87,7 +95,7 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-5 px-6 pb-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form method="post" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {authError && (
               <Alert variant="destructive" className="rounded-xl border-rose-500/30 bg-rose-500/10 text-rose-300">
                 <AlertDescription className="text-xs font-medium">{authError}</AlertDescription>
@@ -104,6 +112,7 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
                 autoComplete="email"
                 className="h-10 border-slate-700 bg-slate-950/80 text-white focus-visible:ring-cyan-500 rounded-xl text-xs"
                 {...register("email")}
+                value={emailValue ?? ""}
               />
               {errors.email && (
                 <p className="text-xs font-medium text-rose-400">{errors.email.message}</p>
@@ -122,6 +131,7 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
                   autoComplete="current-password"
                   className="h-10 pr-10 border-slate-700 bg-slate-950/80 text-white focus-visible:ring-cyan-500 rounded-xl text-xs"
                   {...register("password")}
+                  value={passwordValue ?? ""}
                 />
                 <button
                   type="button"

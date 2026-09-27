@@ -49,6 +49,10 @@ export function PatientFormPersonalSection({ register, errors, setValue, watch }
               value={watch ? watch("birth_date") || "" : ""}
               onChange={(val) => setValue?.("birth_date", val)}
               placeholder="Pick birthdate..."
+              showPresets={false}
+              fromYear={1920}
+              toYear={new Date().getFullYear()}
+              maxDate={new Date().toISOString().split("T")[0]}
             />
             <input type="hidden" {...register("birth_date")} />
           </div>
