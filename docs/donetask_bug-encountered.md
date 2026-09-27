@@ -172,34 +172,10 @@
 | BUG-095 | 2026-09-18 16:30 | 9 | FEAT-015 | Medium | Fixed | Messenger bot prompted doctor selection even when only 1 doctor was available on the date, and required selecting doctor after time slot | Patient books appointment via Messenger on date with 1 available dentist | Bot auto-selects available doctor; if multiple doctors, prompts doctor before time slot | Bot prompted doctor selection redundantly or presented slots without doctor context | Updated `booking-parser.ts` to auto-select doctor if 1 is available, query slots based on doctor, and accept doctor names | 2026-09-18 16:30 |
 | BUG-096 | 2026-09-18 16:55 | 9 | FEAT-016 | Feature | Fixed | Messenger bot lacked an option for patients asking for help to talk directly with clinic reception staff | Patient types "help" or asks to speak with staff in Messenger | Bot presents "Talk to Staff" option and quick reply; handover sets conversation to taken_over and alerts staff in /chat | Bot only offered automated booking/cancellation commands with no human staff fallback | Added `talk_to_staff` intent and `handleTalkToStaff` in `booking-parser.ts`, updated "help" response with Quick Replies, added handover to `/chat`, and updated persistent menu/ice breakers in `messenger-profile/route.ts` | 2026-09-18 16:55 |
 | BUG-097 | 2026-09-21 16:30 | 9 | P5-10 | Medium | Fixed | "Dismiss Alert" button on failed Messenger notification cards failed to persist after page reload because the database BEFORE DELETE trigger on audit_logs raised an exception ("audit_logs is immutable") | Click "Dismiss Alert" on a Messenger delivery failure banner, reload the dashboard | Alert remains permanently dismissed across page reloads | Alert reappears upon refreshing because PostgreSQL trigger prevented the DELETE query | Created migration `20260921163000_allow_dismiss_messenger_notification_alerts.sql` updating `prevent_audit_log_modification()` to allow DELETE on `action = 'messenger_notification_failed'` while preserving strict immutability for all clinical audit logs. Updated `dashboard-client.tsx` with toast feedback and synced `supabase/schema.sql`. | 2026-09-21 16:30 |
-
-- **Status:** 🐛/🔄/✅/❌
-- **Date Found:** YYYY-MM-DD HH:mm UTC+08:00
-- **Date Fixed:** YYYY-MM-DD HH:mm UTC+08:00 (or "N/A")
-
-**Description:**
-[Detailed description of the bug]
-
-**Steps to Reproduce:**
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
-
-**Expected Behavior:**
-[What should happen]
-
-**Actual Behavior:**
-[What actually happens]
-
-**Root Cause:**
-[Why the bug occurs]
-
-**Fix:**
-[What was changed to fix it — file(s), line(s), approach]
-
-**Regression Test:**
-[How to verify the fix doesn't break anything else]
--->
+| BUG-098 | 2026-09-27 13:45 | 10 | MOB-01 | High | Fixed | Mobile login from phone on LAN (`http://192.168.1.36:3000`) threw "Failed to fetch" due to client-side Supabase browser client attempting direct loopback requests and Brave Web3 wallet extension errors (`window.ethereum.selectedAddress = undefined`) | Open login page on mobile phone over local Wi-Fi, submit credentials | User signs in and navigates to mobile dentist portal cleanly | "Failed to fetch" error and Web3 wallet TypeError in browser console | Migrated authentication to Next.js Server Action (`loginUserAction` in `src/app/(auth)/login/actions.ts`), updated `next.config.ts` with `allowedDevOrigins` for LAN IP, and sanitized `window.ethereum` in `src/app/layout.tsx`. | 2026-09-27 13:50 |
+| BUG-099 | 2026-09-27 14:15 | 10 | MOB-02 | High | Fixed | Dental chart on mobile hid colored findings for teeth with notes (e.g. Tooth 18 Impacted purple, Tooth 17 Jacket Crown orange) because flex container had `justify-center` with `overflow-x-auto`, causing teeth 18..15 to overflow into negative scroll coordinates (`scrollLeft < 0`) which browsers cannot reach | Open patient dental chart on mobile phone | All 32 teeth (18 to 28, 48 to 38) and their colored findings are reachable via scrolling | Only teeth 14..24 visible in center; teeth 18 and 17 with findings clipped off on left and unreachable | Replaced `justify-center` with `inline-flex min-w-full justify-start lg:justify-center` starting at `scrollLeft = 0` so teeth 18 and 17 display immediately. Updated `tooth-icon.tsx` to render whole-tooth findings and presence status codes (`Im`, `JC`, `M`, `Un`). | 2026-09-27 14:20 |
+| BUG-100 | 2026-09-27 14:30 | 10 | MOB-03 | Medium | Fixed | Mobile dental chart quadrant buttons (`Right`, `Midline`, `Left`) locked/stuck and required spamming because Upper and Lower arches had separate scroll containers whose concurrent `scrollTo` calls and scroll event listeners mutually cancelled each other | Tap "Midline" or "Left" quadrant button on mobile dental chart | Chart smoothly scrolls to target quadrant on first tap | View barely moved 1-2 pixels and halted, requiring 20+ taps to reach middle | Unified both Upper Arch (Maxillary) and Lower Arch (Mandibular) inside a single shared horizontal scroll container with one `scrollTo` call, eliminating animation cancellation deadlocks and keeping occlusion aligned. | 2026-09-27 14:35 |
+| BUG-101 | 2026-09-27 14:45 | 10 | REG-01 | Medium | Fixed | QR code registration birthdate picker required clicking the previous month chevron `<` hundreds of times (e.g. 372 clicks to reach 1995 from 2026) because the header lacked year and month selection controls | Scan QR code on phone, open birthdate field during registration | Patient can tap a Year dropdown to scroll or pick birth year directly | Patient forced to tap `<` repeatedly month-by-month | Added Month and Year `<select>` dropdowns to `src/components/ui/date-picker.tsx` supporting 1920 to current year, disabled irrelevant appointment presets for birthdates, and capped `maxDate` at today. | 2026-09-27 14:50 |
 
 ---
 
@@ -207,8 +183,9 @@
 
 | Severity | Open | In Progress | Fixed | Won't Fix | Total |
 |---|---|---|---|---|---|
-| 🔴 Critical | 1 | 0 | 6 | 0 | 7 |
-| 🟠 High | 0 | 0 | 17 | 0 | 17 |
-| 🟡 Medium | 0 | 0 | 16 | 0 | 16 |
-| 🟢 Low | 0 | 0 | 8 | 0 | 8 |
-| **Total** | **1** | **0** | **47** | **0** | **48** |
+| Critical | 1 | 0 | 6 | 0 | 7 |
+| High | 0 | 0 | 19 | 0 | 19 |
+| Medium | 0 | 0 | 18 | 0 | 18 |
+| Low | 0 | 0 | 8 | 0 | 8 |
+| **Total** | **1** | **0** | **51** | **0** | **52** |
+
