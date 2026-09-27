@@ -34,7 +34,7 @@ const securityHeaders = [
       "img-src 'self' data: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
       isDev
-        ? "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:54321 ws://127.0.0.1:54321 http://localhost:54321 ws://localhost:54321 http://192.168.100.199:54321 ws://192.168.100.199:3000 ws://192.168.100.199:54321"
+        ? "connect-src 'self' https: http: ws: wss:"
         : "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
       "frame-ancestors 'none'",
       "base-uri 'self'",
@@ -47,9 +47,21 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
+      allowedOrigins: [
+        "192.168.1.36",
+        "192.168.1.36:3000",
+        "192.168.1.43",
+        "192.168.1.43:3000",
+        "localhost:3000",
+      ],
     },
   },
-  allowedDevOrigins: ["192.168.100.199"],
+  allowedDevOrigins: [
+    "192.168.1.36",
+    "192.168.1.43",
+    "localhost",
+    "127.0.0.1",
+  ],
   async headers() {
     return [
       {

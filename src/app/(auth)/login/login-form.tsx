@@ -95,7 +95,7 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-5 px-6 pb-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form method="post" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {authError && (
               <Alert variant="destructive" className="rounded-xl border-rose-500/30 bg-rose-500/10 text-rose-300">
                 <AlertDescription className="text-xs font-medium">{authError}</AlertDescription>
