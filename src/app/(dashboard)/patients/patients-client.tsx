@@ -316,17 +316,17 @@ export function PatientsClient({ initialPatients, totalCount, conditions }: Pati
         )}
       </div>
 
-      {/* Desktop Table View (lg+) */}
+      {/* Desktop & Tablet Table View (lg+) */}
       <div className="hidden lg:block card-premium overflow-hidden">
         <CardContent className="p-0">
-          <Table>
+          <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-950/70">
-                <TableHead className="text-xs font-bold text-slate-700 dark:text-slate-300 py-4 uppercase tracking-wider">Patient Details</TableHead>
-                <TableHead className="text-xs font-bold text-slate-700 dark:text-slate-300 py-4 uppercase tracking-wider">Contact Details</TableHead>
-                <TableHead className="text-xs font-bold text-slate-700 dark:text-slate-300 py-4 uppercase tracking-wider">Birth Date & Age</TableHead>
-                <TableHead className="text-xs font-bold text-slate-700 dark:text-slate-300 py-4 uppercase tracking-wider">Medical Conditions & Allergies</TableHead>
-                <TableHead className="text-right text-xs font-bold text-slate-700 dark:text-slate-300 pr-5 py-4 uppercase tracking-wider">Actions</TableHead>
+                <TableHead className="w-[22%] text-xs font-bold text-slate-700 dark:text-slate-300 py-3.5 px-3 uppercase tracking-wider">Patient Details</TableHead>
+                <TableHead className="w-[22%] text-xs font-bold text-slate-700 dark:text-slate-300 py-3.5 px-3 uppercase tracking-wider">Contact Details</TableHead>
+                <TableHead className="w-[16%] text-xs font-bold text-slate-700 dark:text-slate-300 py-3.5 px-2 uppercase tracking-wider">Birth Date & Age</TableHead>
+                <TableHead className="w-[26%] text-xs font-bold text-slate-700 dark:text-slate-300 py-3.5 px-3 uppercase tracking-wider">Medical Conditions & Allergies</TableHead>
+                <TableHead className="w-[14%] text-right text-xs font-bold text-slate-700 dark:text-slate-300 pr-3 py-3.5 uppercase tracking-wider">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -343,34 +343,36 @@ export function PatientsClient({ initialPatients, totalCount, conditions }: Pati
 
                   return (
                     <TableRow key={patient.id} className="border-b border-border/40 hover:bg-cyan-500/5 transition-colors group">
-                      <TableCell className="py-3">
-                        <div className="flex items-center gap-3">
+                      <TableCell className="py-3 px-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <div className="h-9 w-9 rounded-xl bg-cyan-600/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold text-xs shrink-0 group-hover:scale-105 transition-transform">
                             {getInitials(patient.first_name, patient.last_name)}
                           </div>
-                          <div>
-                            <Link href={`/patients/${patient.id}`} className="font-bold text-xs text-foreground hover:text-cyan-600 transition-colors block">
+                          <div className="min-w-0 flex-1 truncate">
+                            <Link href={`/patients/${patient.id}`} className="font-bold text-xs text-foreground hover:text-cyan-600 transition-colors block truncate">
                               {patient.first_name} {patient.last_name}
                             </Link>
-                            <span className="text-[10px] font-mono text-muted-foreground">ID: #{patient.id.slice(0, 8).toUpperCase()}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground block truncate">ID: #{patient.id.slice(0, 8).toUpperCase()}</span>
                           </div>
                         </div>
                       </TableCell>
 
-                      <TableCell className="text-xs text-muted-foreground py-3">
-                        <div className="space-y-1">
-                          <p className="flex items-center gap-1.5 font-medium text-foreground">
-                            <Phone className="h-3 w-3 text-cyan-600 shrink-0" /> {patient.contact_no}
+                      <TableCell className="text-xs text-muted-foreground py-3 px-3">
+                        <div className="space-y-1 min-w-0">
+                          <p className="flex items-center gap-1.5 font-medium text-foreground truncate">
+                            <Phone className="h-3 w-3 text-cyan-600 shrink-0" />
+                            <span className="truncate">{patient.contact_no}</span>
                           </p>
                           {patient.email && (
-                            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                              <Mail className="h-3 w-3 shrink-0" /> {patient.email}
+                            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate">
+                              <Mail className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{patient.email}</span>
                             </p>
                           )}
                         </div>
                       </TableCell>
 
-                      <TableCell className="text-xs text-muted-foreground py-3">
+                      <TableCell className="text-xs text-muted-foreground py-3 px-2 whitespace-nowrap">
                         <div>
                           <p className="font-semibold text-foreground">{formatDate(patient.birth_date)}</p>
                           {age !== null && (
@@ -379,34 +381,43 @@ export function PatientsClient({ initialPatients, totalCount, conditions }: Pati
                         </div>
                       </TableCell>
 
-                      <TableCell className="text-xs text-muted-foreground py-3">
+                      <TableCell className="text-xs text-muted-foreground py-3 px-3 whitespace-normal">
                         {(() => {
                           const allergyList = parseAllergies(patient.allergies);
                           return allergyList.length > 0 ? (
                             <div className="flex flex-wrap items-center gap-1">
                               {allergyList.map((allergy, idx) => (
-                                <Badge key={idx} variant="outline" className="border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 text-[10px] font-bold">
-                                  <AlertTriangle className="mr-1 h-3 w-3 shrink-0" /> {allergy}
+                                <Badge key={idx} variant="outline" className="border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 text-[10px] font-bold py-0 px-1.5 whitespace-nowrap">
+                                  <AlertTriangle className="mr-0.5 h-2.5 w-2.5 shrink-0" /> {allergy}
                                 </Badge>
                               ))}
                             </div>
                           ) : (
-                            <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[10px] font-medium">
+                            <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[10px] font-medium py-0 px-1.5 whitespace-nowrap">
                               <CheckCircle2 className="mr-1 h-3 w-3 text-emerald-600 shrink-0" /> No Known Allergies
                             </Badge>
                           );
                         })()}
                       </TableCell>
 
-                      <TableCell className="text-right pr-4 py-3">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Link href={`/patients/${patient.id}`}>
-                            <Button size="sm" variant="outline" className="h-8 rounded-xl border-border/80 text-xs hover:bg-cyan-500/10 hover:text-cyan-600 transition-colors">
-                              View Profile <ArrowUpRight className="ml-1 h-3 w-3" />
+                      <TableCell className="text-right pr-3 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link href={`/patients/${patient.id}`} title="View Profile">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 rounded-xl border-border/80 text-xs hover:bg-cyan-500/10 hover:text-cyan-600 transition-colors px-2 xl:px-3"
+                              aria-label={`View profile of ${patient.first_name} ${patient.last_name}`}
+                            >
+                              <span className="hidden xl:inline mr-1">View Profile</span>
+                              <ArrowUpRight className="h-3.5 w-3.5" />
                             </Button>
                           </Link>
                           <DropdownMenu>
-                            <DropdownMenuTrigger className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                            <DropdownMenuTrigger
+                              className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                              aria-label={`More options for ${patient.first_name} ${patient.last_name}`}
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-40 rounded-xl">

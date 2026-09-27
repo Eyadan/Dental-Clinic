@@ -176,6 +176,7 @@
 | BUG-099 | 2026-09-27 14:15 | 10 | MOB-02 | High | Fixed | Dental chart on mobile hid colored findings for teeth with notes (e.g. Tooth 18 Impacted purple, Tooth 17 Jacket Crown orange) because flex container had `justify-center` with `overflow-x-auto`, causing teeth 18..15 to overflow into negative scroll coordinates (`scrollLeft < 0`) which browsers cannot reach | Open patient dental chart on mobile phone | All 32 teeth (18 to 28, 48 to 38) and their colored findings are reachable via scrolling | Only teeth 14..24 visible in center; teeth 18 and 17 with findings clipped off on left and unreachable | Replaced `justify-center` with `inline-flex min-w-full justify-start lg:justify-center` starting at `scrollLeft = 0` so teeth 18 and 17 display immediately. Updated `tooth-icon.tsx` to render whole-tooth findings and presence status codes (`Im`, `JC`, `M`, `Un`). | 2026-09-27 14:20 |
 | BUG-100 | 2026-09-27 14:30 | 10 | MOB-03 | Medium | Fixed | Mobile dental chart quadrant buttons (`Right`, `Midline`, `Left`) locked/stuck and required spamming because Upper and Lower arches had separate scroll containers whose concurrent `scrollTo` calls and scroll event listeners mutually cancelled each other | Tap "Midline" or "Left" quadrant button on mobile dental chart | Chart smoothly scrolls to target quadrant on first tap | View barely moved 1-2 pixels and halted, requiring 20+ taps to reach middle | Unified both Upper Arch (Maxillary) and Lower Arch (Mandibular) inside a single shared horizontal scroll container with one `scrollTo` call, eliminating animation cancellation deadlocks and keeping occlusion aligned. | 2026-09-27 14:35 |
 | BUG-101 | 2026-09-27 14:45 | 10 | REG-01 | Medium | Fixed | QR code registration birthdate picker required clicking the previous month chevron `<` hundreds of times (e.g. 372 clicks to reach 1995 from 2026) because the header lacked year and month selection controls | Scan QR code on phone, open birthdate field during registration | Patient can tap a Year dropdown to scroll or pick birth year directly | Patient forced to tap `<` repeatedly month-by-month | Added Month and Year `<select>` dropdowns to `src/components/ui/date-picker.tsx` supporting 1920 to current year, disabled irrelevant appointment presets for birthdates, and capped `maxDate` at today. | 2026-09-27 14:50 |
+| BUG-102 | 2026-09-27 15:05 | 10 | TAB-01 | Medium | Fixed | Patient list table on tablet viewports (lg: 1024px-1279px) triggered horizontal scrolling because unconstrained table columns with wide content exceeded available 720px width | View /patients on tablet device (1024px width) | Patient table fits 100% of container width with zero horizontal scrolling | Table overflowed container requiring horizontal scrolling | Applied table-fixed w-full to Table, defined percentage column widths (22%, 22%, 16%, 26%, 14%), truncated text for patient info & contact strings, hid 'View Profile' text on tablet (hidden xl:inline) with compact icon button, and set whitespace-normal for allergy badges | 2026-09-27 15:05 |
 
 ---
 
@@ -185,7 +186,7 @@
 |---|---|---|---|---|---|
 | Critical | 1 | 0 | 6 | 0 | 7 |
 | High | 0 | 0 | 19 | 0 | 19 |
-| Medium | 0 | 0 | 18 | 0 | 18 |
+| Medium | 0 | 0 | 19 | 0 | 19 |
 | Low | 0 | 0 | 8 | 0 | 8 |
-| **Total** | **1** | **0** | **51** | **0** | **52** |
+| **Total** | **1** | **0** | **52** | **0** | **53** |
 
