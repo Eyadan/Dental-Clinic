@@ -4,13 +4,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginFormData } from "@/lib/validations";
-import { createBrowserSupabaseClient } from "@/lib/supabase/browser-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Activity, Eye, EyeOff, ShieldCheck, UserCheck, Stethoscope } from "lucide-react";
+import { loginAction } from "./actions";
 
 interface LoginFormProps {
   redirectUrl: string;
@@ -50,14 +50,13 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
     setIsSubmitting(true);
 
     try {
-      const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const result = await loginAction({
         email: data.email,
         password: data.password,
       });
 
-      if (error) {
-        setAuthError(error.message);
+      if (!result.success) {
+        setAuthError(result.error ?? "Invalid email or password");
         setIsSubmitting(false);
         return;
       }
