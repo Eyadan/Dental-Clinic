@@ -35,6 +35,12 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "reception", "dentist"],
   },
   {
+    label: "Dentist Portal",
+    href: "/dentist-portal",
+    icon: Stethoscope,
+    roles: ["dentist"],
+  },
+  {
     label: "Analytics",
     href: "/reports",
     icon: TrendingUp,

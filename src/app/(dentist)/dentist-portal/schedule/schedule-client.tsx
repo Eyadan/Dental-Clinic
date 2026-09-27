@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, memo } from "react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Phone, CalendarDays } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Clock, Phone, CalendarDays, FileText, ArrowUpRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +16,7 @@ import {
 
 interface ScheduleItem {
   id: string;
+  patient_id?: string;
   reference_no: string;
   scheduled_time: string;
   total_duration: number;
@@ -157,6 +160,21 @@ export const DentistScheduleClient = memo(function DentistScheduleClient({ items
                   </Badge>
                 )}
               </div>
+
+              {selectedPatient.patient_id && (
+                <div className="pt-2">
+                  <Link href={`/patients/${selectedPatient.patient_id}`} className="block">
+                    <Button
+                      className="w-full bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2"
+                      style={{ minHeight: "44px" }}
+                    >
+                      <FileText className="h-4 w-4" />
+                      Open Full Patient File & Dental Chart
+                      <ArrowUpRight className="h-3.5 w-3.5 ml-auto" />
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

@@ -60,7 +60,7 @@ function ToothCell({
       aria-label={`Tooth ${number}${tooltipParts.length ? " — " + tooltipParts.join("; ") : ""}`}
       className={cn(
         "relative flex items-center justify-center rounded-full transition-all hover:scale-110 hover:z-10 focus-visible:outline-none shrink-0",
-        small ? "h-6 w-6" : "h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 lg:h-11 lg:w-11",
+        small ? "h-6 w-6" : "h-8 w-8 sm:h-8 sm:w-8 md:h-9 md:w-9 lg:h-11 lg:w-11",
         isSelected && "ring-2 ring-cyan-500 ring-offset-1 z-10 rounded-full",
       )}
     >
@@ -142,43 +142,49 @@ export function DentalChartGrid({ presence, findings, selectedTooth, selectedSur
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border bg-card p-4 space-y-2.5">
+      {/* Mobile Swipe Hint */}
+      <div className="flex sm:hidden items-center justify-between px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-[11px] text-cyan-700 dark:text-cyan-300 font-medium">
+        <span>Scroll horizontally to inspect full arch</span>
+        <span className="font-mono text-[10px] font-bold">FDI Chart</span>
+      </div>
+
+      <div className="rounded-xl border bg-card p-3 sm:p-4 space-y-2.5">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Right</span>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Right (Q1)</span>
           <p className="text-xs font-bold text-foreground uppercase tracking-wide">Upper Arch (Maxillary)</p>
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Left</span>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Left (Q2)</span>
         </div>
         {showTemporary && (
-          <div className="flex justify-center gap-1 pb-1 border-b border-dashed border-border/60 overflow-x-auto max-w-full">
+          <div className="flex justify-center gap-1.5 pb-2 border-b border-dashed border-border/60 overflow-x-auto touch-pan-x no-scrollbar max-w-full">
             <ArchRow numbers={TEMPORARY_UPPER_RIGHT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} small numberPosition="above" />
             <div className="w-px self-stretch bg-border mx-1" />
             <ArchRow numbers={TEMPORARY_UPPER_LEFT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} small numberPosition="above" />
           </div>
         )}
-        <div className="flex justify-center gap-1 overflow-x-auto max-w-full pb-1">
+        <div className="flex justify-center gap-1.5 overflow-x-auto touch-pan-x no-scrollbar max-w-full pb-2 pt-1">
           <ArchRow numbers={PERMANENT_UPPER_RIGHT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} numberPosition="above" />
           <div className="w-px self-stretch bg-border mx-1" />
           <ArchRow numbers={PERMANENT_UPPER_LEFT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} numberPosition="above" />
         </div>
       </div>
 
-      <div className="rounded-xl border bg-card p-4 space-y-2.5">
-        <div className="flex justify-center gap-1 overflow-x-auto max-w-full pb-1">
+      <div className="rounded-xl border bg-card p-3 sm:p-4 space-y-2.5">
+        <div className="flex justify-center gap-1.5 overflow-x-auto touch-pan-x no-scrollbar max-w-full pb-2 pt-1">
           <ArchRow numbers={PERMANENT_LOWER_RIGHT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} numberPosition="below" />
           <div className="w-px self-stretch bg-border mx-1" />
           <ArchRow numbers={PERMANENT_LOWER_LEFT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} numberPosition="below" />
         </div>
         {showTemporary && (
-          <div className="flex justify-center gap-1 pt-1 border-t border-dashed border-border/60 overflow-x-auto max-w-full">
+          <div className="flex justify-center gap-1.5 pt-2 border-t border-dashed border-border/60 overflow-x-auto touch-pan-x no-scrollbar max-w-full">
             <ArchRow numbers={TEMPORARY_LOWER_RIGHT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} small numberPosition="below" />
             <div className="w-px self-stretch bg-border mx-1" />
             <ArchRow numbers={TEMPORARY_LOWER_LEFT} presenceMap={presenceMap} findingsMap={findingsMap} selectedTooth={selectedTooth} selectedSurfaces={selectedSurfaces} onToothClick={onToothClick} onSurfaceClick={onSurfaceClick} small numberPosition="below" />
           </div>
         )}
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Right</span>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Right (Q4)</span>
           <p className="text-xs font-bold text-foreground uppercase tracking-wide">Lower Arch (Mandibular)</p>
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Left</span>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Left (Q3)</span>
         </div>
       </div>
     </div>

@@ -21,6 +21,7 @@ export default async function DentistSchedulePage() {
     .from("appointments")
     .select(`
       id,
+      patient_id,
       reference_no,
       scheduled_time,
       total_duration,
@@ -47,6 +48,7 @@ export default async function DentistSchedulePage() {
     const serviceNames = services?.map((s) => s.dental_services?.name).filter(Boolean) ?? [];
     return {
       id: appt.id as string,
+      patient_id: (appt.patient_id as string) || "",
       reference_no: appt.reference_no as string,
       scheduled_time: appt.scheduled_time as string,
       total_duration: appt.total_duration as number,

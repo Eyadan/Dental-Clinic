@@ -121,27 +121,35 @@ export function ToothEditor({
   return (
     <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-bold text-foreground">Tooth #{toothNumber}</p>
-        <Button type="button" variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
-          <X className="h-3.5 w-3.5" />
+        <p className="text-sm font-bold text-foreground">Tooth #{toothNumber} Clinical Findings</p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onClose}
+          className="h-9 w-9 p-0 rounded-xl hover:bg-muted"
+          aria-label="Close tooth editor"
+        >
+          <X className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Presence — single select radio */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-bold uppercase text-muted-foreground">Presence</Label>
-        <div className="flex flex-wrap gap-1.5">
+        <Label className="text-[11px] font-bold uppercase text-muted-foreground">Tooth Presence Status</Label>
+        <div className="flex flex-wrap gap-2">
           {PRESENCE_OPTIONS.map((p) => (
             <button
               key={p}
               type="button"
               disabled={isSaving}
               onClick={() => handlePresenceChange(p)}
-              className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all ${
+              className={`rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all ${
                 currentPresence === p
-                  ? `${PRESENCE_LEGEND[p].colorClass} ring-2 ring-cyan-500`
+                  ? `${PRESENCE_LEGEND[p].colorClass} ring-2 ring-cyan-500 font-bold shadow-xs`
                   : "border-border text-muted-foreground hover:bg-muted/40"
               }`}
+              style={{ minHeight: "40px" }}
             >
               {PRESENCE_LEGEND[p].code} · {PRESENCE_LEGEND[p].label}
             </button>
@@ -152,21 +160,23 @@ export function ToothEditor({
       {/* Surface multi-select for new findings */}
       <div className="space-y-1.5">
         <Label className="text-[11px] font-bold uppercase text-muted-foreground">
-          Surfaces (optional — select to apply finding to specific surfaces)
+          Surfaces (tap to select specific surfaces)
         </Label>
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-5 gap-1.5">
           {SURFACES.map((surface) => (
             <button
               key={surface}
               type="button"
               onClick={() => onToggleSurface(surface)}
-              className={`rounded-md border px-1 py-1.5 text-[10px] font-semibold transition-all ${
+              className={`rounded-xl border px-2 py-2 text-xs font-bold transition-all flex flex-col items-center justify-center ${
                 selectedSurfaces.has(surface)
-                  ? "border-cyan-500 bg-cyan-500/10 text-cyan-700 ring-1 ring-cyan-500"
+                  ? "border-cyan-500 bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 ring-2 ring-cyan-500 shadow-xs"
                   : "border-border text-muted-foreground hover:bg-muted/40"
               }`}
+              style={{ minHeight: "44px" }}
             >
-              {SURFACE_LABELS[surface].abbr}
+              <span className="font-extrabold">{SURFACE_LABELS[surface].abbr}</span>
+              <span className="text-[9px] font-normal text-muted-foreground">{SURFACE_LABELS[surface].label}</span>
             </button>
           ))}
         </div>

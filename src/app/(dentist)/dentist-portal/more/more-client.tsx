@@ -13,10 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { User, Phone, Mail, Calendar, AlertCircle, FileText, LogOut, Siren, Clock } from "lucide-react";
+import { User, Phone, Mail, Calendar, AlertCircle, FileText, LogOut, Siren, Clock, Users, ArrowUpRight } from "lucide-react";
 
 interface PatientQuickView {
   id: string;
+  patient_id?: string;
   reference_no: string;
   scheduled_time: string;
   booking_status: string;
@@ -62,6 +63,34 @@ export function MorePageClient({
               )}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Patient Records Mobile Hub */}
+      <Card className="border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-background to-teal-500/10 rounded-2xl shadow-xs">
+        <CardContent className="p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <p className="font-bold text-sm text-foreground">Patient Records Hub</p>
+            </div>
+            <Badge variant="outline" className="border-cyan-500/30 text-cyan-600 dark:text-cyan-400 text-[10px] font-bold">
+              Past & Current
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Quickly search, filter, and inspect clinical histories and dental charts for all patients on mobile.
+          </p>
+          <Link href="/dentist-portal/patients" className="block pt-1">
+            <Button
+              className="w-full bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2"
+              style={{ minHeight: "44px" }}
+            >
+              <Users className="h-4 w-4" />
+              Browse All Patient Files
+              <ArrowUpRight className="h-3.5 w-3.5 ml-auto" />
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 
@@ -206,6 +235,21 @@ export function MorePageClient({
                   <Badge variant="default">{selectedPatient.visit_status}</Badge>
                 )}
               </div>
+
+              {selectedPatient.patient_id && (
+                <div className="pt-2">
+                  <Link href={`/patients/${selectedPatient.patient_id}`} className="block">
+                    <Button
+                      className="w-full bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2"
+                      style={{ minHeight: "44px" }}
+                    >
+                      <FileText className="h-4 w-4" />
+                      Open Full Patient File & Dental Chart
+                      <ArrowUpRight className="h-3.5 w-3.5 ml-auto" />
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

@@ -175,8 +175,149 @@ export function PatientsClient({ initialPatients, totalCount, conditions }: Pati
       {/* Search Input */}
       <PatientSearch onSearch={handleSearch} isLoading={isLoading} />
 
-      {/* Patients Table Container */}
-      <div className="card-premium overflow-hidden">
+      {/* Responsive Patient Display: Mobile Cards (<lg) + Desktop Table (lg+) */}
+      
+      {/* Mobile Card List (<lg) */}
+      <div className="block lg:hidden space-y-3">
+        {patients.length === 0 ? (
+          <Card className="border border-dashed border-border/80 bg-card rounded-2xl">
+            <CardContent className="p-8 text-center space-y-2">
+              <Users className="mx-auto h-8 w-8 text-muted-foreground/40" />
+              <p className="text-sm font-bold text-foreground">No Patients Found</p>
+              <p className="text-xs text-muted-foreground">
+                No patient records match your current search query.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          patients.map((patient) => {
+            const age = calculateAge(patient.birth_date);
+            const allergyList = parseAllergies(patient.allergies);
+            const hasAllergies = allergyList.length > 0;
+
+            return (
+              <Card
+                key={patient.id}
+                className="border border-border/80 bg-card rounded-2xl shadow-xs overflow-hidden transition-shadow hover:shadow-md"
+              >
+                <CardContent className="p-4 space-y-3">
+                  {/* Header: Avatar + Name + Dropdown */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-11 w-11 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center font-bold text-sm shrink-0">
+                        {getInitials(patient.first_name, patient.last_name)}
+                      </div>
+                      <div className="min-w-0">
+                        <Link
+                          href={`/patients/${patient.id}`}
+                          className="font-bold text-sm text-foreground hover:text-cyan-600 transition-colors block truncate"
+                        >
+                          {patient.first_name} {patient.last_name}
+                        </Link>
+                        <p className="text-[11px] font-mono text-muted-foreground">
+                          ID: #{patient.id.slice(0, 8).toUpperCase()}
+                          {age !== null && ` · ${age} yrs old`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        className="h-10 w-10 p-0 inline-flex items-center justify-center rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                        aria-label={`Actions for ${patient.first_name} ${patient.last_name}`}
+                      >
+                        <MoreHorizontal className="h-5 w-5" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                        <DropdownMenuItem onClick={() => handleEdit(patient)} className="text-xs py-2.5">
+                          <Pencil className="mr-2 h-4 w-4 text-muted-foreground" /> Edit Demographics
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleArchive(patient.id)} className="text-xs py-2.5 text-destructive">
+                          <Archive className="mr-2 h-4 w-4" /> Archive Record
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  {/* Contact Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-0.5 border-t border-border/40">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Contact</span>
+                      <a
+                        href={`tel:${patient.contact_no}`}
+                        className="flex items-center gap-1.5 font-semibold text-cyan-600 dark:text-cyan-400 hover:underline mt-0.5"
+                        style={{ minHeight: "32px" }}
+                      >
+                        <Phone className="h-3.5 w-3.5 shrink-0" />
+                        {patient.contact_no}
+                      </a>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Birth Date</span>
+                      <p className="font-medium text-foreground mt-0.5 flex items-center gap-1">
+                        {formatDate(patient.birth_date)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {patient.email && (
+                    <div className="text-xs">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Email</span>
+                      <a
+                        href={`mailto:${patient.email}`}
+                        className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors truncate mt-0.5"
+                        style={{ minHeight: "28px" }}
+                      >
+                        <Mail className="h-3.5 w-3.5 shrink-0" />
+                        {patient.email}
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Medical Alerts */}
+                  <div className="pt-0.5">
+                    {hasAllergies ? (
+                      <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                        <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                          Allergies ({allergyList.length}):
+                        </span>
+                        {allergyList.map((allergy, idx) => (
+                          <Badge key={idx} variant="outline" className="border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/20 text-[10px] font-bold">
+                            {allergy}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span>No known medical allergies</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Primary CTA */}
+                  <div className="pt-1">
+                    <Link href={`/patients/${patient.id}`} className="block">
+                      <Button
+                        className="w-full bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2"
+                        style={{ minHeight: "44px" }}
+                      >
+                        <Eye className="h-4 w-4" />
+                        View Patient File & Dental Chart
+                        <ArrowUpRight className="h-3.5 w-3.5 ml-auto" />
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop Table View (lg+) */}
+      <div className="hidden lg:block card-premium overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
