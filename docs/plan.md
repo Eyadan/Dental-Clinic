@@ -398,6 +398,8 @@ Verified against `schema.sql` RLS policies and the codebase:
 | CHAT-02 | Supabase Realtime Publication Registration & Live Chat Polling Fallback | ✅ Done | 🟠 High | Registered `messenger_conversations` and `messenger_messages` in `supabase_realtime` publication (`REPLICA IDENTITY FULL`), added 2.5s polling in `ChatThread` and 3.5s in `ChatClient`. |
 | NAV-03 | Patient Check-In & Arrival Desk Sidebar Navigation Enablement for Dentists | ✅ Done | 🟡 Medium | Added `'dentist'` to `roles` for `Check-In` in `src/lib/constants/navigation.ts`. |
 | CONS-01 | PDA Consent Clauses Restoration & Mobile/Web View Signing Enablement | ✅ Done | 🟠 High | Fixed empty consent checklist on `/consultation/[appointmentId]`, added canonical PDA clauses fallback, Select All helper, direct mobile/tablet signing button, and reception consent access. |
+| CHAT-03 | Dentist Live Chat Cloud RLS Fallback & Admin Client Resolution | ✅ Done | 🟠 High | Added server-side role validation and service-role fallback in chat server actions (`getConversationsAction`, `getMessagesAction`, `markAsReadAction`) to guarantee dentists see conversations on live deployments. |
+
 
 
 ---

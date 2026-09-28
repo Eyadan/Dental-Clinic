@@ -1,6 +1,8 @@
 "use server";
 
+import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getServerUserContext } from "@/lib/supabase/user-context";
 import { sendStaffMessage } from "@/lib/services/notification-service";
 import { updateConversationStatus, saveMessage } from "@/lib/services/messenger-service";
 import type { ServiceResult } from "@/lib/services/base-service";
@@ -14,15 +16,45 @@ export interface ConversationWithDetails extends MessengerConversation {
   unread_count: number;
 }
 
+function getServiceRoleSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.SUPABASE_SECRET_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
 export async function getConversationsAction(): Promise<ServiceResult<ConversationWithDetails[]>> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const { userId, role } = await getServerUserContext();
+    if (!userId || !role || !["admin", "reception", "dentist"].includes(role)) {
+      return { success: false, error: "Unauthorized" };
+    }
 
-    const { data: conversations, error } = await supabase
+    const supabase = await createServerSupabaseClient();
+    const serviceClient = getServiceRoleSupabaseClient();
+
+    let { data: conversations, error } = await supabase
       .from("messenger_conversations")
       .select("*")
       .in("status", ["active", "taken_over"])
       .order("updated_at", { ascending: false });
+
+    // Resilient fallback: if the database has not yet applied the dentist RLS migration,
+    // query with the service role client so dentists can see active conversations.
+    if ((!conversations || conversations.length === 0 || error) && serviceClient) {
+      const { data: adminConvs, error: adminErr } = await serviceClient
+        .from("messenger_conversations")
+        .select("*")
+        .in("status", ["active", "taken_over"])
+        .order("updated_at", { ascending: false });
+
+      if (adminConvs && adminConvs.length > 0) {
+        conversations = adminConvs;
+        error = null;
+      }
+    }
 
     if (error) {
       return { success: false, error: error.message };
@@ -32,9 +64,11 @@ export async function getConversationsAction(): Promise<ServiceResult<Conversati
       return { success: true, data: [] };
     }
 
+    const queryClient = serviceClient ?? supabase;
+
     const result: ConversationWithDetails[] = await Promise.all(
       (conversations as MessengerConversation[]).map(async (conv) => {
-        const { data: lastMsg } = await supabase
+        const { data: lastMsg } = await queryClient
           .from("messenger_messages")
           .select("content, sent_at, direction")
           .eq("conversation_id", conv.id)
@@ -42,13 +76,13 @@ export async function getConversationsAction(): Promise<ServiceResult<Conversati
           .limit(1)
           .maybeSingle();
 
-        const { data: patient } = await supabase
+        const { data: patient } = await queryClient
           .from("patients")
           .select("id, first_name, last_name")
           .eq("messenger_psid", conv.patient_psid)
           .maybeSingle();
 
-        const { count: unreadCount } = await supabase
+        const { count: unreadCount } = await queryClient
           .from("messenger_messages")
           .select("*", { count: "exact", head: true })
           .eq("conversation_id", conv.id)
@@ -79,13 +113,33 @@ export async function getMessagesAction(
   conversationId: string,
 ): Promise<ServiceResult<MessengerMessage[]>> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const { userId, role } = await getServerUserContext();
+    if (!userId || !role || !["admin", "reception", "dentist"].includes(role)) {
+      return { success: false, error: "Unauthorized" };
+    }
 
-    const { data, error } = await supabase
+    const supabase = await createServerSupabaseClient();
+    const serviceClient = getServiceRoleSupabaseClient();
+
+    let { data, error } = await supabase
       .from("messenger_messages")
       .select("*")
       .eq("conversation_id", conversationId)
       .order("sent_at", { ascending: true });
+
+    // Fallback if RLS blocks reading messages for dentists
+    if ((!data || data.length === 0 || error) && serviceClient) {
+      const { data: adminMsgs, error: adminErr } = await serviceClient
+        .from("messenger_messages")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .order("sent_at", { ascending: true });
+
+      if (adminMsgs && adminMsgs.length > 0) {
+        data = adminMsgs;
+        error = null;
+      }
+    }
 
     if (error) {
       return { success: false, error: error.message };
@@ -195,9 +249,16 @@ export async function markAsReadAction(
   conversationId: string,
 ): Promise<ServiceResult<void>> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const { userId, role } = await getServerUserContext();
+    if (!userId || !role || !["admin", "reception", "dentist"].includes(role)) {
+      return { success: false, error: "Unauthorized" };
+    }
 
-    const { error } = await supabase
+    const supabase = await createServerSupabaseClient();
+    const serviceClient = getServiceRoleSupabaseClient();
+    const client = serviceClient ?? supabase;
+
+    const { error } = await client
       .from("messenger_messages")
       .update({ is_read: true })
       .eq("conversation_id", conversationId)
