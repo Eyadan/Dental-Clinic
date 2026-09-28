@@ -76,7 +76,6 @@ export async function getConversationsAction(): Promise<ServiceResult<Conversati
             .select("conversation_id, content, sent_at")
             .in("conversation_id", convIds)
             .order("sent_at", { ascending: false })
-            .limit(Math.max(convIds.length * 5, 100))
         : Promise.resolve({ data: [] }),
     ]);
 
