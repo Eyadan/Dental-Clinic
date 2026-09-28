@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils/cn";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -215,10 +216,12 @@ export function DashboardClient({ role = "admin" }: DashboardClientProps) {
           title: "Unread Messages",
           value: stats?.unreadMessages ?? 0,
           subtitle: "Messenger inbox",
-          change: "Response < 5m",
+          change: (stats?.unreadMessages ?? 0) > 0 ? `${stats?.unreadMessages} New` : "Response < 5m",
           changeType: "neutral" as const,
           icon: MessageSquare,
-          iconBg: "from-indigo-500/20 to-purple-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
+          iconBg: (stats?.unreadMessages ?? 0) > 0
+            ? "from-red-500/20 to-rose-500/20 text-red-600 dark:text-red-400 border-red-500/30"
+            : "from-indigo-500/20 to-purple-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
           href: "/chat",
         },
       ];
@@ -311,10 +314,20 @@ export function DashboardClient({ role = "admin" }: DashboardClientProps) {
                   </div>
                 </div>
                 <div className="mt-4 flex items-baseline justify-between">
-                  <p className="text-3xl font-black tracking-tight text-foreground tabular-nums">
+                  <p className={cn(
+                    "text-3xl font-black tracking-tight tabular-nums",
+                    card.title === "Unread Messages" && (stats?.unreadMessages ?? 0) > 0
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-foreground"
+                  )}>
                     {stats ? card.value : "—"}
                   </p>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
+                  <span className={cn(
+                    "inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border",
+                    card.title === "Unread Messages" && (stats?.unreadMessages ?? 0) > 0
+                      ? "bg-red-600 text-white border-transparent font-black shadow-xs shadow-red-500/50"
+                      : "text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 border-cyan-500/20"
+                  )}>
                     {card.change}
                   </span>
                 </div>

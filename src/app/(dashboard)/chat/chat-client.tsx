@@ -86,6 +86,7 @@ export function ChatClient({ staffId }: ChatClientProps) {
         title="Messenger Live Chat Handoff"
         description="Real-time Facebook Messenger AI chatbot takeover & patient support workspace"
         badgeText={unreadTotal > 0 ? `${unreadTotal} Unread` : undefined}
+        badgeVariant={unreadTotal > 0 ? "danger" : "default"}
       />
 
       {/* 3-COLUMN CHAT INTERFACE */}
