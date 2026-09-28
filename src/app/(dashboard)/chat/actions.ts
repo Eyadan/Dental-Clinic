@@ -32,29 +32,15 @@ export async function getConversationsAction(): Promise<ServiceResult<Conversati
       return { success: false, error: "Unauthorized" };
     }
 
-    const supabase = await createServerSupabaseClient();
     const serviceClient = getServiceRoleSupabaseClient();
+    const supabase = await createServerSupabaseClient();
+    const queryClient = serviceClient ?? supabase;
 
-    let { data: conversations, error } = await supabase
+    const { data: conversations, error } = await queryClient
       .from("messenger_conversations")
       .select("*")
       .in("status", ["active", "taken_over"])
       .order("updated_at", { ascending: false });
-
-    // Resilient fallback: if the database has not yet applied the dentist RLS migration,
-    // query with the service role client so dentists can see active conversations.
-    if ((!conversations || conversations.length === 0 || error) && serviceClient) {
-      const { data: adminConvs, error: adminErr } = await serviceClient
-        .from("messenger_conversations")
-        .select("*")
-        .in("status", ["active", "taken_over"])
-        .order("updated_at", { ascending: false });
-
-      if (adminConvs && adminConvs.length > 0) {
-        conversations = adminConvs;
-        error = null;
-      }
-    }
 
     if (error) {
       return { success: false, error: error.message };
@@ -64,41 +50,77 @@ export async function getConversationsAction(): Promise<ServiceResult<Conversati
       return { success: true, data: [] };
     }
 
-    const queryClient = serviceClient ?? supabase;
+    const convList = conversations as MessengerConversation[];
+    const convIds = convList.map((c) => c.id);
+    const uniquePsids = Array.from(new Set(convList.map((c) => c.patient_psid))).filter(Boolean);
 
-    const result: ConversationWithDetails[] = await Promise.all(
-      (conversations as MessengerConversation[]).map(async (conv) => {
-        const { data: lastMsg } = await queryClient
-          .from("messenger_messages")
-          .select("content, sent_at, direction")
-          .eq("conversation_id", conv.id)
-          .order("sent_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+    // Parallel batch query: fetch all patients, unread counts, and recent messages across all conversations in just 3 queries
+    const [patientsRes, unreadRes, messagesRes] = await Promise.all([
+      uniquePsids.length > 0
+        ? queryClient
+            .from("patients")
+            .select("id, first_name, last_name, messenger_psid")
+            .in("messenger_psid", uniquePsids)
+        : Promise.resolve({ data: [] }),
+      convIds.length > 0
+        ? queryClient
+            .from("messenger_messages")
+            .select("conversation_id")
+            .in("conversation_id", convIds)
+            .eq("direction", "inbound")
+            .eq("is_read", false)
+        : Promise.resolve({ data: [] }),
+      convIds.length > 0
+        ? queryClient
+            .from("messenger_messages")
+            .select("conversation_id, content, sent_at")
+            .in("conversation_id", convIds)
+            .order("sent_at", { ascending: false })
+            .limit(Math.max(convIds.length * 5, 100))
+        : Promise.resolve({ data: [] }),
+    ]);
 
-        const { data: patient } = await queryClient
-          .from("patients")
-          .select("id, first_name, last_name")
-          .eq("messenger_psid", conv.patient_psid)
-          .maybeSingle();
+    // Build fast in-memory lookup maps
+    const patientMap = new Map<string, { id: string; name: string }>();
+    patientsRes.data?.forEach((p) => {
+      if (p.messenger_psid) {
+        patientMap.set(p.messenger_psid, {
+          id: p.id,
+          name: `${p.first_name} ${p.last_name}`,
+        });
+      }
+    });
 
-        const { count: unreadCount } = await queryClient
-          .from("messenger_messages")
-          .select("*", { count: "exact", head: true })
-          .eq("conversation_id", conv.id)
-          .eq("direction", "inbound")
-          .eq("is_read", false);
+    const unreadCountMap = new Map<string, number>();
+    unreadRes.data?.forEach((m) => {
+      unreadCountMap.set(m.conversation_id, (unreadCountMap.get(m.conversation_id) ?? 0) + 1);
+    });
 
-        return {
-          ...conv,
-          last_message: lastMsg?.content ?? null,
-          last_message_at: lastMsg?.sent_at ?? null,
-          patient_name: patient ? `${patient.first_name} ${patient.last_name}` : null,
-          patient_id: patient?.id ?? null,
-          unread_count: unreadCount ?? 0,
-        };
-      }),
-    );
+    // Messages are sorted descending by sent_at, so first occurrence per conversation is the newest message
+    const lastMsgMap = new Map<string, { content: string; sent_at: string }>();
+    messagesRes.data?.forEach((m) => {
+      if (!lastMsgMap.has(m.conversation_id)) {
+        lastMsgMap.set(m.conversation_id, {
+          content: m.content,
+          sent_at: m.sent_at,
+        });
+      }
+    });
+
+    const result: ConversationWithDetails[] = convList.map((conv) => {
+      const patient = patientMap.get(conv.patient_psid);
+      const lastMsg = lastMsgMap.get(conv.id);
+      const unreadCount = unreadCountMap.get(conv.id) ?? 0;
+
+      return {
+        ...conv,
+        last_message: lastMsg?.content ?? null,
+        last_message_at: lastMsg?.sent_at ?? null,
+        patient_name: patient?.name ?? null,
+        patient_id: patient?.id ?? null,
+        unread_count: unreadCount,
+      };
+    });
 
     return { success: true, data: result };
   } catch (error) {
@@ -118,28 +140,15 @@ export async function getMessagesAction(
       return { success: false, error: "Unauthorized" };
     }
 
-    const supabase = await createServerSupabaseClient();
     const serviceClient = getServiceRoleSupabaseClient();
+    const supabase = await createServerSupabaseClient();
+    const queryClient = serviceClient ?? supabase;
 
-    let { data, error } = await supabase
+    const { data, error } = await queryClient
       .from("messenger_messages")
       .select("*")
       .eq("conversation_id", conversationId)
       .order("sent_at", { ascending: true });
-
-    // Fallback if RLS blocks reading messages for dentists
-    if ((!data || data.length === 0 || error) && serviceClient) {
-      const { data: adminMsgs, error: adminErr } = await serviceClient
-        .from("messenger_messages")
-        .select("*")
-        .eq("conversation_id", conversationId)
-        .order("sent_at", { ascending: true });
-
-      if (adminMsgs && adminMsgs.length > 0) {
-        data = adminMsgs;
-        error = null;
-      }
-    }
 
     if (error) {
       return { success: false, error: error.message };
@@ -159,9 +168,11 @@ export async function takeChatAction(
   staffId: string,
 ): Promise<ServiceResult<void>> {
   try {
+    const serviceClient = getServiceRoleSupabaseClient();
     const supabase = await createServerSupabaseClient();
+    const client = serviceClient ?? supabase;
 
-    const { data: conv } = await supabase
+    const { data: conv } = await client
       .from("messenger_conversations")
       .select("patient_psid")
       .eq("id", conversationId)
@@ -170,7 +181,7 @@ export async function takeChatAction(
     await updateConversationStatus(conversationId, "taken_over", staffId);
 
     if (conv?.patient_psid) {
-      const takeOverMsg = "👩\u200d⚕️ A staff member from our clinic has joined this conversation and will assist you personally.";
+      const takeOverMsg = "👩‍⚕️ A staff member from our clinic has joined this conversation and will assist you personally.";
       const sendResult = await sendStaffMessage(conv.patient_psid, takeOverMsg);
       if (!sendResult.success) {
         await saveMessage(conversationId, "outbound", takeOverMsg);
@@ -190,9 +201,11 @@ export async function endChatAction(
   conversationId: string,
 ): Promise<ServiceResult<void>> {
   try {
+    const serviceClient = getServiceRoleSupabaseClient();
     const supabase = await createServerSupabaseClient();
+    const client = serviceClient ?? supabase;
 
-    const { data: conv } = await supabase
+    const { data: conv } = await client
       .from("messenger_conversations")
       .select("patient_psid")
       .eq("id", conversationId)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { MessageSquare, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ConversationList } from "./conversation-list";
@@ -12,24 +12,32 @@ import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 
 interface ChatClientProps {
   staffId: string;
+  initialConversations?: ConversationWithDetails[];
 }
 
-export function ChatClient({ staffId }: ChatClientProps) {
-  const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
+export function ChatClient({ staffId, initialConversations = [] }: ChatClientProps) {
+  const [conversations, setConversations] = useState<ConversationWithDetails[]>(initialConversations);
   const [selected, setSelected] = useState<ConversationWithDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(initialConversations.length === 0);
+  const isFetchingRef = useRef(false);
 
   const loadConversations = useCallback(async () => {
-    const result = await getConversationsAction();
-    if (result.success && result.data) {
-      setConversations(result.data);
-      setSelected((prev) => {
-        if (!prev) return prev;
-        const updated = result.data?.find((c) => c.id === prev.id);
-        return updated ?? prev;
-      });
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    try {
+      const result = await getConversationsAction();
+      if (result.success && result.data) {
+        setConversations(result.data);
+        setSelected((prev) => {
+          if (!prev) return prev;
+          const updated = result.data?.find((c) => c.id === prev.id);
+          return updated ?? prev;
+        });
+      }
+    } finally {
+      isFetchingRef.current = false;
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   useEffect(() => {

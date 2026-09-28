@@ -1,9 +1,12 @@
 import { getServerUserContext } from "@/lib/supabase/user-context";
 import { ChatClient } from "./chat-client";
+import { getConversationsAction } from "./actions";
 
 export default async function ChatPage() {
   const { userId } = await getServerUserContext();
   const staffId = userId ?? "";
+  const initialRes = await getConversationsAction();
+  const initialConversations = initialRes.success && initialRes.data ? initialRes.data : [];
 
   return (
     <div className="space-y-4">
@@ -14,7 +17,7 @@ export default async function ChatPage() {
         </p>
       </div>
 
-      <ChatClient staffId={staffId} />
+      <ChatClient staffId={staffId} initialConversations={initialConversations} />
     </div>
   );
 }

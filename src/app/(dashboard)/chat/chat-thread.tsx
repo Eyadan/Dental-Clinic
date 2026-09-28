@@ -29,24 +29,31 @@ export function ChatThread({ conversation, staffId, onConversationChange }: Chat
   const [isToggling, setIsToggling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isFetchingRef = useRef(false);
 
   const loadMessages = useCallback(async () => {
-    const result = await getMessagesAction(conversation.id);
-    if (result.success && result.data) {
-      const freshMessages = result.data;
-      setMessages((prev) => {
-        if (
-          prev.length === freshMessages.length &&
-          prev[prev.length - 1]?.id === freshMessages[freshMessages.length - 1]?.id
-        ) {
-          return prev;
-        }
-        return freshMessages;
-      });
-    } else {
-      setError(result.error ?? "Failed to load messages");
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    try {
+      const result = await getMessagesAction(conversation.id);
+      if (result.success && result.data) {
+        const freshMessages = result.data;
+        setMessages((prev) => {
+          if (
+            prev.length === freshMessages.length &&
+            prev[prev.length - 1]?.id === freshMessages[freshMessages.length - 1]?.id
+          ) {
+            return prev;
+          }
+          return freshMessages;
+        });
+      } else {
+        setError(result.error ?? "Failed to load messages");
+      }
+    } finally {
+      isFetchingRef.current = false;
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, [conversation.id]);
 
   useEffect(() => {
