@@ -157,12 +157,12 @@ const RECEPTION_FLOW_ORDER = [
   "/dashboard",
   "/check-in",
   "/queue",
+  "/billing",
   "/appointments",
   "/bookings",
   "/waitlist",
   "/patients",
   "/consent",
-  "/billing",
   "/chat",
   "/dentists/unavailability",
 ];

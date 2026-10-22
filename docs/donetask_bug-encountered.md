@@ -196,6 +196,7 @@
 | PERF-119 | 2026-09-28 19:08 | 10 | CHAT-05 | High | Fixed | Live chat experienced up to a ~10-second delay when opening `/chat` or receiving messages due to an N+1 query cascade in `getConversationsAction` (3 queries executed per conversation = 30+ sequential HTTP requests per load and per 3.5s poll) and lack of server prefetching | Open `/chat` on web or mobile | Conversations and message threads appear instantly with zero delay | 5 to 10 second delay with empty loader while 30+ separate network roundtrips executed sequentially | (1) Replaced the 3x N+1 query loop in `actions.ts` with 3 parallel batch queries (`Promise.all`) fetching all patients (`.in("messenger_psid", uniquePsids)`), all unread counts (`.in("conversation_id", convIds)`), and all recent messages across conversations in just 2 network roundtrips; (2) Prefetched conversations server-side in `page.tsx` and passed `initialConversations` to `ChatClient` so the inbox renders instantly in the HTML; (3) Added `useRef` concurrency guards (`isFetchingRef`) in both `ChatClient` and `ChatThread` to prevent overlapping background poll requests from stacking up. | 2026-09-28 19:08 |
 
 | UI-120 | 2026-10-22 15:35 | 10 | NAV-04 | Medium | Fixed | Sidebar navigation items were ordered arbitrarily without clear relationship to clinical flow, causing cognitive friction for attending dentists | Log in as Dentist (`dentist@clinic.local`), view sidebar menu | Nav items follow the dentist's natural daily workflow in chronological sequence: Overview → Appointments → Queue → Consultation → Consent → Patients → Schedule & Leave → Billing → Auxiliary | Clinical tools (Consultation, Consent, Queue) were disjointed and scattered between front desk items | Updated `src/lib/constants/navigation.ts` with role-aware sequential ordering arrays (`DENTIST_FLOW_ORDER` and `RECEPTION_FLOW_ORDER`) inside `getNavItemsForRole()`. Verified clean TypeScript build with 0 errors. | 2026-10-22 15:35 |
+| UI-121 | 2026-10-22 15:52 | 10 | NAV-05 | Medium | Fixed | Receptionist sidebar navigation placed Billing after Consent rather than adjacent to patient arrival and queue handling, causing extra navigation steps during checkout | Log in as Receptionist, view sidebar navigation menu | Sidebar menu arranges items according to the Direct Visit Flow: Overview → Check-In → Queue → Billing → Appointments → Bookings → Waitlist → Patients → Consent → Live Chat → Schedule & Leave | Billing was located at item #9, far from Check-In and Queue | Updated `RECEPTION_FLOW_ORDER` in `src/lib/constants/navigation.ts` to prioritize Billing directly after Queue in the visit lifecycle. | 2026-10-22 15:52 |
 
 ---
 
@@ -205,9 +206,9 @@
 |---|---|---|---|---|---|
 | Critical | 1 | 0 | 6 | 0 | 7 |
 | High | 0 | 0 | 28 | 0 | 28 |
-| Medium | 0 | 0 | 26 | 0 | 26 |
+| Medium | 0 | 0 | 27 | 0 | 27 |
 | Low | 0 | 0 | 10 | 0 | 10 |
-| **Total** | **1** | **0** | **70** | **0** | **71** |
+| **Total** | **1** | **0** | **71** | **0** | **72** |
 
 
 

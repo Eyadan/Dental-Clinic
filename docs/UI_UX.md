@@ -297,25 +297,38 @@ To prevent confusion and cognitive fatigue, sidebar items are strictly arranged 
 10. **Bookings** (`/bookings`) — Booking requests & triage
 11. **Check-In** (`/check-in`) — Front desk check-in visibility
 
-| Item | Route | Admin | Reception | Dentist | Dentist Flow Order |
-|---|---|---|---|---|---|
-| Overview | `/dashboard` | ✅ | ✅ | ✅ | #1 (Morning Overview) |
-| Appointments | `/appointments` | ✅ | ✅ | ✅ | #2 (Daily Schedule) |
-| Queue | `/queue` | ✅ | ✅ | ✅ | #3 (Call Waiting Patient) |
-| Consultation | `/consultation` | ✅ | — | ✅ | #4 (Chart & Treat) |
-| Consent | `/consent` | ✅ | ✅ | ✅ | #5 (Informed E-Consent) |
-| Patients | `/patients` | ✅ | ✅ | ✅ | #6 (Records & History) |
-| Schedule & Leave | `/dentists/unavailability` | — | ✅ | ✅ | #7 (Shifts & Leave) |
-| Billing | `/billing` | ✅ | ✅ | ✅ | #8 (Checkout Status) |
-| Live Chat | `/chat` | ✅ | ✅ | ✅ | #9 (Patient Messages) |
-| Bookings | `/bookings` | ✅ | ✅ | ✅ | #10 (Booking Requests) |
-| Check-In | `/check-in` | ✅ | ✅ | ✅ | #11 (Desk Arrival) |
-| Waitlist | `/waitlist` | — | ✅ | — | — |
-| Doctors Directory | `/dentists` | ✅ | — | — | — |
-| Services | `/services` | ✅ | — | — | — |
-| Analytics | `/reports` | ✅ | — | — | — |
-| Settings | `/settings` | ✅ | — | — | — |
-| Audit Logs | `/audit` | ✅ | — | — | — |
+**Receptionist Daily Flow Order (Direct Visit Flow):**
+1. **Overview** (`/dashboard`) — Morning desk status & arrival KPIs
+2. **Check-In** (`/check-in`) — Patient arrival, search & QR self-registration
+3. **Queue** (`/queue`) — Waiting room monitor & dentist room status
+4. **Billing** (`/billing`) — Checkout, discounts & payment collection
+5. **Appointments** (`/appointments`) — Schedule calendar, follow-ups & walk-ins
+6. **Bookings** (`/bookings`) — Review and approve Messenger requests
+7. **Waitlist** (`/waitlist`) — Standby patient slot filling
+8. **Patients** (`/patients`) — Patient database & contact records
+9. **Consent** (`/consent`) — Tablet consent waiver assistance
+10. **Live Chat** (`/chat`) — Real-time Messenger inquiries & patient support
+11. **Schedule & Leave** (`/dentists/unavailability`) — Doctor shift hours & leave reference
+
+| Item | Route | Admin | Reception | Dentist | Dentist Flow Order | Reception Flow Order |
+|---|---|---|---|---|---|---|
+| Overview | `/dashboard` | ✅ | ✅ | ✅ | #1 | #1 |
+| Check-In | `/check-in` | ✅ | ✅ | ✅ | #11 | #2 (Arrival) |
+| Queue | `/queue` | ✅ | ✅ | ✅ | #3 | #3 (Waiting Room) |
+| Billing | `/billing` | ✅ | ✅ | ✅ | #8 | #4 (Checkout / Pay) |
+| Appointments | `/appointments` | ✅ | ✅ | ✅ | #2 | #5 (Schedule) |
+| Bookings | `/bookings` | ✅ | ✅ | ✅ | #10 | #6 (Messenger Triage) |
+| Waitlist | `/waitlist` | — | ✅ | — | — | #7 (Standby List) |
+| Patients | `/patients` | ✅ | ✅ | ✅ | #6 | #8 (Records) |
+| Consent | `/consent` | ✅ | ✅ | ✅ | #5 | #9 (Tablet Waivers) |
+| Live Chat | `/chat` | ✅ | ✅ | ✅ | #9 | #10 (Support) |
+| Schedule & Leave | `/dentists/unavailability` | — | ✅ | ✅ | #7 | #11 (Doctor Hours) |
+| Consultation | `/consultation` | ✅ | — | ✅ | #4 | — |
+| Doctors Directory | `/dentists` | ✅ | — | — | — | — |
+| Services | `/services` | ✅ | — | — | — | — |
+| Analytics | `/reports` | ✅ | — | — | — | — |
+| Settings | `/settings` | ✅ | — | — | — | — |
+| Audit Logs | `/audit` | ✅ | — | — | — | — |
 
 **Design rationale:**
 - **Jakob's Law:** Users expect sidebar navigation on desktop dashboards (familiar from Gmail, Slack, Linear)

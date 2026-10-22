@@ -214,7 +214,7 @@ components/
 **Role-Based Sequential Navigation Flow (`src/lib/constants/navigation.ts`):**
 - Nav items are sorted per role via `getNavItemsForRole(role)` to mirror daily operations.
 - **Dentist Flow:** Overview → Appointments → Queue (Call Next) → Consultation (Chart/Treat) → Consent → Patients → Schedule & Leave → Billing → Auxiliary.
-- **Reception Flow:** Overview → Check-In → Queue → Appointments → Bookings → Waitlist → Patients → Consent → Billing → Auxiliary.
+- **Reception Flow (Direct Visit Flow):** Overview → Check-In (Arrival) → Queue (Waiting) → Billing (Checkout/Pay) → Appointments → Bookings → Waitlist → Patients → Consent → Live Chat → Schedule & Leave.
 
 ### 3.5 Service Layer
 
