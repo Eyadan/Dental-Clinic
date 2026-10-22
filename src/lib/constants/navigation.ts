@@ -35,27 +35,9 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "reception", "dentist"],
   },
   {
-    label: "Bookings",
-    href: "/bookings",
-    icon: CalendarPlus,
-    roles: ["admin", "reception", "dentist"],
-  },
-  {
-    label: "Patients",
-    href: "/patients",
-    icon: Users,
-    roles: ["admin", "reception", "dentist"],
-  },
-  {
     label: "Appointments",
     href: "/appointments",
     icon: CalendarDays,
-    roles: ["admin", "reception", "dentist"],
-  },
-  {
-    label: "Check-In",
-    href: "/check-in",
-    icon: UserCheck,
     roles: ["admin", "reception", "dentist"],
   },
   {
@@ -63,18 +45,6 @@ export const NAV_ITEMS: NavItem[] = [
     href: "/queue",
     icon: ListOrdered,
     roles: ["admin", "reception", "dentist"],
-  },
-  {
-    label: "Doctors",
-    href: "/dentists",
-    icon: Stethoscope,
-    roles: ["admin"],
-  },
-  {
-    label: "Services",
-    href: "/services",
-    icon: Sparkles,
-    roles: ["admin"],
   },
   {
     label: "Consultation",
@@ -86,6 +56,18 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Consent",
     href: "/consent",
     icon: FileCheck,
+    roles: ["admin", "reception", "dentist"],
+  },
+  {
+    label: "Patients",
+    href: "/patients",
+    icon: Users,
+    roles: ["admin", "reception", "dentist"],
+  },
+  {
+    label: "Schedule & Leave",
+    href: "/dentists/unavailability",
+    icon: CalendarX,
     roles: ["admin", "reception", "dentist"],
   },
   {
@@ -101,9 +83,15 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "reception", "dentist"],
   },
   {
-    label: "Schedule & Leave",
-    href: "/dentists/unavailability",
-    icon: CalendarX,
+    label: "Bookings",
+    href: "/bookings",
+    icon: CalendarPlus,
+    roles: ["admin", "reception", "dentist"],
+  },
+  {
+    label: "Check-In",
+    href: "/check-in",
+    icon: UserCheck,
     roles: ["admin", "reception", "dentist"],
   },
   {
@@ -111,6 +99,18 @@ export const NAV_ITEMS: NavItem[] = [
     href: "/waitlist",
     icon: ListPlus,
     roles: ["reception"],
+  },
+  {
+    label: "Doctors",
+    href: "/dentists",
+    icon: Stethoscope,
+    roles: ["admin"],
+  },
+  {
+    label: "Services",
+    href: "/services",
+    icon: Sparkles,
+    roles: ["admin"],
   },
   {
     label: "Analytics",
@@ -138,6 +138,53 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+// Sequential flow ordering mapped per role to ensure zero confusion
+const DENTIST_FLOW_ORDER = [
+  "/dashboard",
+  "/appointments",
+  "/queue",
+  "/consultation",
+  "/consent",
+  "/patients",
+  "/dentists/unavailability",
+  "/billing",
+  "/chat",
+  "/bookings",
+  "/check-in",
+];
+
+const RECEPTION_FLOW_ORDER = [
+  "/dashboard",
+  "/check-in",
+  "/queue",
+  "/appointments",
+  "/bookings",
+  "/waitlist",
+  "/patients",
+  "/consent",
+  "/billing",
+  "/chat",
+  "/dentists/unavailability",
+];
+
 export function getNavItemsForRole(role: UserRole): NavItem[] {
-  return NAV_ITEMS.filter((item) => item.roles.includes(role));
+  const roleItems = NAV_ITEMS.filter((item) => item.roles.includes(role));
+
+  if (role === "dentist") {
+    return [...roleItems].sort((a, b) => {
+      const idxA = DENTIST_FLOW_ORDER.indexOf(a.href);
+      const idxB = DENTIST_FLOW_ORDER.indexOf(b.href);
+      return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+    });
+  }
+
+  if (role === "reception") {
+    return [...roleItems].sort((a, b) => {
+      const idxA = RECEPTION_FLOW_ORDER.indexOf(a.href);
+      const idxB = RECEPTION_FLOW_ORDER.indexOf(b.href);
+      return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+    });
+  }
+
+  return roleItems;
 }

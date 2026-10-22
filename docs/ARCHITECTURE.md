@@ -211,6 +211,11 @@ components/
 - Loading, error, and empty states on every data-driven component
 - No direct API calls in components — all go through service layer
 
+**Role-Based Sequential Navigation Flow (`src/lib/constants/navigation.ts`):**
+- Nav items are sorted per role via `getNavItemsForRole(role)` to mirror daily operations.
+- **Dentist Flow:** Overview → Appointments → Queue (Call Next) → Consultation (Chart/Treat) → Consent → Patients → Schedule & Leave → Billing → Auxiliary.
+- **Reception Flow:** Overview → Check-In → Queue → Appointments → Bookings → Waitlist → Patients → Consent → Billing → Auxiliary.
+
 ### 3.5 Service Layer
 
 All data access is centralized. Components never call Supabase directly.

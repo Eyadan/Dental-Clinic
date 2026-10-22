@@ -280,27 +280,50 @@ Collapsed mode (w-16, icon-only):
 - **Expanded state:** Logo + "Smile Dental" + role badge, nav items show icon + label
 - **User name:** Always visible in topbar dropdown (avatar + name + chevron)
 
-**Sidebar items by role:**
+**Sidebar items and sequential workflow order by role:**
 
-| Item | Admin | Reception | Dentist |
-|---|---|---|---|
-| Overview | ✅ | ✅ | ✅ |
-| Bookings | ✅ | ✅ | ✅ (view only) |
-| Patients | ✅ | ✅ | ✅ (own patients) |
-| Appointments | ✅ | ✅ | ✅ |
-| Queue | ✅ | ✅ | ✅ |
-| Consultation | ✅ | — | ✅ |
-| Consent | ✅ | — | ✅ |
-| Billing | ✅ | ✅ | ✅ (view only) |
-| Live Chat | ✅ | ✅ | — |
-| Settings | ✅ | — | — |
+To prevent confusion and cognitive fatigue, sidebar items are strictly arranged according to each role's natural daily workflow sequence (`src/lib/constants/navigation.ts`):
+
+**Dentist Daily Flow Order (Clinical Sequence):**
+1. **Overview** (`/dashboard`) — Morning metrics & daily clinic stats
+2. **Appointments** (`/appointments`) — Schedule calendar & booked slots
+3. **Queue** (`/queue`) — Chairside: View waiting room & call next patient
+4. **Consultation** (`/consultation`) — Odontogram charting, clinical notes & treatment
+5. **Consent** (`/consent`) — Informed consent review & signatures
+6. **Patients** (`/patients`) — Patient directory, dental history & files
+7. **Schedule & Leave** (`/dentists/unavailability`) — Shifts, availability & emergency declarations
+8. **Billing** (`/billing`) — Checkout & invoice status
+9. **Live Chat** (`/chat`) — Patient messaging inquiries
+10. **Bookings** (`/bookings`) — Booking requests & triage
+11. **Check-In** (`/check-in`) — Front desk check-in visibility
+
+| Item | Route | Admin | Reception | Dentist | Dentist Flow Order |
+|---|---|---|---|---|---|
+| Overview | `/dashboard` | ✅ | ✅ | ✅ | #1 (Morning Overview) |
+| Appointments | `/appointments` | ✅ | ✅ | ✅ | #2 (Daily Schedule) |
+| Queue | `/queue` | ✅ | ✅ | ✅ | #3 (Call Waiting Patient) |
+| Consultation | `/consultation` | ✅ | — | ✅ | #4 (Chart & Treat) |
+| Consent | `/consent` | ✅ | ✅ | ✅ | #5 (Informed E-Consent) |
+| Patients | `/patients` | ✅ | ✅ | ✅ | #6 (Records & History) |
+| Schedule & Leave | `/dentists/unavailability` | — | ✅ | ✅ | #7 (Shifts & Leave) |
+| Billing | `/billing` | ✅ | ✅ | ✅ | #8 (Checkout Status) |
+| Live Chat | `/chat` | ✅ | ✅ | ✅ | #9 (Patient Messages) |
+| Bookings | `/bookings` | ✅ | ✅ | ✅ | #10 (Booking Requests) |
+| Check-In | `/check-in` | ✅ | ✅ | ✅ | #11 (Desk Arrival) |
+| Waitlist | `/waitlist` | — | ✅ | — | — |
+| Doctors Directory | `/dentists` | ✅ | — | — | — |
+| Services | `/services` | ✅ | — | — | — |
+| Analytics | `/reports` | ✅ | — | — | — |
+| Settings | `/settings` | ✅ | — | — | — |
+| Audit Logs | `/audit` | ✅ | — | — | — |
 
 **Design rationale:**
 - **Jakob's Law:** Users expect sidebar navigation on desktop dashboards (familiar from Gmail, Slack, Linear)
-- **Hick's Law:** Max 10 items in sidebar — decision time stays low
-- **Fitts's Law:** Sidebar items are full-width, tall (48px height) — easy to hit
+- **Sequential Clinical Flow:** Items align directly with the chronological journey of patient care (Appointments → Queue → Consultation → Consent → Patients)
+- **Hick's Law:** Predictable top-to-bottom sequence keeps cognitive overhead low
+- **Fitts's Law:** Sidebar items are full-width, tall (40px+ height) — easy to hit
 - **Recognition over recall:** Icons + labels (not icon-only) — no memorization needed
-- **Collapsible:** Icon-only mode with tooltips maximizes content space when needed; toggle via bottom button
+- **Collapsible:** Icon-only mode with tooltips maximizes content space when needed; toggle via topbar button
 
 ### 6.2 Mobile Navigation (Dentist Portal)
 
