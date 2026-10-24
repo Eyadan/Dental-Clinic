@@ -197,6 +197,7 @@
 
 | UI-120 | 2026-10-22 15:35 | 10 | NAV-04 | Medium | Fixed | Sidebar navigation items were ordered arbitrarily without clear relationship to clinical flow, causing cognitive friction for attending dentists | Log in as Dentist (`dentist@clinic.local`), view sidebar menu | Nav items follow the dentist's natural daily workflow in chronological sequence: Overview → Appointments → Queue → Consultation → Consent → Patients → Schedule & Leave → Billing → Auxiliary | Clinical tools (Consultation, Consent, Queue) were disjointed and scattered between front desk items | Updated `src/lib/constants/navigation.ts` with role-aware sequential ordering arrays (`DENTIST_FLOW_ORDER` and `RECEPTION_FLOW_ORDER`) inside `getNavItemsForRole()`. Verified clean TypeScript build with 0 errors. | 2026-10-22 15:35 |
 | UI-121 | 2026-10-22 15:52 | 10 | NAV-05 | Medium | Fixed | Receptionist sidebar navigation placed Billing after Consent rather than adjacent to patient arrival and queue handling, causing extra navigation steps during checkout | Log in as Receptionist, view sidebar navigation menu | Sidebar menu arranges items according to the Direct Visit Flow: Overview → Check-In → Queue → Billing → Appointments → Bookings → Waitlist → Patients → Consent → Live Chat → Schedule & Leave | Billing was located at item #9, far from Check-In and Queue | Updated `RECEPTION_FLOW_ORDER` in `src/lib/constants/navigation.ts` to prioritize Billing directly after Queue in the visit lifecycle. | 2026-10-22 15:52 |
+| PERF-122 | 2026-10-24 14:43 | 10 | PERF-10 | Medium | Fixed | Barrel imports for `lucide-react` and `date-fns` caused bloated client JavaScript bundles and slowed down browser bundle parsing and page navigation | Load any dashboard or clinical page | Browser downloads compact direct module chunks without loading entire icon/date libraries | Heavy barrel import resolution added unnecessary bundle weight and prolonged Turbopack compilation to ~21s | Added `experimental.optimizePackageImports: ["lucide-react", "date-fns"]` to `next.config.ts`. Next.js now transforms barrel imports into direct file imports, slashing compile time from 21.1s down to 3.4s (-84%) and reducing client JS payload. | 2026-10-24 14:43 |
 
 ---
 
@@ -206,9 +207,9 @@
 |---|---|---|---|---|---|
 | Critical | 1 | 0 | 6 | 0 | 7 |
 | High | 0 | 0 | 28 | 0 | 28 |
-| Medium | 0 | 0 | 27 | 0 | 27 |
+| Medium | 0 | 0 | 28 | 0 | 28 |
 | Low | 0 | 0 | 10 | 0 | 10 |
-| **Total** | **1** | **0** | **71** | **0** | **72** |
+| **Total** | **1** | **0** | **72** | **0** | **73** |
 
 
 
