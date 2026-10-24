@@ -49,11 +49,17 @@ import {
 
 interface DashboardClientProps {
   role?: UserRole;
+  initialStats?: DashboardStatsData | null;
+  initialNotifications?: StaffNotification[];
 }
 
-export function DashboardClient({ role = "admin" }: DashboardClientProps) {
-  const [stats, setStats] = useState<DashboardStatsData | null>(null);
-  const [notifications, setNotifications] = useState<StaffNotification[]>([]);
+export function DashboardClient({
+  role = "admin",
+  initialStats = null,
+  initialNotifications = [],
+}: DashboardClientProps) {
+  const [stats, setStats] = useState<DashboardStatsData | null>(initialStats);
+  const [notifications, setNotifications] = useState<StaffNotification[]>(initialNotifications);
   const [isPending, startTransition] = useTransition();
 
   const [isExportingExcel, setIsExportingExcel] = useState(false);
@@ -123,7 +129,9 @@ export function DashboardClient({ role = "admin" }: DashboardClientProps) {
   };
 
   useEffect(() => {
-    loadData();
+    if (!initialStats) {
+      loadData();
+    }
   }, []);
 
   const handleDismiss = (id: string) => {
