@@ -32,6 +32,7 @@ export function SidebarNav({ role, collapsed = false }: SidebarNavProps) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               className={cn(
                 "group relative flex h-10.5 items-center rounded-xl text-xs font-semibold transition-all duration-200",
                 collapsed ? "justify-center px-0" : "gap-3 px-3.5",

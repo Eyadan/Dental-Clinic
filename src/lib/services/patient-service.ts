@@ -104,11 +104,19 @@ export class PatientService extends BaseService {
     const { query, page, pageSize } = params;
     const offset = (page - 1) * pageSize;
 
-    const supabaseQuery = this.supabase
+    let supabaseQuery = this.supabase
       .from("patients")
       .select("*", { count: "exact" })
-      .eq("is_archived", false)
-      .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,contact_no.ilike.%${query}%,email.ilike.%${query}%`)
+      .eq("is_archived", false);
+
+    const trimmedQuery = query?.trim();
+    if (trimmedQuery) {
+      supabaseQuery = supabaseQuery.or(
+        `first_name.ilike.%${trimmedQuery}%,last_name.ilike.%${trimmedQuery}%,contact_no.ilike.%${trimmedQuery}%,email.ilike.%${trimmedQuery}%`
+      );
+    }
+
+    supabaseQuery = supabaseQuery
       .range(offset, offset + pageSize - 1)
       .order("created_at", { ascending: false });
 

@@ -39,14 +39,35 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
+  const ROLE_COOKIE_NAME = "app_user_role";
+  const validRoles: UserRole[] = ["admin", "reception", "dentist"];
+  const cachedRole = request.cookies.get(ROLE_COOKIE_NAME)?.value as UserRole | undefined;
+
   let role: UserRole | null = null;
   if (user) {
-    const { data: appUser } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-    role = (appUser?.role ?? null) as UserRole | null;
+    if (cachedRole && validRoles.includes(cachedRole)) {
+      role = cachedRole;
+    } else {
+      const { data: appUser } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      role = (appUser?.role ?? null) as UserRole | null;
+      if (role) {
+        supabaseResponse.cookies.set(ROLE_COOKIE_NAME, role, {
+          path: "/",
+          httpOnly: true,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 60 * 60 * 8,
+        });
+      }
+    }
+  } else {
+    if (request.cookies.has(ROLE_COOKIE_NAME)) {
+      supabaseResponse.cookies.delete(ROLE_COOKIE_NAME);
+    }
   }
 
   if (user && role) {
