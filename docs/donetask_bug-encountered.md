@@ -200,6 +200,7 @@
 | PERF-122 | 2026-10-24 14:43 | 10 | PERF-10 | Medium | Fixed | Barrel imports for `lucide-react` and `date-fns` caused bloated client JavaScript bundles and slowed down browser bundle parsing and page navigation | Load any dashboard or clinical page | Browser downloads compact direct module chunks without loading entire icon/date libraries | Heavy barrel import resolution added unnecessary bundle weight and prolonged Turbopack compilation to ~21s | Added `experimental.optimizePackageImports: ["lucide-react", "date-fns"]` to `next.config.ts`. Next.js now transforms barrel imports into direct file imports, slashing compile time from 21.1s down to 3.4s (-84%) and reducing client JS payload. | 2026-10-24 14:43 |
 | PERF-123 | 2026-10-24 15:30 | 10 | PERF-11 | Low | Fixed | Text on initial page load was invisible until Google Font Inter finished downloading over the network (Flash of Invisible Text / FOIT) | Navigate to any page on cold load | Browser immediately displays text using fallback system typography, swapping seamlessly once Inter finishes loading | Missing `display: "swap"` on `Inter` in `layout.tsx` caused browser font-display block behavior | Added `display: "swap"` to Google Font Inter configuration in `src/app/layout.tsx`. | 2026-10-24 15:30 |
 | PERF-124 | 2026-10-24 15:32 | 10 | PERF-12 | Medium | Fixed | Overview dashboard (`/dashboard`) loaded metrics via client-side `useEffect` after page mount, showing empty cards and loaders instead of immediate content | Open `/dashboard` | All KPI counters, gross revenue, and staff notification alerts appear instantly in the initial HTML | Server component previously fetched only user context, delegating stats fetching to client-side Server Action waterfall | Updated `DashboardPage` (`page.tsx`) to parallel-prefetch `getDashboardStatsAction` and `getPendingStaffNotificationsAction` via `Promise.all()`, passing `initialStats` and `initialNotifications` directly to `DashboardClient` (`dashboard-client.tsx`). | 2026-10-24 15:32 |
+| PERF-125 | 2026-10-25 16:58 | 10 | PERF-13 | High | Fixed | Universal 2 to 3 second page transition latency when navigating between dashboard pages (e.g. Overview to Patients or any clinical desk) caused by lack of link prefetching, redundant middleware DB query on every route change, and unindexed full wildcard search queries | Click any link in the sidebar (e.g. Patients, Appointments, Queue, Billing) | Target page loads in <500ms or instantly from background prefetch cache without perceived latency | 2 to 3 second stall on every route transition | (1) Sidebar `<Link>` tags lacked `prefetch={true}`, forcing Next.js to start cold network fetches on demand; (2) Next.js middleware executed `supabase.from("users").select("role")` on every single route change, blocking RSC dispatch by 250-300ms; (3) `getPatients` executed an unindexed 4-way wildcard query `.or("first_name.ilike.%%,last_name.ilike.%%,...")` when browsing the default directory without a search keyword. Fixed by adding `prefetch={true}` in `sidebar-nav.tsx`, caching the verified user role in an HTTP-only `app_user_role` cookie in `middleware-client.ts`, and conditionally applying the `.or(...)` filter in `patient-service.ts` only when a search query is entered. | 2026-10-25 16:58 |
 
 ---
 
@@ -208,10 +209,10 @@
 | Severity | Open | In Progress | Fixed | Won't Fix | Total |
 |---|---|---|---|---|---|
 | Critical | 1 | 0 | 6 | 0 | 7 |
-| High | 0 | 0 | 28 | 0 | 28 |
+| High | 0 | 0 | 29 | 0 | 29 |
 | Medium | 0 | 0 | 29 | 0 | 29 |
 | Low | 0 | 0 | 11 | 0 | 11 |
-| **Total** | **1** | **0** | **74** | **0** | **75** |
+| **Total** | **1** | **0** | **75** | **0** | **76** |
 
 
 
