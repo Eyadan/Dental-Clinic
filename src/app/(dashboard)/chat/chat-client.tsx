@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { MessageSquare, Sparkles } from "lucide-react";
+import { MessageSquare, Sparkles, CheckCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ConversationList } from "./conversation-list";
 import { ChatThread } from "./chat-thread";
 import { PatientInfoPanel } from "./patient-info-panel";
-import { getConversationsAction, markAsReadAction, type ConversationWithDetails } from "./actions";
+import { getConversationsAction, markAsReadAction, markAllAsReadAction, type ConversationWithDetails } from "./actions";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser-client";
 import { PageHeroBanner } from "@/components/shared/page-hero-banner";
 
@@ -19,6 +20,7 @@ export function ChatClient({ staffId, initialConversations = [] }: ChatClientPro
   const [conversations, setConversations] = useState<ConversationWithDetails[]>(initialConversations);
   const [selected, setSelected] = useState<ConversationWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(initialConversations.length === 0);
+  const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
   const isFetchingRef = useRef(false);
 
   const loadConversations = useCallback(async () => {
@@ -80,8 +82,23 @@ export function ChatClient({ staffId, initialConversations = [] }: ChatClientPro
   const handleSelect = async (conversation: ConversationWithDetails) => {
     setSelected(conversation);
     if (conversation.unread_count > 0) {
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversation.id ? { ...c, unread_count: 0 } : c))
+      );
       await markAsReadAction(conversation.id);
       loadConversations();
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (isMarkingAllRead) return;
+    setIsMarkingAllRead(true);
+    try {
+      setConversations((prev) => prev.map((c) => ({ ...c, unread_count: 0 })));
+      await markAllAsReadAction();
+      await loadConversations();
+    } finally {
+      setIsMarkingAllRead(false);
     }
   };
 
@@ -95,7 +112,20 @@ export function ChatClient({ staffId, initialConversations = [] }: ChatClientPro
         description="Real-time Facebook Messenger AI chatbot takeover & patient support workspace"
         badgeText={unreadTotal > 0 ? `${unreadTotal} Unread` : undefined}
         badgeVariant={unreadTotal > 0 ? "danger" : "default"}
-      />
+      >
+        {unreadTotal > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleMarkAllAsRead}
+            disabled={isMarkingAllRead}
+            className="h-8 rounded-xl text-xs font-semibold border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
+          >
+            <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
+            Mark All as Read
+          </Button>
+        )}
+      </PageHeroBanner>
 
       {/* 3-COLUMN CHAT INTERFACE */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-hidden min-h-0">

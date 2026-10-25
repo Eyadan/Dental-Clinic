@@ -117,7 +117,8 @@ export async function getDashboardStatsAction(): Promise<ServiceResult<Dashboard
       supabase
         .from("messenger_messages")
         .select("*", { count: "exact", head: true })
-        .eq("direction", "inbound"),
+        .eq("direction", "inbound")
+        .eq("is_read", false),
       supabase
         .from("payments")
         .select("id, amount, method, paid_at"),

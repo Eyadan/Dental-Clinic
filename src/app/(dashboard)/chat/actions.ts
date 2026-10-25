@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { getServerUserContext } from "@/lib/supabase/user-context";
@@ -281,11 +282,43 @@ export async function markAsReadAction(
       return { success: false, error: error.message };
     }
 
+    revalidatePath("/dashboard");
     return { success: true, data: undefined };
   } catch (error) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to mark messages as read",
+    };
+  }
+}
+
+export async function markAllAsReadAction(): Promise<ServiceResult<void>> {
+  try {
+    const { userId, role } = await getServerUserContext();
+    if (!userId || !role || !["admin", "reception", "dentist"].includes(role)) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const supabase = await createServerSupabaseClient();
+    const serviceClient = getServiceRoleSupabaseClient();
+    const client = serviceClient ?? supabase;
+
+    const { error } = await client
+      .from("messenger_messages")
+      .update({ is_read: true })
+      .eq("direction", "inbound")
+      .eq("is_read", false);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to mark all messages as read",
     };
   }
 }
