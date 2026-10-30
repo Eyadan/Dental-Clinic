@@ -167,20 +167,9 @@ export function DashboardClient({
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    const supabase = createBrowserSupabaseClient();
-    const channel = supabase
-      .channel("dashboard-overview-messages-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "messenger_messages" },
-        () => loadData()
-      )
-      .subscribe();
-
     return () => {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      supabase.removeChannel(channel);
     };
   }, []);
 

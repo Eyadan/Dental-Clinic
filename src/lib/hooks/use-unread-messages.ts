@@ -39,14 +39,16 @@ export function useUnreadMessagesCount(initialCount: number = 0) {
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     const supabase = createBrowserSupabaseClient();
+    const channelName = `unread-count-${Math.random().toString(36).substring(2, 9)}`;
     const channel = supabase
-      .channel("unread-messages-count-realtime")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "messenger_messages" },
         () => refreshCount()
-      )
-      .subscribe();
+      );
+
+    channel.subscribe();
 
     return () => {
       clearInterval(interval);
