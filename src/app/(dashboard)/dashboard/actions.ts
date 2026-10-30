@@ -1,8 +1,18 @@
 "use server";
 
+import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 import { todayLocal } from "@/lib/utils/date-utils";
 import type { ServiceResult } from "@/lib/services/base-service";
+
+function getServiceRoleSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.SUPABASE_SECRET_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false } });
+}
 
 export interface StaffNotification {
   id: string;
@@ -88,6 +98,9 @@ export async function getDashboardStatsAction(): Promise<ServiceResult<Dashboard
     const supabase = await createServerSupabaseClient();
     const today = todayLocal();
 
+    const serviceClient = getServiceRoleSupabaseClient();
+    const messageClient = serviceClient ?? supabase;
+
     const [
       { count: pendingBookings },
       { count: todayAppointments },
@@ -114,7 +127,7 @@ export async function getDashboardStatsAction(): Promise<ServiceResult<Dashboard
         .eq("scheduled_date", today)
         .eq("is_archived", false)
         .in("visit_status", ["checked_in", "waiting", "treatment_ongoing", "treatment_paused"]),
-      supabase
+      messageClient
         .from("messenger_messages")
         .select("*", { count: "exact", head: true })
         .eq("direction", "inbound")

@@ -48,6 +48,8 @@ import {
   type DashboardStatsData,
 } from "./actions";
 
+import { useUnreadMessagesCount } from "@/lib/hooks/use-unread-messages";
+
 interface DashboardClientProps {
   role?: UserRole;
   initialStats?: DashboardStatsData | null;
@@ -62,6 +64,11 @@ export function DashboardClient({
   const [stats, setStats] = useState<DashboardStatsData | null>(initialStats);
   const [notifications, setNotifications] = useState<StaffNotification[]>(initialNotifications);
   const [isPending, startTransition] = useTransition();
+
+  const { unreadCount, refreshCount } = useUnreadMessagesCount(initialStats?.unreadMessages ?? 0);
+
+  // Keep stats.unreadMessages in 100% sync with the real-time unreadCount hook
+  const effectiveUnreadMessages = unreadCount;
 
   const [isExportingExcel, setIsExportingExcel] = useState(false);
 
@@ -265,12 +272,12 @@ export function DashboardClient({
         },
         {
           title: "Unread Messages",
-          value: stats?.unreadMessages ?? 0,
+          value: effectiveUnreadMessages,
           subtitle: "Messenger inbox",
-          change: (stats?.unreadMessages ?? 0) > 0 ? `${stats?.unreadMessages} New` : "Response < 5m",
-          changeType: "neutral" as const,
+          change: effectiveUnreadMessages > 0 ? `${effectiveUnreadMessages} New` : "Response < 5m",
+          changeType: (effectiveUnreadMessages > 0 ? "negative" : "neutral") as "neutral" | "positive" | "negative",
           icon: MessageSquare,
-          iconBg: (stats?.unreadMessages ?? 0) > 0
+          iconBg: effectiveUnreadMessages > 0
             ? "from-red-500/20 to-rose-500/20 text-red-600 dark:text-red-400 border-red-500/30"
             : "from-indigo-500/20 to-purple-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
           href: "/chat",
