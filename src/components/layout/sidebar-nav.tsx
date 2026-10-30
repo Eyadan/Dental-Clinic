@@ -12,6 +12,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+import { useUnreadMessagesCount } from "@/lib/hooks/use-unread-messages";
+
 interface SidebarNavProps {
   role: UserRole;
   collapsed?: boolean;
@@ -20,6 +22,7 @@ interface SidebarNavProps {
 export function SidebarNav({ role, collapsed = false }: SidebarNavProps) {
   const pathname = usePathname();
   const items = getNavItemsForRole(role);
+  const { unreadCount } = useUnreadMessagesCount();
 
   return (
     <TooltipProvider delay={0}>
@@ -27,6 +30,8 @@ export function SidebarNav({ role, collapsed = false }: SidebarNavProps) {
         {items.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
           const Icon = item.icon;
+          const isChat = item.href === "/chat";
+          const showChatBadge = isChat && unreadCount > 0;
 
           const linkContent = (
             <Link
@@ -42,13 +47,30 @@ export function SidebarNav({ role, collapsed = false }: SidebarNavProps) {
               )}
               aria-current={isActive ? "page" : undefined}
             >
-              <Icon
-                className={cn(
-                  "h-4 w-4 shrink-0 transition-transform group-hover:scale-110",
-                  isActive ? "text-cyan-600 dark:text-cyan-400" : "text-muted-foreground group-hover:text-foreground"
+              <div className="relative shrink-0 flex items-center justify-center">
+                <Icon
+                  className={cn(
+                    "h-4 w-4 shrink-0 transition-transform group-hover:scale-110",
+                    isActive ? "text-cyan-600 dark:text-cyan-400" : "text-muted-foreground group-hover:text-foreground"
+                  )}
+                />
+                {collapsed && showChatBadge && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600" />
+                  </span>
                 )}
-              />
-              {!collapsed && <span className="truncate">{item.label}</span>}
+              </div>
+              {!collapsed && (
+                <>
+                  <span className="truncate flex-1">{item.label}</span>
+                  {showChatBadge && (
+                    <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-600 text-white font-black text-[10px] shadow-xs shadow-red-600/40">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </>
+              )}
             </Link>
           );
 
@@ -57,7 +79,14 @@ export function SidebarNav({ role, collapsed = false }: SidebarNavProps) {
               <Tooltip key={item.href}>
                 <TooltipTrigger render={linkContent} />
                 <TooltipContent side="right" sideOffset={8}>
-                  {item.label}
+                  <div className="flex items-center gap-1.5">
+                    <span>{item.label}</span>
+                    {showChatBadge && (
+                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-red-600 text-white font-bold text-[10px]">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </div>
                 </TooltipContent>
               </Tooltip>
             );

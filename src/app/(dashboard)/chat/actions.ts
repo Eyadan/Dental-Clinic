@@ -349,3 +349,33 @@ export async function getPatientAppointmentsAction(
     };
   }
 }
+
+export async function getUnreadMessagesCountAction(): Promise<ServiceResult<number>> {
+  try {
+    const { userId, role } = await getServerUserContext();
+    if (!userId || !role || !["admin", "reception", "dentist"].includes(role)) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const supabase = await createServerSupabaseClient();
+    const serviceClient = getServiceRoleSupabaseClient();
+    const client = serviceClient ?? supabase;
+
+    const { count, error } = await client
+      .from("messenger_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("direction", "inbound")
+      .eq("is_read", false);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data: count ?? 0 };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch unread count",
+    };
+  }
+}

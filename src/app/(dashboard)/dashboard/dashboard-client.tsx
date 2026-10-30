@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser-client";
 import type { UserRole } from "@/lib/types/enums";
 import {
   AlertTriangle,
@@ -145,14 +146,34 @@ export function DashboardClient({
       loadData();
     }
 
+    // 4-second polling fallback so metrics stay live even across inactive states
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadData();
+      }
+    }, 4000);
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         loadData();
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    const supabase = createBrowserSupabaseClient();
+    const channel = supabase
+      .channel("dashboard-overview-messages-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messenger_messages" },
+        () => loadData()
+      )
+      .subscribe();
+
     return () => {
+      clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      supabase.removeChannel(channel);
     };
   }, []);
 
